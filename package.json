@@ -1,0 +1,26 @@
+{
+  "name": "triagekit",
+  "version": "0.0.0",
+  "type": "module",
+  "bin": {
+    "triagekit": "./dist-cli/cli/index.js"
+  },
+  "scripts": {
+    "build:cli": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "lint:anon": "node scripts/anon-lint.mjs"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.16",
+    "vite-plugin-singlefile": "^2.3.3",
+    "vitest": "^4.1.8"
+  },
+  "dependencies": {
+    "commander": "^15.0.0",
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
+  }
+}

@@ -1,0 +1,13 @@
+# Copy to triage.config.yml (gitignored) and edit with your real values.
+org: acme-corp
+provider: github
+repos:
+  - web-app
+  - api-gateway
+  - billing-service
+views:
+  - security-alerts
+branding:
+  title: "Acme Triage"
+# Optional: path to a JS/TS module exporting scoring/correlation overrides.
+# logicHooks: ./triage.hooks.ts
