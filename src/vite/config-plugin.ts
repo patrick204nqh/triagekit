@@ -1,5 +1,5 @@
 import type { Plugin } from "vite";
-import type { TriageConfigT } from "../config/schema";
+import type { TriageConfigT } from "../config/schema.js";
 
 const VIRTUAL_ID = "virtual:triagekit-config";
 

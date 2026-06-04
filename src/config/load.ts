@@ -1,6 +1,6 @@
 import { readFileSync, existsSync } from "node:fs";
 import { parse } from "yaml";
-import { TriageConfig, type TriageConfigT } from "./schema";
+import { TriageConfig, type TriageConfigT } from "./schema.js";
 
 export function loadConfig(path: string): TriageConfigT {
   if (!existsSync(path)) {
