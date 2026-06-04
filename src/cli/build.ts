@@ -1,17 +1,21 @@
 import { build as viteBuild } from "vite";
 import { viteSingleFile } from "vite-plugin-singlefile";
 import { renameSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { loadConfig } from "../config/load.js";
 import { configPlugin } from "../vite/config-plugin.js";
 
 export async function runBuild(configPath: string) {
   const config = loadConfig(configPath);
   const outDir = resolve(process.cwd(), "dist");
+  // Resolve the optional user logic-hooks module relative to the config file.
+  const hookPath = config.logicHooks
+    ? resolve(dirname(resolve(configPath)), config.logicHooks)
+    : undefined;
   await viteBuild({
     // The compiled CLI lives at dist-cli/cli/; the runtime source is at src/runtime.
     root: resolve(import.meta.dirname, "../../src/runtime"),
-    plugins: [configPlugin(config), viteSingleFile()],
+    plugins: [configPlugin(config, hookPath), viteSingleFile()],
     build: { outDir, emptyOutDir: true },
   });
   // Vite names the single-file output after its html entry (index.html); the
