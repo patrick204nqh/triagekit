@@ -1,0 +1,21 @@
+:root {
+  --bg: #0d1117; --panel: #161b22; --border: #30363d; --fg: #e6edf3;
+  --muted: #8b949e; --accent: #58a6ff; --on-accent: #0d1117;
+  --p0: #f85149; --p1: #db6d28; --p2: #d29922; --p3: #3fb950;
+  --crit: #f85149; --high: #db6d28; --med: #d29922; --low: #6e7681;
+}
+[data-theme="light"] {
+  --bg: #ffffff; --panel: #f6f8fa; --border: #d0d7de; --fg: #1f2328;
+  --muted: #656d76; --accent: #0969da; --on-accent: #ffffff;
+  --p0: #cf222e; --p1: #bc4c00; --p2: #9a6700; --p3: #1a7f37;
+  --crit: #cf222e; --high: #bc4c00; --med: #9a6700; --low: #6e7681;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; font: 14px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif;
+  background: var(--bg); color: var(--fg);
+}
+header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+main { padding: 0 24px 48px; }
+.muted { color: var(--muted); }
+input[type="password"] { background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; min-width: 280px; }
