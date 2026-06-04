@@ -19,3 +19,28 @@ header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: fl
 main { padding: 0 24px 48px; }
 .muted { color: var(--muted); }
 input[type="password"] { background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; min-width: 280px; }
+button { background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; font-weight: 600; cursor: pointer; }
+.viewswitch { display: inline-flex; gap: 8px; padding: 16px 24px 0; }
+.error { color: var(--p0); }
+
+.stats { display: flex; gap: 16px; margin: 16px 0; flex-wrap: wrap; }
+.stat { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px 18px; min-width: 90px; }
+.stat-v { font-size: 22px; font-weight: 700; }
+.stat-l { color: var(--muted); font-size: 12px; }
+
+table.alerts { width: 100%; border-collapse: collapse; }
+table.alerts th, table.alerts td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+table.alerts th { color: var(--muted); font-size: 12px; text-transform: uppercase; }
+.alert-row { cursor: pointer; }
+.alert-row:hover { background: var(--panel); }
+
+.tier { display: inline-block; padding: 2px 8px; border-radius: 999px; font-weight: 700; font-size: 12px; color: var(--on-accent); }
+.tier-P0 { background: var(--p0); } .tier-P1 { background: var(--p1); }
+.tier-P2 { background: var(--p2); } .tier-P3 { background: var(--p3); }
+.sev-critical { color: var(--crit); } .sev-high { color: var(--high); }
+.sev-medium { color: var(--med); } .sev-low { color: var(--low); }
+
+.drawer { position: fixed; top: 0; right: 0; width: min(420px, 90vw); height: 100%; background: var(--panel); border-left: 1px solid var(--border); padding: 24px; overflow-y: auto; box-shadow: -8px 0 24px rgba(0,0,0,.2); }
+.drawer dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; }
+.drawer dt { color: var(--muted); }
+.drawer a { color: var(--accent); word-break: break-all; }
