@@ -1,9 +1,10 @@
 import { build as viteBuild } from "vite";
 import { viteSingleFile } from "vite-plugin-singlefile";
-import { renameSync } from "node:fs";
+import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { loadConfig } from "../config/load.js";
 import { configPlugin } from "../vite/config-plugin.js";
+import { buildCspMeta, PROVIDER_CONNECT_SRC } from "../vite/csp-plugin.js";
 
 export async function runBuild(configPath: string) {
   const config = loadConfig(configPath);
@@ -20,7 +21,15 @@ export async function runBuild(configPath: string) {
   });
   // Vite names the single-file output after its html entry (index.html); the
   // shareable artifact is triage.html.
-  renameSync(resolve(outDir, "index.html"), resolve(outDir, "triage.html"));
+  const outFile = resolve(outDir, "triage.html");
+  renameSync(resolve(outDir, "index.html"), outFile);
+
+  // Inject a strict, hash-based CSP computed over the final inlined HTML. connect-src
+  // origins come from the configured provider (mirrors the adapter's connectSrc).
+  const connectSrc = PROVIDER_CONNECT_SRC[config.provider] ?? [];
+  const withCsp = buildCspMeta(readFileSync(outFile, "utf8"), connectSrc);
+  writeFileSync(outFile, withCsp);
+
   console.warn(
     `\n⚠  dist/triage.html contains your org ("${config.org}") and repo names.\n` +
     `   Safe to share within your team; do NOT commit it to a public repo.\n` +
