@@ -1,6 +1,6 @@
 import { esc } from "./triage-table";
 import {
-  type ReviewItem, type ReviewKind, type ActionId, type MergeMethod,
+  type ReviewItem, type ActionId, type MergeMethod,
   actionsFor, mergeable, reasonNotMergeable,
 } from "../dataset/kinds/review";
 import {
@@ -56,7 +56,7 @@ function actionBarHtml(item: ReviewItem, st: CardState): string {
     return `${field}<button class="act primary" data-confirm>${ACTION_LABEL[st.armed]}</button>
       <button class="act" data-cancel>Cancel</button>`;
   }
-  const buttons = actionsFor(item.kind as ReviewKind).map(id => {
+  const buttons = actionsFor(item.kind).map(id => {
     if (id === "open") {
       return `<a class="act" data-action="open" href="${esc(selfHref(item))}" target="_blank" rel="noreferrer">Open ↗</a>`;
     }
@@ -83,12 +83,6 @@ export function reviewCardHtml(
     error: state?.error ?? "",
     method: state?.method ?? opts.defaultMergeMethod ?? "squash",
   };
-  const sla = opts.sla ? slaTagHtml(opts.sla) : "";
-  const head =
-    `<div class="rc-head">${tierBadgeHtml(item.tier)}${sla}` +
-    `<span class="rc-title">${esc(item.title)}</span>` +
-    `<span class="rc-num">#${d.number}</span>` +
-    `${relationStripHtml(d.relations, d.permalinks)}</div>`;
 
   if (opts.collapsed) {
     const avatars = [actorChipHtml(d.author), ...d.reviewers.map(r => actorChipHtml(r))].join("");
@@ -98,6 +92,13 @@ export function reviewCardHtml(
       `${checkIndicatorHtml(d.checks)}<span class="rc-comments">\u{1F4AC} ${d.comments}</span>${avatars}` +
       `<button class="rc-expand" data-action="expand">▾</button></div></div>`;
   }
+
+  const sla = opts.sla ? slaTagHtml(opts.sla) : "";
+  const head =
+    `<div class="rc-head">${tierBadgeHtml(item.tier)}${sla}` +
+    `<span class="rc-title">${esc(item.title)}</span>` +
+    `<span class="rc-num">#${d.number}</span>` +
+    `${relationStripHtml(d.relations, d.permalinks)}</div>`;
 
   const meta =
     `<div class="rc-meta">${actorChipHtml(d.author, "author")}` +

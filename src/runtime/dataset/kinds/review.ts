@@ -22,7 +22,7 @@ export interface ReviewDetails {
 }
 
 // A scored review item, as the list/drawer hand it to the card.
-export type ReviewItem = TriageItem<ReviewDetails> & { tier: Tier };
+export type ReviewItem = TriageItem<ReviewDetails> & { tier: Tier; kind: ReviewKind };
 
 export type MergeMethod = "merge" | "squash" | "rebase";
 
