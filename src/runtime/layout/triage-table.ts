@@ -40,9 +40,11 @@ function defaultDrawer(r: ScoredItem): string {
 export function renderTriageTable(root: HTMLElement, rows: ScoredItem[], errors: TriageError[]): void {
   const warnings = warningsHtml(errors);
   if (!rows.length) {
-    root.innerHTML = warnings + (errors.length
-      ? `<p class="muted">No items loaded from the targets above.</p>`
-      : `<p class="muted">No open items for the configured targets.</p>`);
+    root.innerHTML = warnings + `<div class="empty">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      <h3>${errors.length ? "No items loaded" : "No open items for these targets"}</h3>
+      <p class="muted">${errors.length ? "The targets above returned nothing loadable." : "Everything in scope is clear. Adjust your scope in Settings or load a different provider."}</p>
+    </div>`;
     return;
   }
   const r0 = renderers.get(rows[0].kind);
@@ -56,4 +58,11 @@ export function renderTriageTable(root: HTMLElement, rows: ScoredItem[], errors:
       drawer.querySelector(".drawer-close")?.addEventListener("click", () => { drawer.hidden = true; });
     });
   });
+}
+
+// Shimmer placeholder shown while a fetch is in flight (no spinner).
+export function renderTableSkeleton(root: HTMLElement): void {
+  const rows = Array.from({ length: 8 }).map(() =>
+    `<tr><td><div class="sk" style="width:80%"></div></td><td><div class="sk" style="width:60%"></div></td><td><div class="sk" style="width:40%"></div></td><td class="num"><div class="sk" style="width:30%;margin-left:auto"></div></td><td class="num"><div class="sk" style="width:30%;margin-left:auto"></div></td><td><div class="sk" style="width:30%"></div></td></tr>`).join("");
+  root.innerHTML = `<table class="alerts"><thead><tr><th>Location</th><th>Title</th><th>Severity</th><th class="num">Signal</th><th class="num">Score</th><th>Tier</th></tr></thead><tbody>${rows}</tbody></table>`;
 }

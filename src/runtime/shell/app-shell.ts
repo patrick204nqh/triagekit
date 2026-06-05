@@ -5,7 +5,7 @@ import { getView } from "../views/registry";
 import { getDomain } from "../dataset/domain";
 import { resolveScorer, type Scorer } from "../scoring/registry";
 import { tierOf } from "../scoring/tier";
-import { renderTriageTable, type ScoredItem } from "../layout/triage-table";
+import { renderTriageTable, renderTableSkeleton, type ScoredItem } from "../layout/triage-table";
 import { renderUpcoming } from "../layout/upcoming";
 import { renderInsights } from "../layout/insights";
 import { CredStore } from "./cred-store";
@@ -61,7 +61,7 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
     const token = creds.get(source.id);
     if (!Object.keys(scope).length) { root.innerHTML = `<p class="muted">Open Settings (⚙) to choose your scope.</p>`; return; }
     if (!token) { root.innerHTML = `<p class="muted">Open Settings (⚙) to connect a token.</p>`; return; }
-    root.innerHTML = `<p class="muted">Loading…</p>`;
+    renderTableSkeleton(root);
     source.fetch(scope, token)
       .then(({ items, errors }) => {
         const rows: ScoredItem[] = items
