@@ -15,7 +15,7 @@ export function esc(s: unknown): string {
   return String(s ?? "").replace(/[&<>"]/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
 }
-function warningsHtml(errors: TriageError[]): string {
+export function warningsHtml(errors: TriageError[]): string {
   if (!errors.length) return "";
   const items = errors.map(e => `<li>${esc(e.target)}: ${esc(e.message)}</li>`).join("");
   const noun = errors.length === 1 ? "target" : "targets";

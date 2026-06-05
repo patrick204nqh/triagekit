@@ -5,6 +5,7 @@ import { listArtifacts, GROUP_LABEL, GROUP_ORDER, type Artifact } from "../datas
 import { resolveScorer, type Scorer } from "../scoring/registry";
 import { tierOf } from "../scoring/tier";
 import { renderTriageTable, renderTableSkeleton, esc, type ScoredItem } from "../layout/triage-table";
+import { resolveSurface } from "../layout/surface";
 import { renderInsights } from "../layout/insights";
 import { CredStore } from "./cred-store";
 import { ScopeStore } from "./scope-store";
@@ -198,7 +199,11 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
           .sort((a, b) => b.score - a.score);
         lastRows = rows; lastFetchedAt = Date.now(); updateSync();
         if (view === "insights") renderInsights(root, rows, active.kinds);
-        else renderTriageTable(root, rows, errors);
+        else {
+          const surface = resolveSurface(active.id);
+          if (surface) surface(root, rows, errors, { token: creds.get(providerOf(usable[0]))! });
+          else renderTriageTable(root, rows, errors);
+        }
       })
       .catch(err => { root.innerHTML = `<p class="error">Failed to load: ${err?.message ?? err}</p>`; });
   };
