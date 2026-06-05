@@ -52,6 +52,26 @@ describe("makeGithubActions", () => {
     expect(JSON.parse(init.body)).toEqual({ state: "closed" });
   });
 
+  it("addLabels POSTs the names under the labels key", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await makeGithubActions("tok").addLabels(item(), ["security", "dependencies"]);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.github.com/repos/acme-corp/web-app/issues/482/labels");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({ labels: ["security", "dependencies"] });
+  });
+
+  it("assign POSTs the logins under the assignees key", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await makeGithubActions("tok").assign(item("issue"), ["marta"]);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.github.com/repos/acme-corp/web-app/issues/482/assignees");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({ assignees: ["marta"] });
+  });
+
   it("throws a descriptive error on failure", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ message: "Base branch was modified" }), { status: 409 })));
