@@ -73,3 +73,16 @@ describe("reviewCardHtml", () => {
     expect(xss).toContain("&lt;script&gt;");
   });
 });
+
+describe("checks affordance for unfetched PRs", () => {
+  it("shows 'open to load' for a PR with null checks", () => {
+    const html = reviewCardHtml(pr({ checks: null }));
+    expect(html).toContain("checks: open to load");
+  });
+  it("shows no check indicator for an issue with null checks", () => {
+    const issue = { ...pr({ checks: null }), kind: "issue" as const };
+    const html = reviewCardHtml(issue);
+    expect(html).not.toContain("checks: open to load");
+    expect(html).not.toContain("ci-pass");
+  });
+});

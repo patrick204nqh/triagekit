@@ -105,4 +105,31 @@ describe("mountReviewCard", () => {
     expect(host.querySelector(".rc-collapsed")).toBeNull();
     expect(host.querySelector(".rc-actions")).toBeTruthy();
   });
+
+  it("calls onExpand once when a collapsed card expands and patches the result", async () => {
+    const host = document.createElement("div"); document.body.appendChild(host);
+    let calls = 0;
+    mountReviewCard(host, pr({ checks: null }), {
+      collapsed: true,
+      onExpand: async () => { calls++; return { checks: { state: "pass", conflicts: false } }; },
+    });
+    expect(host.querySelector(".rc-collapsed")).toBeTruthy();
+    host.querySelector<HTMLElement>('[data-action="expand"]')!.click();
+    await flush();
+    expect(calls).toBe(1);
+    expect(host.innerHTML).toContain("✓ checks");      // patched checks now render
+  });
+
+  it("recovers when onExpand rejects (no unhandled rejection, card still renders)", async () => {
+    const host = document.createElement("div"); document.body.appendChild(host);
+    let calls = 0;
+    mountReviewCard(host, pr({ checks: null }), {
+      collapsed: true,
+      onExpand: async () => { calls++; throw new Error("boom"); },
+    });
+    host.querySelector<HTMLElement>('[data-action="expand"]')!.click();
+    await flush();
+    expect(calls).toBe(1);
+    expect(host.querySelector(".review-card")).toBeTruthy();   // expanded card rendered, did not crash
+  });
 });
