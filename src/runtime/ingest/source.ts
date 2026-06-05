@@ -19,6 +19,7 @@ export interface Source {
   kinds: Kind[];
   connectSrc: string[];
   status: "ready" | "upcoming";
+  setup?: { hint: string; url?: string };   // how to create the credential (shown in Settings)
   scopeSchema: ScopeField[];
   discover?(token: string): Promise<DiscoveryOption[]>;   // Plan 2 (GitHub)
   fetch(scope: Scope, token: string): Promise<TriageResult>;

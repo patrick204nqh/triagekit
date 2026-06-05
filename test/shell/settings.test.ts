@@ -97,7 +97,7 @@ describe("mountSettings", () => {
     expect(host.querySelector("[data-conns] .muted")).toBeTruthy();
   });
 
-  it("discovers into a filterable multi-select checklist and caches the result", async () => {
+  it("discovers into a tag-style multiselect (chips + add-list) and caches the result", async () => {
     const discover = vi.fn(async () => [
       { value: "acme/web", label: "web", group: "acme" },
       { value: "acme/api", label: "api", group: "acme" },
@@ -112,23 +112,46 @@ describe("mountSettings", () => {
     host.querySelector<HTMLElement>('[data-discover="repos"]')!.click();
     await Promise.resolve(); await Promise.resolve();
     expect(discover).toHaveBeenCalledTimes(1);
-    expect(host.querySelectorAll(".checklist .crow").length).toBe(2);
+    expect(host.querySelectorAll(".ms-options .opt-row").length).toBe(2);   // both addable
+    expect(host.querySelectorAll(".ms-chip").length).toBe(0);               // none selected
     expect(host.querySelector("[data-count]")?.textContent).toBe("0 selected");
 
-    // select-all over the (unfiltered) list updates the count
-    host.querySelector<HTMLElement>("[data-all]")!.click();
-    expect(host.querySelector("[data-count]")?.textContent).toBe("2 selected");
+    // clicking an add-row promotes it to a chip and drops it from the list
+    host.querySelector<HTMLElement>('[data-add="acme/web"]')!.click();
+    expect(host.querySelectorAll(".ms-chip").length).toBe(1);
+    expect(host.querySelectorAll(".ms-options .opt-row").length).toBe(1);
+    expect(scopes.get("github")).toEqual({});                               // staged, not yet saved
 
-    // filtering hides non-matching rows in place
+    // removing the chip returns it to the add-list
+    host.querySelector<HTMLElement>("[data-rm]")!.click();
+    expect(host.querySelectorAll(".ms-chip").length).toBe(0);
+    expect(host.querySelectorAll(".ms-options .opt-row").length).toBe(2);
+
+    // searching narrows the add-list (input stays mounted, keeps focus)
     const lf = host.querySelector<HTMLInputElement>("[data-lf]")!;
     lf.value = "api"; lf.dispatchEvent(new Event("input"));
-    const visible = [...host.querySelectorAll<HTMLElement>(".crow")].filter(r => !r.hidden);
-    expect(visible.length).toBe(1);
+    expect(host.querySelectorAll(".ms-options .opt-row").length).toBe(1);
 
-    // re-opening the form re-renders from cache, no second API call
-    host.querySelector<HTMLElement>('.conn-item[data-src="github"]')!.click();   // collapse
-    host.querySelector<HTMLElement>('.conn-item[data-src="github"]')!.click();   // re-expand
+    // "Add all" over the current filter, then Save commits to scope
+    host.querySelector<HTMLElement>("[data-all]")!.click();
+    expect(host.querySelector("[data-count]")?.textContent).toBe("1 selected");
+    host.querySelector<HTMLElement>("[data-save]")!.click();
+    expect(scopes.get("github")).toEqual({ repos: ["acme/api"] });
+
+    // re-opening re-renders from cache, no second API call
+    s.open("github");
     expect(discover).toHaveBeenCalledTimes(1);
-    expect(host.querySelectorAll(".checklist .crow").length).toBe(2);
+    expect(host.querySelectorAll(".ms-chip").length).toBe(1);               // saved selection shown
+  });
+
+  it("surfaces provider setup guidance (row ⓘ + form link)", () => {
+    const src: Source = { ...github, setup: { hint: "Use a fine-grained PAT.", url: "https://example.test/pat" } };
+    const host = document.createElement("div"); document.body.appendChild(host);
+    const s = mountSettings(host, { sources: [src], creds: new CredStore(), scopes: new ScopeStore(), onChange: () => {} });
+    s.open("github");
+    expect(host.querySelector(".conn-item .info")?.getAttribute("title")).toBe("Use a fine-grained PAT.");
+    const link = host.querySelector<HTMLAnchorElement>(".set-link");
+    expect(link?.getAttribute("href")).toBe("https://example.test/pat");
+    expect(host.querySelector(".conn-item .cmeta")?.textContent).not.toMatch(/Security/);   // domain noise gone
   });
 });

@@ -192,12 +192,20 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 .data-actions { display:flex; gap:10px; flex-wrap:wrap; }
 .set-label { font:600 12px var(--sans); color:var(--muted); letter-spacing:.04em; text-transform:uppercase; }
 .set-helper { font-size:11px; color:var(--muted); }
-.checklist { display:flex; flex-direction:column; gap:2px; margin-top:4px; max-height:300px; overflow-y:auto; border:1px solid var(--line); border-radius:10px; padding:6px; }
-.checklist:empty { display:none; }
-.crow { display:flex; align-items:center; gap:10px; padding:8px; border-radius:8px; cursor:pointer; transition:background .12s; }
-.crow:hover { background:var(--slate); }
-.crow input { width:auto; min-height:0; accent-color:var(--accent); }
-.crow .repo { font-family:var(--mono); font-size:13px; } .crow .org { color:var(--muted); }
+.checklist { display:flex; flex-direction:column; gap:2px; margin-top:4px; max-height:280px; overflow-y:auto; border:1px solid var(--line); border-radius:10px; padding:6px; }
+.repo { font-family:var(--mono); font-size:13px; } .org { color:var(--muted); }
+/* selected targets as removable chips */
+.ms-chips { display:flex; flex-wrap:wrap; gap:6px; max-height:120px; overflow-y:auto; }
+.ms-empty { font-size:12px; }
+.ms-chip { display:inline-flex; align-items:center; gap:6px; background:color-mix(in srgb,var(--accent) 12%,transparent); border:1px solid color-mix(in srgb,var(--accent) 40%,transparent); border-radius:999px; padding:3px 4px 3px 10px; }
+.ms-chip .x { width:18px; height:18px; min-height:0; padding:0; display:inline-flex; align-items:center; justify-content:center; border:none; border-radius:50%; background:transparent; color:var(--muted); font-size:15px; line-height:1; cursor:pointer; }
+.ms-chip .x:hover { background:color-mix(in srgb,var(--accent) 22%,transparent); color:var(--fg); }
+/* searchable add-list (unselected only) */
+.opt-row { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; padding:8px; border:none; border-radius:8px; background:none; color:var(--fg); cursor:pointer; text-align:left; transition:background .12s; }
+.opt-row:hover { background:var(--carbon); }
+.opt-row .plus { color:var(--muted); font-size:15px; flex:none; }
+.opt-row:hover .plus { color:var(--accent); }
+.ms-none { padding:10px 8px; font-size:13px; }
 .conn-list { display:flex; flex-direction:column; }
 .conn-item { display:flex; align-items:center; gap:11px; padding:11px 12px; border:none; cursor:pointer; background:none; color:var(--fg); transition:background .12s; text-align:left; width:100%; }
 .conn-item:hover { background:var(--carbon); }
@@ -237,7 +245,11 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 .list-filter { flex:1; min-height:34px; padding:6px 10px; }
 .btn-ghost.mini { min-height:34px; padding:5px 11px; font-size:12px; }
 .list-count { font:500 11px var(--mono); color:var(--muted); white-space:nowrap; margin-left:auto; }
-.crow[hidden] { display:none; }
+
+/* ── Connection row: ⓘ setup hint + setup link ─────────────────────── */
+.conn-item .info { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; flex:none; border:1px solid var(--line-strong); border-radius:50%; color:var(--muted); font:700 10px var(--sans); font-style:normal; cursor:help; }
+.conn-item .info:hover { color:var(--accent); border-color:var(--accent); }
+.set-link { color:var(--accent); white-space:nowrap; }
 
 @media (max-width:768px) {
   #appbar, .domains, .viewswitch, main { padding-left:16px; padding-right:16px; }

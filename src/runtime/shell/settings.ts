@@ -1,5 +1,4 @@
 import type { Source, Scope, DiscoveryOption } from "../ingest/source";
-import { getDomain } from "../dataset/domain";
 import type { CredStore } from "./cred-store";
 import type { ScopeStore } from "./scope-store";
 import { scopeSummary } from "./health";
@@ -84,7 +83,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   // ── Integrations catalog: Connected on top, Available below, filterable ──
   function renderConns() {
     const q = filter.value.trim().toLowerCase();
-    const matches = (s: Source) => !q || s.id.toLowerCase().includes(q) || getDomain(s.domain).label.toLowerCase().includes(q);
+    const matches = (s: Source) => !q || s.id.toLowerCase().includes(q);
     const visible = sources.filter(matches);
     const connected = visible.filter(isConnected);
     const available = visible.filter(s => !isConnected(s));
@@ -92,6 +91,8 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     const row = (s: Source) => {
       const open = expanded === s.id;
       const off = s.status === "upcoming";
+      const meta = off ? "" : scopeSummary(s, getScope(s.id));
+      const info = s.setup ? `<span class="info" title="${esc(s.setup.hint)}" aria-label="How to connect ${esc(s.id)}">i</span>` : "";
       const action = off ? `<span class="cstat">upcoming</span>`
         : isConnected(s) ? `<span class="cstat">connected</span>`
         : `<span class="cstat add">+ Add</span>`;
@@ -99,8 +100,8 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       return `<div class="conn ${open ? "open" : ""}">
         <button class="conn-item ${isConnected(s) ? "ok" : ""}" data-src="${esc(s.id)}" aria-expanded="${open}" ${off ? "disabled" : ""}>
           ${providerIcon(s.id, 16)}<span class="cinfo"><span class="cname">${esc(s.id)}</span>
-          <span class="cmeta">${esc(getDomain(s.domain).label)} · ${esc(scopeSummary(s, getScope(s.id)))}</span></span>
-          ${action}${chev}</button>
+          ${meta ? `<span class="cmeta">${esc(meta)}</span>` : ""}</span>
+          ${info}${action}${chev}</button>
         <div class="conn-body" data-body="${esc(s.id)}" ${open ? "" : "hidden"}></div></div>`;
     };
     const group = (label: string, list: Source[]) => list.length
@@ -117,9 +118,12 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     const body = conns.querySelector<HTMLElement>(`[data-body="${id}"]`);
     if (!body) return;
     const s = byId(id); const off = s.status === "upcoming"; const scope = getScope(id);
+    const setup = s.setup
+      ? `<span class="set-helper">${esc(s.setup.hint)}${s.setup.url ? ` <a class="set-link" href="${esc(s.setup.url)}" target="_blank" rel="noopener noreferrer">Create one ↗</a>` : ""}</span>`
+      : "";
     let html = `<div class="set-group"><label class="set-label">Credential</label>
         <input type="password" data-cred ${off ? "disabled" : ""} value="${getCred(id) ? "••••••••" : ""}" placeholder="token / key — stored in this tab only"/>
-        <span class="set-helper">Session-only, never persisted or embedded.</span></div>`;
+        ${setup}<span class="set-helper">Session-only, never persisted or embedded.</span></div>`;
     for (const f of s.scopeSchema) {
       html += `<div class="set-group"><label class="set-label">${esc(f.label)}</label>`;
       if (f.discoverable) {
@@ -144,7 +148,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     // Re-show cached results without an API call when the form re-opens.
     for (const f of s.scopeSchema) if (f.discoverable && getCred(id)) {
       const cached = discoverCache.get(`${id}:${fingerprint(getCred(id))}`);
-      if (cached) mountChecklist(body.querySelector<HTMLElement>(`[data-list="${f.key}"]`)!, s, f.key, cached);
+      if (cached) mountMultiSelect(body.querySelector<HTMLElement>(`[data-list="${f.key}"]`)!, s, f.key, cached);
     }
   }
 
@@ -153,7 +157,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     const s = byId(id), ok = isConnected(s);
     const item = conns.querySelector<HTMLElement>(`.conn-item[data-src="${id}"]`);
     item?.classList.toggle("ok", ok);
-    const meta = item?.querySelector(".cmeta"); if (meta) meta.textContent = `${getDomain(s.domain).label} · ${scopeSummary(s, getScope(id))}`;
+    const meta = item?.querySelector(".cmeta"); if (meta) meta.textContent = scopeSummary(s, getScope(id));
     const cstat = item?.querySelector(".cstat");
     if (cstat) { cstat.textContent = s.status === "upcoming" ? "upcoming" : ok ? "connected" : "+ Add"; cstat.classList.toggle("add", !ok && s.status !== "upcoming"); }
   }
@@ -170,40 +174,60 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     const btn = conns.querySelector<HTMLElement>(`[data-discover="${key}"]`);
     const f = s.scopeSchema.find(x => x.key === key);
     if (btn && f) btn.textContent = `Re-scan ${f.label.toLowerCase()}`;
-    mountChecklist(list, s, key, options);
+    mountMultiSelect(list, s, key, options);
   }
 
-  // A filterable, multi-select checklist: selected pinned to the top, a live
-  // count, and select-all / clear over the current filter. Filtering hides rows
-  // in place (no rebuild) so typing keeps focus; selection never reorders mid-edit.
-  function mountChecklist(list: HTMLElement, s: Source, key: string, options: DiscoveryOption[]) {
+  // Tag-style multiselect: the chosen targets sit at the top as removable chips
+  // (one-click removal, see-at-a-glance), and the searchable list below holds only
+  // the *unselected* options — so at 100+ repos you only scroll what you can add.
+  function mountMultiSelect(list: HTMLElement, s: Source, key: string, options: DiscoveryOption[]) {
+    const noun = s.scopeSchema.find(f => f.key === key)?.label.toLowerCase() ?? "items";
     const sel = new Set((getScope(s.id)[key] as string[]) ?? []);
-    const ordered = [...options].sort((a, b) => (sel.has(b.value) ? 1 : 0) - (sel.has(a.value) ? 1 : 0));
-    list.innerHTML = `<div class="list-tools">
-        <input class="list-filter" data-lf type="text" placeholder="Filter ${esc(s.scopeSchema.find(f => f.key === key)?.label.toLowerCase() ?? "")}…"/>
-        <button class="btn-ghost mini" data-all>Select all</button>
+    const byVal = new Map(options.map(o => [o.value, o]));
+    const labelOf = (v: string) => { const o = byVal.get(v); return o ? `${o.group ? o.group + "/" : ""}${o.label}` : v; };
+    let q = "";
+
+    list.innerHTML = `<div class="ms-chips" data-chips></div>
+      <div class="list-tools">
+        <input class="list-filter" data-lf type="text" placeholder="Search ${esc(noun)} to add…"/>
+        <button class="btn-ghost mini" data-all>Add all</button>
         <button class="btn-ghost mini" data-none>Clear</button>
-        <span class="list-count" data-count>${sel.size} selected</span></div>
-      <div class="checklist">${ordered.map(o => `<label class="crow"><input type="checkbox" value="${esc(o.value)}" ${sel.has(o.value) ? "checked" : ""}>
-        <span class="repo">${o.group ? `<span class="org">${esc(o.group)}/</span>` : ""}${esc(o.label)}</span></label>`).join("")}</div>`;
-
+        <span class="list-count" data-count></span></div>
+      <div class="ms-options checklist" data-options></div>`;
+    const chips = list.querySelector<HTMLElement>("[data-chips]")!;
+    const opts = list.querySelector<HTMLElement>("[data-options]")!;
     const count = list.querySelector<HTMLElement>("[data-count]")!;
-    const rows = [...list.querySelectorAll<HTMLLabelElement>(".crow")];
-    const commit = () => { draftScope.set(s.id, { ...getScope(s.id), [key]: [...sel] }); count.textContent = `${sel.size} selected`; renderMeta(s.id); };
+    const lf = list.querySelector<HTMLInputElement>("[data-lf]")!;
 
-    list.querySelector<HTMLInputElement>("[data-lf]")!.addEventListener("input", e => {
-      const q = (e.target as HTMLInputElement).value.trim().toLowerCase();
-      rows.forEach(r => { r.hidden = !!q && !r.textContent!.toLowerCase().includes(q); });
-    });
+    const commit = () => { draftScope.set(s.id, { ...getScope(s.id), [key]: [...sel] }); renderMeta(s.id); };
+    const drawCount = () => { count.textContent = `${sel.size} selected`; };
+    const drawChips = () => {
+      chips.innerHTML = sel.size
+        ? [...sel].map(v => `<span class="ms-chip"><span class="repo">${esc(labelOf(v))}</span><button class="x" data-rm="${esc(v)}" aria-label="Remove ${esc(labelOf(v))}">×</button></span>`).join("")
+        : `<span class="muted ms-empty">No ${esc(noun)} selected yet — add from below.</span>`;
+      chips.querySelectorAll<HTMLElement>("[data-rm]").forEach(b =>
+        b.addEventListener("click", () => { sel.delete(b.dataset.rm!); commit(); drawChips(); drawOptions(); drawCount(); }));
+    };
+    const drawOptions = () => {
+      const ql = q.trim().toLowerCase();
+      const avail = options.filter(o => !sel.has(o.value) && (!ql || labelOf(o.value).toLowerCase().includes(ql)));
+      opts.innerHTML = avail.length
+        ? avail.map(o => `<button class="opt-row" data-add="${esc(o.value)}"><span class="repo">${o.group ? `<span class="org">${esc(o.group)}/</span>` : ""}${esc(o.label)}</span><span class="plus">+</span></button>`).join("")
+        : `<div class="muted ms-none">${ql ? "No matches." : "All added."}</div>`;
+      opts.querySelectorAll<HTMLElement>("[data-add]").forEach(b =>
+        b.addEventListener("click", () => { sel.add(b.dataset.add!); commit(); drawChips(); drawOptions(); drawCount(); }));
+    };
+
+    lf.addEventListener("input", () => { q = lf.value; drawOptions(); });   // input is static → keeps focus
     list.querySelector<HTMLElement>("[data-all]")!.addEventListener("click", () => {
-      rows.filter(r => !r.hidden).forEach(r => { const cb = r.querySelector("input")!; cb.checked = true; sel.add(cb.value); }); commit();
+      const ql = q.trim().toLowerCase();
+      options.forEach(o => { if (!ql || labelOf(o.value).toLowerCase().includes(ql)) sel.add(o.value); });
+      commit(); drawChips(); drawOptions(); drawCount();
     });
     list.querySelector<HTMLElement>("[data-none]")!.addEventListener("click", () => {
-      rows.forEach(r => { const cb = r.querySelector("input")!; cb.checked = false; }); sel.clear(); commit();
+      sel.clear(); commit(); drawChips(); drawOptions(); drawCount();
     });
-    list.querySelectorAll<HTMLInputElement>(".crow input").forEach(cb => cb.addEventListener("change", () => {
-      cb.checked ? sel.add(cb.value) : sel.delete(cb.value); commit();
-    }));
+    drawChips(); drawOptions(); drawCount();
   }
 
   function clearData(kind: "creds" | "scope") {

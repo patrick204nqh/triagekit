@@ -39,6 +39,10 @@ async function fetchRepoItems(full: string, token: string) {
 export const githubSource: Source = {
   id: "github", domain: "code-security", kinds: [DEPENDENCY_VULN],
   connectSrc: ["https://api.github.com"], status: "ready",
+  setup: {
+    hint: "Use a fine-grained personal access token with read-only access to Dependabot alerts on the repositories you triage.",
+    url: "https://github.com/settings/personal-access-tokens",
+  },
   scopeSchema: [
     { key: "repos", label: "Repositories", type: "multiselect", discoverable: true, required: true },
   ],
