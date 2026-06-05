@@ -72,6 +72,28 @@ describe("enrichReview", () => {
     expect(patch.reviewers!.map(r => r.login)).toEqual(["marta"]);
   });
 
+  it("rolls up a failing check-run to checks.state 'fail'", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.endsWith("/pulls/7")) return new Response(JSON.stringify({ head: { sha: "abc" }, mergeable: true, requested_reviewers: [] }), { status: 200 });
+      if (url.includes("/commits/abc/check-runs")) return new Response(JSON.stringify({ check_runs: [{ status: "completed", conclusion: "failure" }] }), { status: 200 });
+      throw new Error("unexpected " + url);
+    }));
+    const item = { kind: "pull-request", location: "acme/web", details: { number: 7 } } as unknown as TriageItem<ReviewDetails>;
+    const patch = await enrichReview(item, "t");
+    expect(patch.checks).toEqual({ state: "fail", conflicts: false });
+  });
+
+  it("rolls up an in-progress check-run to checks.state 'pending'", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.endsWith("/pulls/7")) return new Response(JSON.stringify({ head: { sha: "abc" }, mergeable: true, requested_reviewers: [] }), { status: 200 });
+      if (url.includes("/commits/abc/check-runs")) return new Response(JSON.stringify({ check_runs: [{ status: "in_progress", conclusion: null }] }), { status: 200 });
+      throw new Error("unexpected " + url);
+    }));
+    const item = { kind: "pull-request", location: "acme/web", details: { number: 7 } } as unknown as TriageItem<ReviewDetails>;
+    const patch = await enrichReview(item, "t");
+    expect(patch.checks).toEqual({ state: "pending", conflicts: false });
+  });
+
   it("is a no-op for an issue", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

@@ -10,9 +10,9 @@ import { ghPaginate, GH_HEADERS } from "./paginate";
 // a user-configurable list lives with the Policy surface (later slice).
 export const KNOWN_BOTS = ["dependabot", "renovate", "github-actions", "snyk"];
 export function isBotLogin(login: string): boolean {
-  const l = login.toLowerCase();
-  if (l.endsWith("[bot]")) return true;
-  return KNOWN_BOTS.includes(l.replace(/\[bot\]$/, ""));
+  const lower = login.toLowerCase();
+  if (lower.endsWith("[bot]")) return true;        // GitHub App accounts: "dependabot[bot]"
+  return KNOWN_BOTS.includes(lower);               // bare known-bot logins: "renovate"
 }
 function toActor(u: any): Actor {
   const login = u?.login ?? "";
