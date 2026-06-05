@@ -168,6 +168,14 @@ charts for the loaded items — a separate surface so the table stays a clean co
   `script-src` allowing only the inlined script by its `sha256` hash (no
   `unsafe-inline`), and a `connect-src` limited to the configured provider's API origin.
 
+## Design
+
+The visual language — a dark-first operations cockpit (Void Zinc canvas, a single Kelp
+Teal accent, a semantic P0–P3 ramp, monospace numerals, divider-based tables) — is
+documented in [`DESIGN.md`](DESIGN.md). The runtime theme in `src/runtime/theme/` is the
+implementation of that language; JetBrains Mono is self-hosted and inlined (no CDN), and
+the strict CSP allows fonts only via `font-src 'self' data:`.
+
 ## Development
 
 ```bash
