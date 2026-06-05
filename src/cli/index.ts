@@ -7,5 +7,6 @@ program
   .name("triagekit")
   .command("build")
   .option("-c, --config <path>", "config file", "triage.config.yml")
-  .action(async (opts) => { await runBuild(opts.config); });
+  .option("--generic", "build a generic dashboard (enter org/repos at runtime; nothing baked in)")
+  .action(async (opts) => { await runBuild(opts.config, { generic: !!opts.generic }); });
 program.parse();

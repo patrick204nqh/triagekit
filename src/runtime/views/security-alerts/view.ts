@@ -59,9 +59,13 @@ export const securityAlertsView: ViewModule = {
   id: "security-alerts",
   needs: ["alerts"],
   mount(root: HTMLElement, ctx: ViewContext) {
+    if (!ctx.org || !ctx.repos.length) {
+      root.innerHTML = `<p class="muted">Enter an org and at least one repo above, then Load alerts.</p>`;
+      return;
+    }
     const token = ctx.token();
     if (!token) {
-      root.innerHTML = `<p class="muted">Paste your token above, then click Refresh.</p>`;
+      root.innerHTML = `<p class="muted">Paste your token above, then click Load alerts.</p>`;
       return;
     }
     root.innerHTML = `<p class="muted">Loading alerts…</p>`;

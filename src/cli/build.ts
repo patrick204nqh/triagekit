@@ -3,14 +3,27 @@ import { viteSingleFile } from "vite-plugin-singlefile";
 import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { loadConfig } from "../config/load.js";
+import type { TriageConfigT } from "../config/schema.js";
 import { configPlugin } from "../vite/config-plugin.js";
 import { buildCspMeta, PROVIDER_CONNECT_SRC } from "../vite/csp-plugin.js";
 
-export async function runBuild(configPath: string) {
-  const config = loadConfig(configPath);
+// Generic build: nothing org-specific baked in. The user supplies org + repos + token
+// at runtime, so the artifact is safe to share/commit publicly.
+const GENERIC_CONFIG: TriageConfigT = {
+  org: "",
+  provider: "github",
+  repos: [],
+  views: ["security-alerts"],
+  branding: { title: "Triage" },
+};
+
+export interface BuildOptions { generic?: boolean; }
+
+export async function runBuild(configPath: string, opts: BuildOptions = {}) {
+  const config = opts.generic ? GENERIC_CONFIG : loadConfig(configPath);
   const outDir = resolve(process.cwd(), "dist");
   // Resolve the optional user logic-hooks module relative to the config file.
-  const hookPath = config.logicHooks
+  const hookPath = !opts.generic && config.logicHooks
     ? resolve(dirname(resolve(configPath)), config.logicHooks)
     : undefined;
   await viteBuild({
@@ -30,9 +43,17 @@ export async function runBuild(configPath: string) {
   const withCsp = buildCspMeta(readFileSync(outFile, "utf8"), connectSrc);
   writeFileSync(outFile, withCsp);
 
-  console.warn(
-    `\n⚠  dist/triage.html contains your org ("${config.org}") and repo names.\n` +
-    `   Safe to share within your team; do NOT commit it to a public repo.\n` +
-    `   No token is embedded — each user pastes their own at runtime.\n`,
-  );
+  if (opts.generic) {
+    console.warn(
+      `\n✓ dist/triage.html is a generic dashboard — no org/repos baked in.\n` +
+      `   Safe to share or commit publicly. Each user enters org, repos, and their\n` +
+      `   own token at runtime; no credential is ever embedded.\n`,
+    );
+  } else {
+    console.warn(
+      `\n⚠  dist/triage.html contains your org ("${config.org}") and repo names.\n` +
+      `   Safe to share within your team; do NOT commit it to a public repo.\n` +
+      `   No token is embedded — each user pastes their own at runtime.\n`,
+    );
+  }
 }

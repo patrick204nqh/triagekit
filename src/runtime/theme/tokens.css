@@ -18,7 +18,9 @@ body {
 header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
 main { padding: 0 24px 48px; }
 .muted { color: var(--muted); }
-input[type="password"] { background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; min-width: 280px; }
+input[type="password"], input[type="text"] { background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; }
+input[type="password"] { min-width: 280px; }
+input[type="text"] { min-width: 180px; }
 button { background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; font-weight: 600; cursor: pointer; }
 .viewswitch { display: inline-flex; gap: 8px; padding: 16px 24px 0; }
 .error { color: var(--p0); }
