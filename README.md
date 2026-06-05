@@ -1,6 +1,11 @@
-# triagekit
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo.svg" />
+    <img alt="triagekit" src="assets/logo-light.svg" width="300" />
+  </picture>
+</p>
 
-> Compile a config into a shareable, backend-free repo-triage dashboard.
+<p align="center"><em>Compile a config into a shareable, backend-free repo-triage dashboard.</em></p>
 
 `triagekit` builds a single, self-contained HTML triage dashboard that runs entirely in
 the browser — no backend, no build server, no third-party scripts. You paste your own

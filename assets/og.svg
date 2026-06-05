@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" fill="none" role="img" aria-label="triagekit social card">
+  <rect width="1280" height="640" fill="#0A0A0B"/>
+  <rect x="0.5" y="0.5" width="1279" height="639" fill="none" stroke="#1C1C21"/>
+  <!-- funnel mark -->
+  <g transform="translate(96,150) scale(5.4)" stroke="#ECECEE" stroke-width="1.5" stroke-linejoin="round">
+    <path d="M3.5 5.5H20.5L13 14.5V18H11V14.5Z"/>
+  </g>
+  <circle cx="200.8" cy="262.3" r="9" fill="#2E9E96"/>
+  <!-- wordmark -->
+  <text x="96" y="380" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="104" font-weight="700" letter-spacing="-3">
+    <tspan fill="#ECECEE">triage</tspan><tspan fill="#2E9E96">·</tspan><tspan fill="#ECECEE">kit</tspan>
+  </text>
+  <!-- tagline -->
+  <text x="98" y="452" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="34" font-weight="400" fill="#8A8A92">Compile a config into a shareable, backend-free triage dashboard.</text>
+  <!-- footer chips -->
+  <text x="98" y="556" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace" font-size="24" font-weight="500" fill="#6E7681">single-file HTML  ·  strict CSP  ·  no backend  ·  no CDN</text>
+</svg>

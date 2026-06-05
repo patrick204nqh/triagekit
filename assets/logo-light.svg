@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="64" viewBox="0 0 280 64" fill="none" role="img" aria-label="triagekit">
+  <g transform="translate(10,13) scale(1.6)" stroke="#1A1A1E" stroke-width="1.7" stroke-linejoin="round">
+    <path d="M3.5 5.5H20.5L13 14.5V18H11V14.5Z"/>
+  </g>
+  <circle cx="29.2" cy="46.3" r="2.7" fill="#1F7E77"/>
+  <text x="60" y="42" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="30" font-weight="700" letter-spacing="-0.6">
+    <tspan fill="#1A1A1E">triage</tspan><tspan fill="#1F7E77">·</tspan><tspan fill="#1A1A1E">kit</tspan>
+  </text>
+</svg>

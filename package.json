@@ -7,7 +7,7 @@
   },
   "scripts": {
     "build:cli": "tsc -p tsconfig.json",
-    "build:pages": "npm run build:cli && node dist-cli/cli/index.js build --generic && mkdir -p docs && cp dist/triage.html docs/index.html",
+    "build:pages": "npm run build:cli && node dist-cli/cli/index.js build --generic && mkdir -p docs && cp dist/triage.html docs/index.html && cp assets/og.png docs/og.png",
     "test": "vitest run",
     "lint:anon": "node scripts/anon-lint.mjs"
   },
