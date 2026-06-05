@@ -156,6 +156,7 @@ export function mountReviewCard(host: HTMLElement, item: ReviewItem, opts: Mount
     const t = e.target as HTMLElement;
     if (t.closest("[data-cancel]")) { st.armed = null; render(); return; }
     if (t.closest("[data-confirm]")) {
+      if (!st.armed) return;
       const sel = host.querySelector<HTMLSelectElement>("[data-method]");
       if (sel) st.method = sel.value as MergeMethod;
       const input = host.querySelector<HTMLInputElement | HTMLTextAreaElement>("[data-input]");
