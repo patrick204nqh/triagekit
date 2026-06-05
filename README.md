@@ -74,7 +74,7 @@ open dist/triage.html
 
 ```yaml
 org: acme-corp
-provider: github
+source: github
 repos:
   - web-app
   - api-gateway
@@ -109,15 +109,17 @@ Neither build embeds a token — each user always pastes their own.
 ## Customizing the scoring
 
 The default scoring model is transparent and lives in
-`src/runtime/views/security-alerts/score.ts`. To override it without forking the engine,
+`src/runtime/scoring/dependency-vuln.ts`. To override it without forking the engine,
 point `logicHooks` at a module that exports a `score` function:
 
 ```ts
 // triage.hooks.ts  (gitignored)
-import type { Alert } from "./src/runtime/providers/registry";
-export const score = (a: Alert): number => {
+import type { TriageItem } from "./src/runtime/dataset/item";
+import type { DependencyVulnDetails } from "./src/runtime/dataset/kinds/dependency-vuln";
+export const score = (item: TriageItem): number => {
+  const d = item.details as DependencyVulnDetails;
   // your weighting…
-  return a.severity === "critical" ? 1000 : 0;
+  return d.severity === "critical" ? 1000 : item.signal;
 };
 ```
 

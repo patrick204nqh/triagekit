@@ -1,6 +1,6 @@
 # Copy to triage.config.yml (gitignored) and edit with your real values.
 org: acme-corp
-provider: github
+source: github
 repos:
   - web-app
   - api-gateway

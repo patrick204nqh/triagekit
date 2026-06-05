@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest";
-import { ghPaginate, GH_HEADERS } from "../../../src/runtime/providers/github/paginate";
+import { ghPaginate, GH_HEADERS } from "../../../src/runtime/ingest/github/paginate";
 
 describe("ghPaginate", () => {
   it("follows Link rel=next and concatenates pages", async () => {
