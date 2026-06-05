@@ -29,3 +29,12 @@ jobs:
             exit 1
           fi
           echo "✓ dist/triage.html is self-contained"
+      - name: Pages artifact in sync
+        run: |
+          npm run build:pages
+          if ! git diff --quiet -- docs/index.html; then
+            echo "✗ docs/index.html is stale — run 'npm run build:pages' and commit the result"
+            git diff -- docs/index.html | head -40
+            exit 1
+          fi
+          echo "✓ docs/index.html matches a fresh generic build"

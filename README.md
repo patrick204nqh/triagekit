@@ -49,6 +49,13 @@ In the page, enter your **org**, your **repos** (comma-separated), and a **fine-
 personal access token** with read access to Dependabot alerts, then click **Load
 alerts**. Org/repos persist locally for convenience; the token stays in this tab only.
 
+### Hosted version
+
+A prebuilt generic dashboard is committed at [`docs/index.html`](docs/index.html) and
+can be served via GitHub Pages (Settings → Pages → Source: `main` / `/docs`). It is
+regenerated with `npm run build:pages`, and CI fails if the committed copy drifts from a
+fresh build.
+
 ## Quickstart — compiled (config-baked)
 
 ```bash
