@@ -4,16 +4,15 @@ import { registerSurface, type SurfaceCtx } from "../../layout/surface";
 import { mountReviewCard } from "../../layout/review-card";
 import type { ReviewItem } from "../../dataset/kinds/review";
 import { makeGithubActions } from "../../ingest/github/actions";
-import { enrichReview, githubReviewSource } from "../../ingest/github/review-source";
+import { enrichReview } from "../../ingest/github/review-source";   // also pins the module's registerSource() side-effect
 import "../../scoring/review";          // side-effect: register PR + issue scorers
-
-// keep the registered source referenced so tree-shaking never drops the registration.
-void githubReviewSource;
 
 type Facet = "all" | "pull-request" | "issue" | "bot" | "human";
 type Sort = "priority" | "recent";
 
 export function renderReviewQueue(root: HTMLElement, rows: ScoredItem[], errors: TriageError[], ctx: SurfaceCtx): void {
+  // Safe: this surface is only mounted for the `review` artifact, whose source emits
+  // ReviewDetails items, and the shell has already scored them (score + tier present).
   const items = rows as unknown as ReviewItem[];
   const repos = [...new Set(items.map(i => i.location))].sort();
   let facet: Facet = "all";
