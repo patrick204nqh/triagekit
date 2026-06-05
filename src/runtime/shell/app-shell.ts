@@ -5,13 +5,14 @@ import { getView } from "../views/registry";
 import { getDomain } from "../dataset/domain";
 import { resolveScorer, type Scorer } from "../scoring/registry";
 import { tierOf } from "../scoring/tier";
-import { renderTriageTable } from "../layout/triage-table";
+import { renderTriageTable, type ScoredItem } from "../layout/triage-table";
 import { renderUpcoming } from "../layout/upcoming";
+import { renderInsights } from "../layout/insights";
 import { CredStore } from "./cred-store";
 import { ScopeStore } from "./scope-store";
 import { healthOf, scopeSummary } from "./health";
 import { mountSettings } from "./settings";
-import "../views/security-alerts/view";   // register view + scorer + ready source
+import "../views/security-alerts/view";   // register view + scorer + ready source + charts
 import "../ingest/upcoming";              // register roadmap sources
 
 export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
@@ -49,28 +50,31 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
 
   const root = document.getElementById("root")!;
   let current = config.views[0];
+  let lastRows: ScoredItem[] = [];
 
   const render = () => {
     const up = upcoming.find(s => s.id === current);
     if (up) { renderUpcoming(root, up); return; }
-    const view = getView(current);
+    const showInsights = current === "insights";
+    if (showInsights && lastRows.length) { renderInsights(root, lastRows, source.kinds); return; }
     const scope = scopes.get(source.id);
     const token = creds.get(source.id);
     if (!Object.keys(scope).length) { root.innerHTML = `<p class="muted">Open Settings (⚙) to choose your scope.</p>`; return; }
     if (!token) { root.innerHTML = `<p class="muted">Open Settings (⚙) to connect a token.</p>`; return; }
     root.innerHTML = `<p class="muted">Loading…</p>`;
-    const scorer = resolveScorer(view.kind, scoreOverride);
     source.fetch(scope, token)
       .then(({ items, errors }) => {
-        const rows = items.filter(it => it.kind === view.kind)
-          .map(it => { const score = scorer(it); return { ...it, score, tier: tierOf(score) }; })
+        const rows: ScoredItem[] = items
+          .map(it => { const score = resolveScorer(it.kind, scoreOverride)(it); return { ...it, score, tier: tierOf(score) }; })
           .sort((a, b) => b.score - a.score);
-        renderTriageTable(root, rows, errors);
+        lastRows = rows;
+        if (showInsights) renderInsights(root, rows, source.kinds);
+        else renderTriageTable(root, rows.filter(r => r.kind === getView(current).kind), errors);
       })
       .catch(err => { root.innerHTML = `<p class="error">Failed to load: ${err?.message ?? err}</p>`; });
   };
 
-  // View switch grouped by domain: ready views first, then upcoming sources under their domain.
+  // View switch: ready views first, then upcoming sources under their domain.
   const nav = document.getElementById("viewswitch")!;
   nav.innerHTML = ""; nav.className = "viewswitch";
   const addBtn = (id: string, label: string) => {
