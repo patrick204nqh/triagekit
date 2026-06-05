@@ -33,6 +33,7 @@ export function buildCspMeta(html: string, connectSrc: string[]): string {
     styleSrc,
     connect,
     "img-src 'self' data:",
+    "font-src 'self' data:",
     "base-uri 'none'",
   ].join("; ");
   const meta = `<meta http-equiv="Content-Security-Policy" content="${policy}">`;
