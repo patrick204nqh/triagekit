@@ -65,11 +65,11 @@ input::placeholder { color:var(--muted); } select { appearance:none; cursor:poin
 
 /* ── View switch (#viewswitch nav — plain buttons styled as tabs) ──── */
 .viewswitch { display:flex; gap:24px; padding:10px 32px 0; border-bottom:1px solid var(--line); min-height:44px; flex-wrap:wrap; }
-.viewswitch button { position:relative; background:none; border:none; color:var(--muted); padding:8px 2px 14px; font:500 14px var(--sans); display:flex; align-items:center; gap:8px; transition:color .15s; }
-.viewswitch button:hover { color:var(--fg); }
-.viewswitch button.active { color:var(--fg); }
-.viewswitch button.active::after { content:""; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--accent); border-radius:2px; }
-.viewswitch button:focus-visible { outline:none; color:var(--fg); }
+.viewswitch > button { position:relative; background:none; border:none; color:var(--muted); padding:8px 2px 14px; font:500 14px var(--sans); display:flex; align-items:center; gap:8px; transition:color .15s; }
+.viewswitch > button:hover { color:var(--fg); }
+.viewswitch > button.active { color:var(--fg); }
+.viewswitch > button.active::after { content:""; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--accent); border-radius:2px; }
+.viewswitch > button:focus-visible { outline:none; color:var(--fg); }
 .chip { font:500 11px var(--mono); color:var(--muted); background:var(--slate); border:1px solid var(--line); border-radius:999px; padding:2px 8px; letter-spacing:.02em; }
 .prov-icon { flex:none; vertical-align:middle; }
 .prov-mono text { font-family:var(--mono); font-weight:600; }
