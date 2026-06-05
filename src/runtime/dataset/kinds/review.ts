@@ -35,8 +35,10 @@ export interface ReviewActions {
   close(item: ReviewItem): Promise<void>;
 }
 
+// "open" is rendered as a plain <a> link and is never dispatched through ReviewActions (no open() method by design).
 export type ActionId = "merge" | "comment" | "label" | "assign" | "close" | "open";
 
+// PRs intentionally omit "close" and "assign" from quick actions; those exist on ReviewActions but aren't surfaced for PRs by design.
 export function actionsFor(kind: ReviewKind): ActionId[] {
   return kind === PULL_REQUEST
     ? ["merge", "comment", "label", "open"]
