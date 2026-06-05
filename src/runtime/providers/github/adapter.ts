@@ -1,4 +1,4 @@
-import { type Alert, type ProviderAdapter, registerProvider } from "../registry";
+import { type Alert, type AlertError, type ProviderAdapter, registerProvider } from "../registry";
 import { ghPaginate, GH_HEADERS } from "./paginate";
 
 type Severity = Alert["severity"];
@@ -36,8 +36,10 @@ async function fetchRepoAlerts(org: string, repo: string, token: string): Promis
     }
   });
   if (!res.ok) {
-    let msg = `${repo}: ${res.status}`;
-    try { const j = await res.json(); msg += ` ${j.message || ""}`; } catch { /* ignore */ }
+    // The repo name is attached by the caller (see alerts()), so the message
+    // here is repo-agnostic: just the status and GitHub's own explanation.
+    let msg = `${res.status}`;
+    try { const j = await res.json(); if (j.message) msg += ` ${j.message}`; } catch { /* ignore */ }
     if (res.status === 403 && res.headers.get("x-github-sso")) msg += " — token not SSO-authorized for org";
     throw new Error(msg);
   }
@@ -48,8 +50,17 @@ export const githubAdapter: ProviderAdapter = {
   id: "github",
   connectSrc: ["https://api.github.com"],
   async alerts({ org, repos, token }) {
-    const results = await Promise.all(repos.map(r => fetchRepoAlerts(org, r, token)));
-    return results.flat();
+    // allSettled, not all: one repo with Dependabot disabled (a common, legitimate
+    // state) must not throw away alerts from every other repo. Failures are
+    // collected and surfaced non-fatally by the view.
+    const settled = await Promise.allSettled(repos.map(r => fetchRepoAlerts(org, r, token)));
+    const alerts: Alert[] = [];
+    const errors: AlertError[] = [];
+    settled.forEach((res, i) => {
+      if (res.status === "fulfilled") alerts.push(...res.value);
+      else errors.push({ repo: repos[i], message: String(res.reason?.message ?? res.reason) });
+    });
+    return { alerts, errors };
   },
 };
 

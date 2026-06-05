@@ -1,4 +1,4 @@
-import { type Alert, getProvider } from "../../providers/registry";
+import { type Alert, type AlertError, getProvider } from "../../providers/registry";
 import { registerView, type ViewContext, type ViewModule } from "../registry";
 import { tierOf } from "./score";
 // Ensure the GitHub adapter registers itself (side-effect import).
@@ -15,6 +15,13 @@ function fixVersion(a: Alert): string {
 }
 
 interface Scored extends Alert { score: number; tier: ReturnType<typeof tierOf>; }
+
+function warningsHtml(errors: AlertError[]): string {
+  if (!errors.length) return "";
+  const items = errors.map((e) => `<li>${esc(e.repo)}: ${esc(e.message)}</li>`).join("");
+  const noun = errors.length === 1 ? "repo" : "repos";
+  return `<div class="warnings"><strong>${errors.length} ${noun} couldn't be loaded</strong><ul>${items}</ul></div>`;
+}
 
 function statsHtml(rows: Scored[]): string {
   const total = rows.length;
@@ -70,15 +77,19 @@ export const securityAlertsView: ViewModule = {
     }
     root.innerHTML = `<p class="muted">Loading alerts…</p>`;
     getProvider("github").alerts({ org: ctx.org, repos: ctx.repos, token })
-      .then((alerts) => {
+      .then(({ alerts, errors }) => {
         const rows: Scored[] = alerts
           .map((a) => { const score = ctx.score(a); return { ...a, score, tier: tierOf(score) }; })
           .sort((x, y) => y.score - x.score);
+        const warnings = warningsHtml(errors);
         if (!rows.length) {
-          root.innerHTML = `<p class="muted">No open alerts for the configured repos. 🎉</p>`;
+          const note = errors.length
+            ? `<p class="muted">No alerts loaded from the repos above.</p>`
+            : `<p class="muted">No open alerts for the configured repos. 🎉</p>`;
+          root.innerHTML = warnings + note;
           return;
         }
-        root.innerHTML = statsHtml(rows) + tableHtml(rows) + `<aside class="drawer" hidden></aside>`;
+        root.innerHTML = warnings + statsHtml(rows) + tableHtml(rows) + `<aside class="drawer" hidden></aside>`;
         const drawer = root.querySelector<HTMLElement>(".drawer")!;
         root.querySelectorAll<HTMLElement>(".alert-row").forEach((tr) => {
           tr.addEventListener("click", () => {

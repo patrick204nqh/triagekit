@@ -4,10 +4,18 @@ export interface Alert {
   createdAt: string; ghsaUrl: string; raw: unknown;
 }
 
+// A single repo that failed to load, surfaced non-fatally alongside the alerts
+// that did load (e.g. Dependabot disabled, repo not found, token not scoped).
+export interface AlertError { repo: string; message: string; }
+
+// Partial result: alerts from the repos that succeeded, plus per-repo failures.
+// One repo erroring must never blank the whole dashboard.
+export interface AlertResult { alerts: Alert[]; errors: AlertError[]; }
+
 export interface ProviderAdapter {
   id: string;
   connectSrc: string[];            // origins the CSP must allow, e.g. ["https://api.github.com"]
-  alerts(opts: { org: string; repos: string[]; token: string }): Promise<Alert[]>;
+  alerts(opts: { org: string; repos: string[]; token: string }): Promise<AlertResult>;
 }
 
 const adapters = new Map<string, ProviderAdapter>();

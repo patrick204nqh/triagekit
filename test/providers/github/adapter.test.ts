@@ -12,7 +12,26 @@ describe("githubAdapter.alerts", () => {
       html_url: "https://example/ghsa",
     }];
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(raw), { status: 200 })));
-    const out = await githubAdapter.alerts({ org: "acme-corp", repos: ["web-app"], token: "t" });
-    expect(out[0]).toMatchObject({ repo: "web-app", package: "axios", severity: "high", cvss: 7.5, fixAvailable: true, scope: "runtime" });
+    const { alerts, errors } = await githubAdapter.alerts({ org: "acme-corp", repos: ["web-app"], token: "t" });
+    expect(errors).toEqual([]);
+    expect(alerts[0]).toMatchObject({ repo: "web-app", package: "axios", severity: "high", cvss: 7.5, fixAvailable: true, scope: "runtime" });
+  });
+
+  it("surfaces a failed repo non-fatally while still returning alerts from healthy repos", async () => {
+    const ok = [{
+      security_advisory: { severity: "low", cvss: { score: 2.0 } },
+      dependency: { scope: "runtime", package: { name: "lodash" } },
+    }];
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes("/disabled/")) {
+        return new Response(JSON.stringify({ message: "Dependabot alerts are disabled for this repository." }), { status: 403 });
+      }
+      return new Response(JSON.stringify(ok), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { alerts, errors } = await githubAdapter.alerts({ org: "acme-corp", repos: ["healthy", "disabled"], token: "t" });
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toMatchObject({ repo: "healthy", package: "lodash" });
+    expect(errors).toEqual([{ repo: "disabled", message: "403 Dependabot alerts are disabled for this repository." }]);
   });
 });
