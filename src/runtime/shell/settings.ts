@@ -13,7 +13,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   const { sources, creds, scopes, onChange } = opts;
   host.innerHTML = `<div class="scrim" data-scrim></div>
     <aside class="sheet panel" data-panel aria-hidden="true">
-      <div class="panel-head"><h3>Settings</h3><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+      <div class="panel-head"><h3>Settings</h3><button class="icon-btn" data-close aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
       <div class="panel-body"><div class="set-group"><label class="set-label">Connections</label>
         <div class="conn-list" data-conns></div></div><div data-form></div></div>
     </aside>`;

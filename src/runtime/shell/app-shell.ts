@@ -27,7 +27,8 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
   // Reflection-only command bar — all config lives in the Settings slide-over.
   const scopePill = document.createElement("button"); scopePill.className = "scope-pill";
   const health = document.createElement("button"); health.className = "health";
-  const gear = document.createElement("button"); gear.className = "icon-btn"; gear.textContent = "⚙";
+  const gear = document.createElement("button"); gear.className = "icon-btn"; gear.setAttribute("aria-label", "Settings"); gear.title = "Settings";
+  gear.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
   const load = document.createElement("button"); load.className = "btn-primary"; load.textContent = "Load";
   bar.append(scopePill, health, load, gear);
 
@@ -59,8 +60,8 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
     if (showInsights && lastRows.length) { renderInsights(root, lastRows, source.kinds); return; }
     const scope = scopes.get(source.id);
     const token = creds.get(source.id);
-    if (!Object.keys(scope).length) { root.innerHTML = `<p class="muted">Open Settings (⚙) to choose your scope.</p>`; return; }
-    if (!token) { root.innerHTML = `<p class="muted">Open Settings (⚙) to connect a token.</p>`; return; }
+    if (!Object.keys(scope).length) { root.innerHTML = `<p class="muted">Open Settings to choose your scope.</p>`; return; }
+    if (!token) { root.innerHTML = `<p class="muted">Open Settings to connect a token.</p>`; return; }
     renderTableSkeleton(root);
     source.fetch(scope, token)
       .then(({ items, errors }) => {
