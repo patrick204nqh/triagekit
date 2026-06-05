@@ -4,7 +4,7 @@ import { PrefsStore } from "./prefs";
 import { isCompiledConfig } from "./mode";
 import { getSource, listSources, type Scope } from "../ingest/source";
 import { getView } from "../views/registry";
-import { getDomain, type Domain } from "../dataset/domain";
+import { getDomain } from "../dataset/domain";
 import { resolveScorer, type Scorer } from "../scoring/registry";
 import { tierOf } from "../scoring/tier";
 import { renderTriageTable, type ScoredItem } from "../layout/triage-table";
