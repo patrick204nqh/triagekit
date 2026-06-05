@@ -1,7 +1,7 @@
 import { esc } from "./triage-table";
 import {
   type ReviewItem, type ActionId, type MergeMethod, type ReviewActions,
-  actionsFor, mergeable, reasonNotMergeable,
+  actionsFor, mergeable, reasonNotMergeable, PULL_REQUEST,
 } from "../dataset/kinds/review";
 import {
   type Sla, tierBadgeHtml, slaTagHtml, actorChipHtml, labelChipHtml,
@@ -31,6 +31,15 @@ function snippet(body: string): string {
 
 function selfHref(item: ReviewItem): string {
   return item.details.permalinks.find(p => p.kind === "pr" || p.kind === "issue")?.href ?? item.url;
+}
+
+// A PR whose checks are unfetched (lazy) shows a neutral "open to load" affordance;
+// an issue (which never has CI) shows nothing. A fetched CheckStatus renders normally.
+function checksHtml(item: ReviewItem): string {
+  if (item.kind === PULL_REQUEST && item.details.checks === null) {
+    return `<span class="check ci-open">checks: open to load</span>`;
+  }
+  return checkIndicatorHtml(item.details.checks);
 }
 
 function actionBarHtml(item: ReviewItem, st: CardState): string {
@@ -89,7 +98,7 @@ export function reviewCardHtml(
     return `<div class="review-card rc-collapsed" data-kind="${esc(item.kind)}" data-state="${d.state}">` +
       `<div class="rc-head">${tierBadgeHtml(item.tier)}` +
       `<span class="rc-title">${esc(item.title)}</span><span class="rc-num">#${d.number}</span>` +
-      `${checkIndicatorHtml(d.checks)}<span class="rc-comments">\u{1F4AC} ${d.comments}</span>${avatars}` +
+      `${checksHtml(item)}<span class="rc-comments">\u{1F4AC} ${d.comments}</span>${avatars}` +
       `<button class="rc-expand" data-action="expand">▾</button></div></div>`;
   }
 
@@ -104,7 +113,7 @@ export function reviewCardHtml(
     `<div class="rc-meta">${actorChipHtml(d.author, "author")}` +
     `${d.assignees.map(a => actorChipHtml(a, "assignee")).join("")}` +
     `${d.reviewers.map(r => actorChipHtml(r, "review")).join("")}` +
-    `${checkIndicatorHtml(d.checks)}` +
+    `${checksHtml(item)}` +
     `<span class="rc-comments">\u{1F4AC} ${d.comments}</span>` +
     `${d.labels.map(labelChipHtml).join("")}</div>`;
 
@@ -116,6 +125,7 @@ export function reviewCardHtml(
 export interface MountOpts extends ReviewCardOpts {
   actions?: ReviewActions;
   onChange?: (item: ReviewItem) => void;
+  onExpand?: (item: ReviewItem) => Promise<Partial<ReviewItem["details"]>> | void;
 }
 
 export function mountReviewCard(host: HTMLElement, item: ReviewItem, opts: MountOpts = {}): void {
@@ -126,6 +136,14 @@ export function mountReviewCard(host: HTMLElement, item: ReviewItem, opts: Mount
   };
   let collapsed = opts.collapsed ?? false;
   const { actions } = opts;
+  let enriched = false;
+  async function expand(): Promise<void> {
+    if (enriched || !opts.onExpand) return;
+    enriched = true;
+    const patchData = await opts.onExpand(cur);
+    if (patchData) patch(patchData);
+    render();
+  }
 
   function render(): void {
     host.innerHTML = reviewCardHtml(cur, { ...opts, collapsed }, st);
@@ -166,7 +184,7 @@ export function mountReviewCard(host: HTMLElement, item: ReviewItem, opts: Mount
     const act = t.closest("[data-action]")?.getAttribute("data-action");
     if (!act) return;
     if (act === "open") return;                       // plain anchor
-    if (act === "expand") { collapsed = false; render(); return; }
+    if (act === "expand") { collapsed = false; render(); void expand(); return; }
     st.armed = act as ActionId; st.error = ""; render();
   });
 

@@ -105,4 +105,18 @@ describe("mountReviewCard", () => {
     expect(host.querySelector(".rc-collapsed")).toBeNull();
     expect(host.querySelector(".rc-actions")).toBeTruthy();
   });
+
+  it("calls onExpand once when a collapsed card expands and patches the result", async () => {
+    const host = document.createElement("div"); document.body.appendChild(host);
+    let calls = 0;
+    mountReviewCard(host, pr({ checks: null }), {
+      collapsed: true,
+      onExpand: async () => { calls++; return { checks: { state: "pass", conflicts: false } }; },
+    });
+    expect(host.querySelector(".rc-collapsed")).toBeTruthy();
+    host.querySelector<HTMLElement>('[data-action="expand"]')!.click();
+    await flush();
+    expect(calls).toBe(1);
+    expect(host.innerHTML).toContain("✓ checks");      // patched checks now render
+  });
 });
