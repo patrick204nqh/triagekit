@@ -15,6 +15,8 @@ export interface DiscoveryOption { value: string; label: string; group?: string;
 
 export interface Source {
   id: string;
+  provider?: string;   // credential/scope are keyed by this; defaults to `id`. Lets two
+                       // sources (e.g. github alerts + github reviews) share one connection.
   domain: DomainId;
   kinds: Kind[];
   connectSrc: string[];
@@ -31,6 +33,7 @@ export function getSource(id: string): Source {
   const s = sources.get(id); if (!s) throw new Error(`unknown source: ${id}`); return s;
 }
 export function listSources(): Source[] { return [...sources.values()]; }
+export function providerOf(s: Source): string { return s.provider ?? s.id; }
 export function allConnectSrc(): string[] {
   return [...new Set(listSources().flatMap(s => s.connectSrc))];
 }
