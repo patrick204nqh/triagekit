@@ -1,3 +1,5 @@
+.env
+.envrc
 node_modules/
 dist/
 dist-cli/
@@ -5,3 +7,4 @@ triage.config.yml
 triage.hooks.ts
 *.local.yml
 scripts/anon-denylist.txt
+.claude/
