@@ -43,8 +43,8 @@ export async function runBuild(configPath: string, opts: BuildOptions = {}) {
 
   if (opts.generic) {
     console.warn(
-      `\n✓ dist/triage.html is a generic dashboard — no org/repos baked in.\n` +
-      `   Safe to share or commit publicly. Each user enters org, repos, and their\n` +
+      `\n✓ dist/triage.html is a generic dashboard — no scope baked in.\n` +
+      `   Safe to share or commit publicly. Each user enters their scope and their\n` +
       `   own token at runtime; no credential is ever embedded.\n`,
     );
   } else {

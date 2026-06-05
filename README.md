@@ -68,7 +68,7 @@ $EDITOR triage.config.yml        # set your scope (repos) + branding
 # 2. Build the single-file dashboard
 npx triagekit build              # writes dist/triage.html
 
-# 3. Open it, paste a token, and click Refresh
+# 3. Open it, connect a token in Settings, and click Load
 open dist/triage.html
 ```
 
