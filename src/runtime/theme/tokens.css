@@ -37,6 +37,14 @@ svg { display:block; }
 .brand { display:inline-flex; align-items:center; gap:9px; font-weight:700; font-size:clamp(1.25rem,1rem + 1vw,1.625rem); letter-spacing:-0.02em; }
 .brand-mark { flex:none; }
 .brand .dot { color:var(--accent); }
+
+/* Merged status chip: provider mark + id + state, leading dot carries health. */
+.status-chip { display:inline-flex; align-items:center; gap:7px; background:var(--slate); border:1px solid var(--line); color:var(--fg); border-radius:999px; padding:6px 12px 6px 11px; font:500 13px var(--sans); transition:border-color .15s; }
+.status-chip:hover { border-color:var(--line-strong); }
+.status-chip::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--inert); flex:none; }
+.status-chip.ok::before { background:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent); }
+.status-chip.warn::before { background:var(--p2); }
+.status-chip .sep { color:var(--muted); }
 .spacer { flex:1 1 auto; }
 .scope-pill .caret { display:inline-flex; color:var(--muted); }
 .scope-pill { display:inline-flex; align-items:center; gap:8px; background:var(--slate); border:1px solid var(--line); color:var(--fg); border-radius:999px; padding:7px 12px; font:500 13px var(--sans); transition:border-color .15s, background .15s; }
@@ -74,6 +82,16 @@ input::placeholder { color:var(--muted); } select { appearance:none; cursor:poin
 .chip { font:500 11px var(--mono); color:var(--muted); background:var(--slate); border:1px solid var(--line); border-radius:999px; padding:2px 8px; letter-spacing:.02em; }
 .prov-icon { flex:none; vertical-align:middle; }
 .prov-mono text { font-family:var(--mono); font-weight:600; }
+
+/* Provider facet — filter the queue by source (lives at the right of the tab row) */
+.viewswitch { align-items:center; }
+.facet { display:flex; align-items:center; gap:6px; margin-left:auto; margin-bottom:8px; }
+.prov-chip { display:inline-flex; align-items:center; gap:6px; background:none; border:1px solid var(--line); color:var(--muted); border-radius:999px; padding:4px 10px; font:500 12px var(--sans); transition:color .15s, border-color .15s, background .15s; }
+.prov-chip:hover { color:var(--fg); }
+.prov-chip.on { color:var(--fg); border-color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
+.prov-chip.soon { opacity:.55; cursor:default; }
+.prov-roadmap { list-style:none; padding:0; display:flex; flex-direction:column; gap:9px; }
+.prov-roadmap li { display:flex; align-items:center; gap:9px; font-family:var(--mono); font-size:13px; color:var(--fg); }
 
 main { padding:24px 32px 64px; }
 

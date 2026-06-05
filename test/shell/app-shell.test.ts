@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mountShell } from "../../src/runtime/shell/app-shell";
 import type { TriageConfigT } from "../../src/config/schema";
 
@@ -11,38 +11,43 @@ const config: TriageConfigT = {
 };
 
 function scaffold() {
+  vi.stubGlobal("matchMedia", (q: string) => ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} }) as any);
   document.body.innerHTML = `<header id="appbar"></header>
     <nav id="domainRail" class="domains"></nav>
     <nav id="viewswitch" class="viewswitch"></nav>
     <main id="root"></main><div id="settings-host"></div>`;
 }
 
-describe("mountShell navigation", () => {
+describe("mountShell artifact navigation", () => {
   beforeEach(() => { sessionStorage.clear(); localStorage.clear(); scaffold(); });
 
-  it("renders the brand and a domain rail with the live domain active", () => {
+  it("renders the brand and an artifact rail with the live artifact active", () => {
     mountShell(config);
-    expect(document.querySelector("#appbar .brand .brand-mark")).toBeTruthy();   // funnel mark
+    expect(document.querySelector("#appbar .brand .brand-mark")).toBeTruthy();
     expect(document.querySelector("#appbar .brand .wordmark")?.textContent).toBe("Acme Triage");
-    const rail = document.querySelectorAll<HTMLElement>("#domainRail button");
-    expect(rail.length).toBeGreaterThan(1);                       // live + roadmap domains
-    expect(rail[0].className).toContain("active");                // live domain leads
-    expect(rail[0].textContent).toBe("Code & Dependency Security");
+    const rail = [...document.querySelectorAll<HTMLElement>("#domainRail button")];
+    expect(rail.map(b => b.textContent?.replace(/\s*upcoming$/, "").trim()))
+      .toEqual(expect.arrayContaining(["Vulnerabilities", "Misconfigurations", "Tickets"]));
+    const vuln = rail.find(b => b.textContent?.startsWith("Vulnerabilities"))!;
+    expect(vuln.className).toContain("active");          // live artifact leads
+    expect(document.querySelector("#root")?.textContent).toMatch(/connect a token/i);  // empty scope/cred
   });
 
-  it("shows the live domain's tabs with the first one active", () => {
+  it("shows List + Insights tabs and a provider facet for the live artifact", () => {
     mountShell(config);
-    const tabs = document.querySelectorAll<HTMLElement>("#viewswitch button");
-    expect([...tabs].map(t => t.textContent?.trim())).toEqual(
-      expect.arrayContaining(["security-alerts", "insights"]));
-    expect([...tabs].find(t => t.textContent === "security-alerts")?.className).toContain("active");
+    const tabs = [...document.querySelectorAll<HTMLElement>("#viewswitch button:not(.prov-chip)")];
+    expect(tabs.map(t => t.textContent)).toEqual(expect.arrayContaining(["List", "Insights"]));
+    const facet = document.querySelector("#viewswitch .facet .prov-chip");
+    expect(facet?.textContent).toContain("github");
+    expect(facet?.className).toContain("on");            // live provider selected by default
   });
 
-  it("switches to a roadmap domain and renders its upcoming source", () => {
+  it("switching to an upcoming artifact renders its roadmap placeholder", () => {
     mountShell(config);
     const rail = [...document.querySelectorAll<HTMLElement>("#domainRail button")];
-    rail.find(b => b.textContent === "Cloud & Infra Posture")!.click();
-    expect(document.querySelector("#viewswitch .chip")?.textContent).toBe("upcoming");
+    rail.find(b => b.textContent?.startsWith("Misconfigurations"))!.click();
     expect(document.querySelector("#root .upcoming")).toBeTruthy();
+    expect(document.querySelector("#root .badge")?.textContent).toBe("upcoming");
+    expect(document.querySelectorAll("#root .prov-roadmap li").length).toBeGreaterThan(0);  // aws/gcp/cloudflare
   });
 });
