@@ -72,6 +72,8 @@ input::placeholder { color:var(--muted); } select { appearance:none; cursor:poin
 .viewswitch button.active::after { content:""; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--accent); border-radius:2px; }
 .viewswitch button:focus-visible { outline:none; color:var(--fg); }
 .chip { font:500 11px var(--mono); color:var(--muted); background:var(--slate); border:1px solid var(--line); border-radius:999px; padding:2px 8px; letter-spacing:.02em; }
+.prov-icon { flex:none; vertical-align:middle; }
+.prov-mono text { font-family:var(--mono); font-weight:600; }
 
 main { padding:24px 32px 64px; }
 
