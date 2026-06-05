@@ -144,6 +144,28 @@ describe("mountSettings", () => {
     expect(host.querySelectorAll(".ms-chip").length).toBe(1);               // saved selection shown
   });
 
+  it("shows one connection row per provider and saves the credential under the provider key", () => {
+    vi.stubGlobal("matchMedia", (q: string) => ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} }) as any);
+    const alerts: Source = {
+      id: "github", domain: "code-security", kinds: ["dependency-vuln"], connectSrc: [], status: "ready",
+      scopeSchema: [{ key: "repos", label: "Repositories", type: "multiselect", discoverable: true }],
+      discover: async () => [{ value: "acme/web", label: "web", group: "acme" }],
+      fetch: async () => ({ items: [], errors: [] }),
+    };
+    const reviews: Source = { ...alerts, id: "github-review", provider: "github", kinds: ["pull-request"] };
+    const host = document.createElement("div"); document.body.appendChild(host);
+    const creds = new CredStore(); const scopes = new ScopeStore();
+    const s = mountSettings(host, { sources: [alerts, reviews], creds, scopes, onChange: () => {} });
+    s.open("github");
+
+    // one row for the shared provider, not two
+    expect(host.querySelectorAll(".conn-item").length).toBe(1);
+    const input = host.querySelector<HTMLInputElement>("[data-cred]")!;
+    input.value = "ghp_x"; input.dispatchEvent(new Event("input"));
+    host.querySelector<HTMLElement>("[data-save]")!.click();
+    expect(creds.get("github")).toBe("ghp_x");        // saved under provider, shared by both sources
+  });
+
   it("surfaces provider setup guidance (row ⓘ + form link)", () => {
     const src: Source = { ...github, setup: { hint: "Use a fine-grained PAT.", url: "https://example.test/pat" } };
     const host = document.createElement("div"); document.body.appendChild(host);

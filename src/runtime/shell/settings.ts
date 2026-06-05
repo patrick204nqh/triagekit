@@ -1,4 +1,5 @@
 import type { Source, Scope, DiscoveryOption } from "../ingest/source";
+import { providerOf } from "../ingest/source";
 import type { CredStore } from "./cred-store";
 import type { ScopeStore } from "./scope-store";
 import { scopeSummary } from "./health";
@@ -26,6 +27,17 @@ function fingerprint(token: string): string {
 
 export function mountSettings(host: HTMLElement, opts: Opts) {
   const { sources, creds, scopes, onChange, onThemeChange, onRefreshChange } = opts;
+  // One connection per provider: pick a representative (prefer a ready source), and
+  // key credentials/scope by provider so sources that share a provider share a token.
+  const providerReps: Source[] = (() => {
+    const byProv = new Map<string, Source>();
+    for (const s of sources) {
+      const p = providerOf(s);
+      const cur = byProv.get(p);
+      if (!cur || (cur.status !== "ready" && s.status === "ready")) byProv.set(p, s);
+    }
+    return [...byProv.values()];
+  })();
   host.innerHTML = `<div class="scrim" data-scrim></div>
     <aside class="sheet panel" data-panel aria-hidden="true">
       <div class="panel-head"><h3>Settings</h3><button class="icon-btn" data-close aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
@@ -57,12 +69,11 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   // Credential/scope edits are staged and committed on Save; theme + clear apply now.
   const draftCred = new Map<string, string>();
   const draftScope = new Map<string, Scope>();
-  const getCred = (id: string) => draftCred.has(id) ? draftCred.get(id)! : (creds.get(id) ?? "");
-  const getScope = (id: string) => draftScope.has(id) ? draftScope.get(id)! : scopes.get(id);
-  const isConnected = (s: Source) => s.status !== "upcoming" && !!getCred(s.id);
-  let expanded: string | null = null;
-
-  const byId = (id: string) => sources.find(s => s.id === id)!;
+  const getCred = (prov: string) => draftCred.has(prov) ? draftCred.get(prov)! : (creds.get(prov) ?? "");
+  const getScope = (prov: string) => draftScope.has(prov) ? draftScope.get(prov)! : scopes.get(prov);
+  const isConnected = (s: Source) => s.status !== "upcoming" && !!getCred(providerOf(s));
+  let expanded: string | null = null;   // now holds a provider key
+  const repOf = (prov: string) => providerReps.find(s => providerOf(s) === prov)!;
 
   function renderTheme() {
     const choice = getThemeChoice();
@@ -83,26 +94,27 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   // ── Integrations catalog: Connected on top, Available below, filterable ──
   function renderConns() {
     const q = filter.value.trim().toLowerCase();
-    const matches = (s: Source) => !q || s.id.toLowerCase().includes(q);
-    const visible = sources.filter(matches);
+    const matches = (s: Source) => !q || providerOf(s).toLowerCase().includes(q);
+    const visible = providerReps.filter(matches);
     const connected = visible.filter(isConnected);
     const available = visible.filter(s => !isConnected(s));
 
     const row = (s: Source) => {
-      const open = expanded === s.id;
+      const prov = providerOf(s);
+      const open = expanded === prov;
       const off = s.status === "upcoming";
-      const meta = off ? "" : scopeSummary(s, getScope(s.id));
-      const info = s.setup ? `<span class="info" title="${esc(s.setup.hint)}" aria-label="How to connect ${esc(s.id)}">i</span>` : "";
+      const meta = off ? "" : scopeSummary(s, getScope(prov));
+      const info = s.setup ? `<span class="info" title="${esc(s.setup.hint)}" aria-label="How to connect ${esc(prov)}">i</span>` : "";
       const action = off ? `<span class="cstat">upcoming</span>`
         : isConnected(s) ? `<span class="cstat">connected</span>`
         : `<span class="cstat add">+ Add</span>`;
       const chev = off ? "" : `<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg>`;
       return `<div class="conn ${open ? "open" : ""}">
-        <button class="conn-item ${isConnected(s) ? "ok" : ""}" data-src="${esc(s.id)}" aria-expanded="${open}" ${off ? "disabled" : ""}>
-          ${providerIcon(s.id, 16)}<span class="cinfo"><span class="cname">${esc(s.id)}</span>
+        <button class="conn-item ${isConnected(s) ? "ok" : ""}" data-src="${esc(prov)}" aria-expanded="${open}" ${off ? "disabled" : ""}>
+          ${providerIcon(prov, 16)}<span class="cinfo"><span class="cname">${esc(prov)}</span>
           ${meta ? `<span class="cmeta">${esc(meta)}</span>` : ""}</span>
           ${info}${action}${chev}</button>
-        <div class="conn-body" data-body="${esc(s.id)}" ${open ? "" : "hidden"}></div></div>`;
+        <div class="conn-body" data-body="${esc(prov)}" ${open ? "" : "hidden"}></div></div>`;
     };
     const group = (label: string, list: Source[]) => list.length
       ? `<div class="conn-group"><span class="conn-group-label">${label}<span class="count">${list.length}</span></span>${list.map(row).join("")}</div>` : "";
@@ -110,24 +122,24 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     conns.innerHTML = group("Connected", connected) + group("Available", available)
       || `<p class="muted">No integrations match “${esc(filter.value)}”.</p>`;
     conns.querySelectorAll<HTMLElement>(".conn-item:not([disabled])").forEach(b =>
-      b.addEventListener("click", () => { const id = b.dataset.src!; expanded = expanded === id ? null : id; renderConns(); }));
-    if (expanded && visible.some(s => s.id === expanded)) renderForm(expanded);
+      b.addEventListener("click", () => { const p = b.dataset.src!; expanded = expanded === p ? null : p; renderConns(); }));
+    if (expanded && visible.some(s => providerOf(s) === expanded)) renderForm(expanded);
   }
 
-  function renderForm(id: string) {
-    const body = conns.querySelector<HTMLElement>(`[data-body="${id}"]`);
+  function renderForm(prov: string) {
+    const body = conns.querySelector<HTMLElement>(`[data-body="${prov}"]`);
     if (!body) return;
-    const s = byId(id); const off = s.status === "upcoming"; const scope = getScope(id);
+    const s = repOf(prov); const off = s.status === "upcoming"; const scope = getScope(prov);
     const setup = s.setup
       ? `<span class="set-helper">${esc(s.setup.hint)}${s.setup.url ? ` <a class="set-link" href="${esc(s.setup.url)}" target="_blank" rel="noopener noreferrer">Create one ↗</a>` : ""}</span>`
       : "";
     let html = `<div class="set-group"><label class="set-label">Credential</label>
-        <input type="password" data-cred ${off ? "disabled" : ""} value="${getCred(id) ? "••••••••" : ""}" placeholder="token / key — stored in this tab only"/>
+        <input type="password" data-cred ${off ? "disabled" : ""} value="${getCred(prov) ? "••••••••" : ""}" placeholder="token / key — stored in this tab only"/>
         ${setup}<span class="set-helper">Session-only, never persisted or embedded.</span></div>`;
     for (const f of s.scopeSchema) {
       html += `<div class="set-group"><label class="set-label">${esc(f.label)}</label>`;
       if (f.discoverable) {
-        const cached = getCred(id) ? discoverCache.get(`${id}:${fingerprint(getCred(id))}`) : undefined;
+        const cached = getCred(prov) ? discoverCache.get(`${prov}:${fingerprint(getCred(prov))}`) : undefined;
         const verb = cached ? "Re-scan" : "Find";
         const tail = cached ? esc(f.label.toLowerCase()) : `${esc(f.label.toLowerCase())} I can access`;
         html += `<button class="btn-ghost" data-discover="${esc(f.key)}" ${off ? "disabled" : ""}>${verb} ${tail}</button>
@@ -140,35 +152,36 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     body.innerHTML = html;
 
     const cred = body.querySelector<HTMLInputElement>("[data-cred]");
-    cred?.addEventListener("input", () => { draftCred.set(id, cred.value.includes("•") ? getCred(id) : cred.value); renderMeta(id); });
+    cred?.addEventListener("input", () => { draftCred.set(prov, cred.value.includes("•") ? getCred(prov) : cred.value); renderMeta(prov); });
     body.querySelectorAll<HTMLInputElement>("[data-field]").forEach(inp =>
-      inp.addEventListener("change", () => { draftScope.set(id, { ...getScope(id), [inp.dataset.field!]: inp.value.split(/[\s,]+/).filter(Boolean) }); renderMeta(id); }));
+      inp.addEventListener("change", () => { draftScope.set(prov, { ...getScope(prov), [inp.dataset.field!]: inp.value.split(/[\s,]+/).filter(Boolean) }); renderMeta(prov); }));
     body.querySelectorAll<HTMLElement>("[data-discover]").forEach(btn =>
       btn.addEventListener("click", () => runDiscover(s, btn.dataset.discover!, true)));
     // Re-show cached results without an API call when the form re-opens.
-    for (const f of s.scopeSchema) if (f.discoverable && getCred(id)) {
-      const cached = discoverCache.get(`${id}:${fingerprint(getCred(id))}`);
+    for (const f of s.scopeSchema) if (f.discoverable && getCred(prov)) {
+      const cached = discoverCache.get(`${prov}:${fingerprint(getCred(prov))}`);
       if (cached) mountMultiSelect(body.querySelector<HTMLElement>(`[data-list="${f.key}"]`)!, s, f.key, cached);
     }
   }
 
   // Refresh just the collapsed-row summary/status without collapsing the open body.
-  function renderMeta(id: string) {
-    const s = byId(id), ok = isConnected(s);
-    const item = conns.querySelector<HTMLElement>(`.conn-item[data-src="${id}"]`);
+  function renderMeta(prov: string) {
+    const s = repOf(prov), ok = isConnected(s);
+    const item = conns.querySelector<HTMLElement>(`.conn-item[data-src="${prov}"]`);
     item?.classList.toggle("ok", ok);
-    const meta = item?.querySelector(".cmeta"); if (meta) meta.textContent = scopeSummary(s, getScope(id));
+    const meta = item?.querySelector(".cmeta"); if (meta) meta.textContent = scopeSummary(s, getScope(prov));
     const cstat = item?.querySelector(".cstat");
     if (cstat) { cstat.textContent = s.status === "upcoming" ? "upcoming" : ok ? "connected" : "+ Add"; cstat.classList.toggle("add", !ok && s.status !== "upcoming"); }
   }
 
   async function runDiscover(s: Source, key: string, force: boolean) {
+    const prov = providerOf(s);
     const list = conns.querySelector<HTMLElement>(`[data-list="${key}"]`)!;
-    const cacheKey = `${s.id}:${fingerprint(getCred(s.id))}`;
-    if (!force && discoverCache.has(cacheKey)) { mountChecklist(list, s, key, discoverCache.get(cacheKey)!); return; }
+    const cacheKey = `${prov}:${fingerprint(getCred(prov))}`;
+    if (!force && discoverCache.has(cacheKey)) { mountMultiSelect(list, s, key, discoverCache.get(cacheKey)!); return; }
     list.innerHTML = `<div class="muted">Querying…</div>`;
     let options: DiscoveryOption[] = [];
-    try { options = (await s.discover?.(getCred(s.id))) ?? []; }
+    try { options = (await s.discover?.(getCred(prov))) ?? []; }
     catch (e: any) { list.innerHTML = `<div class="error">${esc(e?.message ?? e)}</div>`; return; }
     discoverCache.set(cacheKey, options);
     const btn = conns.querySelector<HTMLElement>(`[data-discover="${key}"]`);
@@ -182,7 +195,8 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   // the *unselected* options — so at 100+ repos you only scroll what you can add.
   function mountMultiSelect(list: HTMLElement, s: Source, key: string, options: DiscoveryOption[]) {
     const noun = s.scopeSchema.find(f => f.key === key)?.label.toLowerCase() ?? "items";
-    const sel = new Set((getScope(s.id)[key] as string[]) ?? []);
+    const prov = providerOf(s);
+    const sel = new Set((getScope(prov)[key] as string[]) ?? []);
     const byVal = new Map(options.map(o => [o.value, o]));
     const labelOf = (v: string) => { const o = byVal.get(v); return o ? `${o.group ? o.group + "/" : ""}${o.label}` : v; };
     let q = "";
@@ -199,7 +213,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     const count = list.querySelector<HTMLElement>("[data-count]")!;
     const lf = list.querySelector<HTMLInputElement>("[data-lf]")!;
 
-    const commit = () => { draftScope.set(s.id, { ...getScope(s.id), [key]: [...sel] }); renderMeta(s.id); };
+    const commit = () => { draftScope.set(prov, { ...getScope(prov), [key]: [...sel] }); renderMeta(prov); };
     const drawCount = () => { count.textContent = `${sel.size} selected`; };
     const drawChips = () => {
       chips.innerHTML = sel.size
@@ -233,9 +247,9 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   function clearData(kind: "creds" | "scope") {
     const noun = kind === "creds" ? "credentials (this session)" : "saved scope";
     if (typeof confirm === "function" && !confirm(`Clear all ${noun}? This cannot be undone.`)) return;
-    for (const s of sources) {
-      if (kind === "creds") { creds.set(s.id, ""); draftCred.delete(s.id); }
-      else { scopes.set(s.id, {}); draftScope.delete(s.id); }
+    for (const prov of new Set(sources.map(providerOf))) {
+      if (kind === "creds") { creds.set(prov, ""); draftCred.delete(prov); }
+      else { scopes.set(prov, {}); draftScope.delete(prov); }
     }
     renderConns(); onChange();
   }
@@ -246,8 +260,8 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   }
   function discard() { draftCred.clear(); draftScope.clear(); setHidden(true); }
   function save() {
-    for (const [id, v] of draftCred) creds.set(id, v);
-    for (const [id, sc] of draftScope) scopes.set(id, sc);
+    for (const [prov, v] of draftCred) creds.set(prov, v);
+    for (const [prov, sc] of draftScope) scopes.set(prov, sc);
     draftCred.clear(); draftScope.clear(); onChange(); setHidden(true);
   }
   scrim.addEventListener("click", discard);
@@ -259,8 +273,8 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     b.addEventListener("click", () => clearData(b.dataset.clear as "creds" | "scope")));
 
   return {
-    open(sourceId?: string) {
-      expanded = sourceId ?? sources[0]?.id ?? null;
+    open(provider?: string) {
+      expanded = provider ?? (providerReps[0] ? providerOf(providerReps[0]) : null);
       draftCred.clear(); draftScope.clear(); filter.value = "";
       renderTheme(); renderRefresh(); renderConns(); setHidden(false);
     },
