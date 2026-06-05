@@ -20,3 +20,16 @@ describe("artifacts", () => {
     expect(artifactOf("work-item").group).toBe("work");
   });
 });
+
+describe("review artifact", () => {
+  it("registers a Review artifact under the work group for PR + issue kinds", () => {
+    const review = listArtifacts().find(a => a.id === "review");
+    expect(review).toBeDefined();
+    expect(review!.group).toBe("work");
+    expect(review!.kinds).toEqual(["pull-request", "issue"]);
+  });
+  it("maps pull-request and issue kinds to the review artifact", () => {
+    expect(artifactOf("pull-request").id).toBe("review");
+    expect(artifactOf("issue").id).toBe("review");
+  });
+});

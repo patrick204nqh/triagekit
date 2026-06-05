@@ -20,6 +20,7 @@ const ARTIFACTS: Artifact[] = [
   { id: "vulnerabilities",   label: "Vulnerabilities",   group: "findings", kinds: ["dependency-vuln", "code-scanning"] },
   { id: "secrets",           label: "Secrets",           group: "findings", kinds: ["secret-scanning"] },
   { id: "misconfigurations", label: "Misconfigurations", group: "findings", kinds: ["infra-misconfig", "edge-misconfig", "waf-finding"] },
+  { id: "review",            label: "Review",            group: "work",     kinds: ["pull-request", "issue"] },
   { id: "tickets",           label: "Tickets",           group: "work",     kinds: ["work-item"] },
 ];
 
