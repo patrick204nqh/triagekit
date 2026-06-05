@@ -34,7 +34,8 @@ svg { display:block; }
 
 /* ── Command bar (#appbar header) ──────────────────────────────────── */
 #appbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:14px 32px; border-bottom:1px solid var(--line); }
-.brand { font-weight:700; font-size:clamp(1.25rem,1rem + 1vw,1.625rem); letter-spacing:-0.02em; }
+.brand { display:inline-flex; align-items:center; gap:9px; font-weight:700; font-size:clamp(1.25rem,1rem + 1vw,1.625rem); letter-spacing:-0.02em; }
+.brand-mark { flex:none; }
 .brand .dot { color:var(--accent); }
 .spacer { flex:1 1 auto; }
 .scope-pill .caret { display:inline-flex; color:var(--muted); }

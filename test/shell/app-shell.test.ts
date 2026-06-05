@@ -22,7 +22,8 @@ describe("mountShell navigation", () => {
 
   it("renders the brand and a domain rail with the live domain active", () => {
     mountShell(config);
-    expect(document.querySelector("#appbar .brand")?.textContent).toBe("Acme Triage");
+    expect(document.querySelector("#appbar .brand .brand-mark")).toBeTruthy();   // funnel mark
+    expect(document.querySelector("#appbar .brand .wordmark")?.textContent).toBe("Acme Triage");
     const rail = document.querySelectorAll<HTMLElement>("#domainRail button");
     expect(rail.length).toBeGreaterThan(1);                       // live + roadmap domains
     expect(rail[0].className).toContain("active");                // live domain leads

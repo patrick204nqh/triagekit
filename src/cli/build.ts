@@ -12,7 +12,7 @@ import { buildCspMeta, SOURCE_CONNECT_SRC } from "../vite/csp-plugin.js";
 const GENERIC_CONFIG: TriageConfigT = {
   source: "github",
   views: ["security-alerts"],
-  branding: { title: "Triage" },
+  branding: { title: "triage·kit" },
 };
 
 export interface BuildOptions { generic?: boolean; }

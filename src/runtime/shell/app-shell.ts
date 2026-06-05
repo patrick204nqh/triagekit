@@ -17,6 +17,11 @@ import "../ingest/upcoming";              // register roadmap sources
 
 interface Tab { id: string; label: string; upcoming: boolean; }
 
+// Product mark: a funnel (many signals in → a triaged few out) whose drip is the
+// teal accent, echoing the "·" in the wordmark. Outline tracks the theme via
+// currentColor; the dot uses --accent.
+const BRAND_MARK = `<svg class="brand-mark" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 5.5H20.5L13 14.5V18H11V14.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="20.8" r="1.7" fill="var(--accent)"/></svg>`;
+
 export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
   const creds = new CredStore();
   const scopes = new ScopeStore();
@@ -52,7 +57,9 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
 
   // ── Command bar: brand + reflection-only controls (config lives in Settings) ──
   const bar = document.getElementById("appbar")!;
-  bar.innerHTML = `<span class="brand">${esc(config.branding.title)}</span><div class="spacer"></div>`;
+  // A "·" in the title renders as the teal accent middot; plain titles stay plain.
+  const titleHtml = esc(config.branding.title).replace(/·/g, `<span class="dot">·</span>`);
+  bar.innerHTML = `<span class="brand">${BRAND_MARK}<span class="wordmark">${titleHtml}</span></span><div class="spacer"></div>`;
   const scopePill = document.createElement("button"); scopePill.className = "scope-pill";
   scopePill.innerHTML = `<span class="scope-label"></span><span class="caret"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg></span>`;
   const scopeLabel = scopePill.querySelector<HTMLElement>(".scope-label")!;
