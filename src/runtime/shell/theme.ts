@@ -21,6 +21,14 @@ export function setThemeChoice(choice: ThemeChoice): void {
   if (choice === "auto") localStorage.removeItem(KEY); else localStorage.setItem(KEY, choice);
   applyTheme(choice);
 }
+// Advance the explicit choice (auto → light → dark → auto) and apply it. The
+// top-right toggle uses this so it never silently destroys an "auto" preference.
+const CYCLE: ThemeChoice[] = ["auto", "light", "dark"];
+export function cycleTheme(from: ThemeChoice = getThemeChoice()): ThemeChoice {
+  const next = CYCLE[(CYCLE.indexOf(from) + 1) % CYCLE.length];
+  setThemeChoice(next);
+  return next;
+}
 // Keep "auto" live when the OS flips between light/dark.
 export function watchSystemTheme(): void {
   if (typeof matchMedia !== "function") return;

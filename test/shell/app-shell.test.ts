@@ -33,6 +33,15 @@ describe("mountShell artifact navigation", () => {
     expect(document.querySelector("#root")?.textContent).toMatch(/connect a token/i);  // empty scope/cred
   });
 
+  it("groups the rail into Findings and Work, with a refresh control and no Load button", () => {
+    mountShell(config);
+    const groups = [...document.querySelectorAll<HTMLElement>("#domainRail .rail-group-label")].map(g => g.textContent);
+    expect(groups).toEqual(["Findings", "Work"]);
+    expect(document.querySelector("#appbar .btn-primary")).toBeNull();               // Load retired
+    expect(document.querySelector('#appbar .icon-btn[aria-label="Refresh now"]')).toBeTruthy();
+    expect(document.querySelector("#appbar .icon-btn[aria-label='Toggle theme']")?.getAttribute("title")).toMatch(/^Theme:/);
+  });
+
   it("shows List + Insights tabs and a provider facet for the live artifact", () => {
     mountShell(config);
     const tabs = [...document.querySelectorAll<HTMLElement>("#viewswitch button:not(.prov-chip)")];

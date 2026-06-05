@@ -116,18 +116,25 @@ Neither build embeds a token — each user always pastes their own.
 
 ## Settings & connections
 
-All configuration lives in the **Settings** slide-over (⚙ in the command bar) — the
-command bar itself only *reflects* state (a scope summary pill + a connection-health
-badge). Settings is a multi-provider manager:
+All configuration lives in the **Settings** slide-over (⚙ in the command bar). The
+command bar carries a scope/health status chip plus a **manual refresh** and a **theme**
+toggle; everything else lives in Settings:
 
-- **Connections list** — every source, grouped by domain, with a health dot
-  (`connected` / `no token` / `upcoming`) and a scope summary.
+- **Integrations catalog** — sources split into **Connected** (a credential is set) and
+  **Available** (ready to add, or `upcoming`), filterable by name or domain, so the list
+  scales as providers grow.
 - **Per-source credential** — provider-appropriate (GitHub fine-grained PAT, …),
   **session-only** (`sessionStorage`), one per source, never persisted or embedded.
 - **Schema-driven scope** — each source declares its own scope fields; discoverable
   fields (e.g. GitHub repositories) offer **"Find … I can access"**, which calls the
-  source's `discover()` and lists the targets your credential can actually reach. Scope
-  is non-secret, so it persists in `localStorage` keyed per source.
+  source's `discover()` and lists the targets your credential can reach. Results are
+  **cached** per credential (filter and re-select without re-querying; "Re-scan" forces a
+  refresh), and the picker is a filterable multi-select with select-all / clear and a live
+  count. Scope is non-secret, so it persists in `localStorage` keyed per source.
+- **Auto-refresh** — optionally re-fetch every **5 or 10 minutes** (snapshot-only; there
+  is no backend history to trend). The command bar shows an "updated *N*m ago" stamp.
+- **Appearance** — `Auto` (follow the OS) / `Light` / `Dark`; the top-right toggle cycles
+  the same three so an `Auto` preference is never silently lost.
 
 Compiled builds seed their baked `scope` automatically, so a turnkey dashboard only needs
 a token.

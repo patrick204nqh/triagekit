@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { getThemeChoice, setThemeChoice, resolveTheme, applyTheme } from "../../src/runtime/shell/theme";
+import { getThemeChoice, setThemeChoice, resolveTheme, applyTheme, cycleTheme } from "../../src/runtime/shell/theme";
 
 function mockSystem(dark: boolean) {
   vi.stubGlobal("matchMedia", (q: string) => ({ matches: dark, media: q, addEventListener() {}, removeEventListener() {} }) as any);
@@ -32,5 +32,14 @@ describe("theme", () => {
     expect(localStorage.getItem("triagekit.theme")).toBeNull();
     applyTheme("auto");
     expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+  });
+
+  it("cycles auto → light → dark → auto without ever losing auto", () => {
+    mockSystem(false);
+    expect(getThemeChoice()).toBe("auto");
+    expect(cycleTheme()).toBe("light");
+    expect(cycleTheme()).toBe("dark");
+    expect(cycleTheme()).toBe("auto");
+    expect(localStorage.getItem("triagekit.theme")).toBeNull();   // back to auto = unpinned
   });
 });

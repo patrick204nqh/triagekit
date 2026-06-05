@@ -216,8 +216,32 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 .upcoming li { font-family:var(--mono); }
 .badge { font:600 11px var(--mono); color:var(--accent); background:color-mix(in srgb,var(--accent) 14%,transparent); border:1px solid color-mix(in srgb,var(--accent) 40%,transparent); border-radius:999px; padding:2px 9px; letter-spacing:.03em; text-transform:uppercase; }
 
+/* ── Command-bar sync stamp ────────────────────────────────────────── */
+.last-sync { font:500 12px var(--mono); color:var(--muted); white-space:nowrap; }
+
+/* ── Grouped rail (Findings / Work) ────────────────────────────────── */
+.rail-group { display:inline-flex; align-items:center; gap:6px; }
+.rail-group + .rail-group { margin-left:16px; padding-left:18px; border-left:1px solid var(--line); }
+.rail-group-label { font:600 10.5px var(--mono); letter-spacing:.09em; text-transform:uppercase; color:var(--muted); margin-right:3px; user-select:none; }
+
+/* ── Integrations catalog ──────────────────────────────────────────── */
+.conn-filter { margin-bottom:4px; }
+.conn-group + .conn-group { margin-top:14px; }
+.conn-group-label { display:flex; align-items:center; gap:8px; font:600 11px var(--mono); letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:0 2px 8px; }
+.conn-group-label .count { font-weight:500; color:var(--muted); background:var(--slate); border:1px solid var(--line); border-radius:999px; padding:0 7px; }
+.conn-item[disabled] { cursor:default; opacity:.6; }
+.conn-item .cstat.add { color:var(--accent); }
+
+/* ── Discovery checklist (filter + multi-select) ───────────────────── */
+.list-tools { display:flex; align-items:center; gap:8px; margin-top:6px; }
+.list-filter { flex:1; min-height:34px; padding:6px 10px; }
+.btn-ghost.mini { min-height:34px; padding:5px 11px; font-size:12px; }
+.list-count { font:500 11px var(--mono); color:var(--muted); white-space:nowrap; margin-left:auto; }
+.crow[hidden] { display:none; }
+
 @media (max-width:768px) {
   #appbar, .domains, .viewswitch, main { padding-left:16px; padding-right:16px; }
   .insights { grid-template-columns:1fr; }
   .barrow { grid-template-columns:110px 1fr 28px; gap:10px; }
+  .rail-group + .rail-group { margin-left:10px; padding-left:12px; }
 }
