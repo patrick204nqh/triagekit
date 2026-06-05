@@ -33,7 +33,11 @@ svg { display:block; }
 .error { color:var(--p0); }
 
 /* ── Command bar (#appbar header) ──────────────────────────────────── */
-#appbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:14px 32px; border-bottom:1px solid var(--line); font-weight:700; font-size:1.375rem; letter-spacing:-0.02em; }
+#appbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:14px 32px; border-bottom:1px solid var(--line); }
+.brand { font-weight:700; font-size:clamp(1.25rem,1rem + 1vw,1.625rem); letter-spacing:-0.02em; }
+.brand .dot { color:var(--accent); }
+.spacer { flex:1 1 auto; }
+.scope-pill .caret { display:inline-flex; color:var(--muted); }
 .scope-pill { display:inline-flex; align-items:center; gap:8px; background:var(--slate); border:1px solid var(--line); color:var(--fg); border-radius:999px; padding:7px 12px; font:500 13px var(--sans); transition:border-color .15s, background .15s; }
 .scope-pill:hover { border-color:var(--line-strong); }
 .health { display:inline-flex; align-items:center; gap:8px; background:none; border:1px solid var(--line-strong); color:var(--muted); border-radius:999px; padding:6px 13px; font:500 13px var(--sans); transition:color .15s, background .15s; }
@@ -53,12 +57,20 @@ input, select { background:var(--slate); color:var(--fg); border:1px solid var(-
 input:focus, select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 45%,transparent); }
 input::placeholder { color:var(--muted); } select { appearance:none; cursor:pointer; }
 
+/* ── Domain rail (#domainRail — purpose-level grouping) ─────────────── */
+.domains { display:flex; gap:6px; padding:14px 32px 0; flex-wrap:wrap; }
+.domains button { background:none; border:1px solid transparent; color:var(--muted); padding:7px 13px; border-radius:8px; font:600 13px var(--sans); transition:color .15s, background .15s, border-color .15s; }
+.domains button:hover { color:var(--fg); }
+.domains button.active { color:var(--fg); background:var(--carbon); border-color:var(--line); }
+
 /* ── View switch (#viewswitch nav — plain buttons styled as tabs) ──── */
 .viewswitch { display:flex; gap:24px; padding:10px 32px 0; border-bottom:1px solid var(--line); min-height:44px; flex-wrap:wrap; }
-.viewswitch button { position:relative; background:none; border:none; color:var(--muted); padding:8px 2px 14px; font:500 14px var(--sans); transition:color .15s; }
+.viewswitch button { position:relative; background:none; border:none; color:var(--muted); padding:8px 2px 14px; font:500 14px var(--sans); display:flex; align-items:center; gap:8px; transition:color .15s; }
 .viewswitch button:hover { color:var(--fg); }
+.viewswitch button.active { color:var(--fg); }
+.viewswitch button.active::after { content:""; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--accent); border-radius:2px; }
 .viewswitch button:focus-visible { outline:none; color:var(--fg); }
-.viewswitch button:focus-visible::after { content:""; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--accent); border-radius:2px; }
+.chip { font:500 11px var(--mono); color:var(--muted); background:var(--slate); border:1px solid var(--line); border-radius:999px; padding:2px 8px; letter-spacing:.02em; }
 
 main { padding:24px 32px 64px; }
 
@@ -94,8 +106,10 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 .insights { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
 .chart { background:var(--carbon); border:1px solid var(--line); border-radius:14px; padding:18px 20px; display:flex; flex-direction:column; gap:16px; }
 .chart.span2 { grid-column:1 / -1; }
-.chart-head { display:flex; align-items:baseline; justify-content:space-between; }
+.chart-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
 .chart-title { font:600 12px var(--sans); color:var(--muted); letter-spacing:.04em; text-transform:uppercase; }
+.chart-title .k { font:500 10px var(--mono); color:var(--muted); background:var(--slate); border:1px solid var(--line); border-radius:999px; padding:1px 7px; margin-left:8px; text-transform:none; letter-spacing:0; }
+.chart-meta { font:500 12px var(--mono); color:var(--muted); white-space:nowrap; } .chart-meta b { color:var(--fg); font-weight:600; }
 
 .tierbar { display:flex; height:12px; border-radius:999px; overflow:hidden; background:var(--slate); }
 .tierbar span { display:block; height:100%; width:0; transition:width .6s var(--spring); }
@@ -166,6 +180,7 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 .conn-item .cname { font:600 13px var(--mono); }
 .conn-item .cmeta { font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .conn-item .cstat { font:500 11px var(--sans); color:var(--muted); flex:none; }
+.panel-foot { padding:18px 24px; border-top:1px solid var(--line); position:sticky; bottom:0; background:var(--carbon); display:flex; gap:10px; justify-content:flex-end; }
 
 /* ── Upcoming placeholder ──────────────────────────────────────────── */
 .upcoming { padding:56px 8px; max-width:60ch; }
@@ -175,7 +190,7 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 .badge { font:600 11px var(--mono); color:var(--accent); background:color-mix(in srgb,var(--accent) 14%,transparent); border:1px solid color-mix(in srgb,var(--accent) 40%,transparent); border-radius:999px; padding:2px 9px; letter-spacing:.03em; text-transform:uppercase; }
 
 @media (max-width:768px) {
-  #appbar, .viewswitch, main { padding-left:16px; padding-right:16px; }
+  #appbar, .domains, .viewswitch, main { padding-left:16px; padding-right:16px; }
   .insights { grid-template-columns:1fr; }
   .barrow { grid-template-columns:110px 1fr 28px; gap:10px; }
 }

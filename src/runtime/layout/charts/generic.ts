@@ -9,6 +9,7 @@ const rank = (t: Tier) => TIERS.indexOf(t);
 
 export const tierChart: TriageChart = {
   id: "tier", title: "Priority distribution", kinds: "*",
+  meta: (rows) => `<b>${rows.length}</b> open`,
   render(rows, el) {
     const total = rows.length || 1;
     const c = Object.fromEntries(TIERS.map(t => [t, rows.filter(r => r.tier === t).length])) as Record<Tier, number>;
@@ -26,6 +27,7 @@ const ageDays = (r: ScoredItem) => (Date.now() - +new Date(r.createdAt)) / 86400
 
 export const ageChart: TriageChart = {
   id: "age", title: "Age", kinds: "*",
+  meta: (rows) => `oldest <b>${Math.max(0, ...rows.map(r => Math.round(ageDays(r))))}d</b>`,
   render(rows, el) {
     const b = BUCKETS.map(x => {
       const rs = rows.filter(r => { const a = ageDays(r); return a >= x.lo && a < x.hi; });

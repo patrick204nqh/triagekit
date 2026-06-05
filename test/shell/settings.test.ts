@@ -21,13 +21,25 @@ describe("mountSettings", () => {
     expect(host.querySelector(".conn-item")).toBeTruthy();
     expect(host.querySelector("[data-cred]")).toBeTruthy();
   });
-  it("persists a typed credential per source", () => {
+  it("commits a typed credential only on Save", () => {
     const host = document.createElement("div"); document.body.appendChild(host);
     const creds = new CredStore();
     const s = mountSettings(host, { sources: [github], creds, scopes: new ScopeStore(), onChange: () => {} });
     s.open("github");
     const input = host.querySelector<HTMLInputElement>("[data-cred]")!;
     input.value = "ghp_x"; input.dispatchEvent(new Event("input"));
+    expect(creds.has("github")).toBe(false);            // staged, not yet committed
+    host.querySelector<HTMLElement>("[data-save]")!.click();
     expect(creds.has("github")).toBe(true);
+  });
+  it("discards staged edits on Cancel", () => {
+    const host = document.createElement("div"); document.body.appendChild(host);
+    const creds = new CredStore();
+    const s = mountSettings(host, { sources: [github], creds, scopes: new ScopeStore(), onChange: () => {} });
+    s.open("github");
+    const input = host.querySelector<HTMLInputElement>("[data-cred]")!;
+    input.value = "ghp_x"; input.dispatchEvent(new Event("input"));
+    host.querySelector<HTMLElement>("[data-cancel]")!.click();
+    expect(creds.has("github")).toBe(false);
   });
 });

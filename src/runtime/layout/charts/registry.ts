@@ -6,6 +6,7 @@ export interface TriageChart {
   title: string;
   kinds: Kind[] | "*";          // "*" = generic
   span?: boolean;               // full-width in the grid
+  meta?(rows: ScoredItem[]): string;   // optional headline stat (may contain <b>…</b>)
   render(rows: ScoredItem[], el: HTMLElement): void;   // CSS/SVG only — no time-series
 }
 const charts: TriageChart[] = [];

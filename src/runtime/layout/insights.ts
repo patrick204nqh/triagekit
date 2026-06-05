@@ -11,7 +11,9 @@ export function renderInsights(root: HTMLElement, rows: ScoredItem[], kinds: Kin
   for (const c of chartsFor(kinds)) {
     const card = document.createElement("div");
     card.className = "chart" + (c.span ? " span2" : "");
-    card.innerHTML = `<div class="chart-head"><span class="chart-title">${esc(c.title)}</span></div><div class="chart-body"></div>`;
+    const ktag = c.kinds === "*" ? "generic" : (c.kinds as Kind[]).join(", ");
+    const meta = c.meta?.(rows) ?? "";
+    card.innerHTML = `<div class="chart-head"><span class="chart-title">${esc(c.title)}<span class="k">${esc(ktag)}</span></span><span class="chart-meta">${meta}</span></div><div class="chart-body"></div>`;
     c.render(rows, card.querySelector<HTMLElement>(".chart-body")!);
     grid.appendChild(card);
   }
