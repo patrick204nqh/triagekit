@@ -5,6 +5,8 @@ export type Kind =
   | "infra-misconfig"   // cloud-posture (roadmap)
   | "edge-misconfig"    // edge-security (roadmap)
   | "waf-finding"       // edge-security (roadmap)
+  | "pull-request"      // work (review surface)
+  | "issue"             // work (review surface)
   | "work-item";        // work-items (roadmap)
 
 export interface TriageItem<D = unknown> {
