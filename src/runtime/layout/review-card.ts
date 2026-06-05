@@ -1,6 +1,6 @@
 import { esc } from "./triage-table";
 import {
-  type ReviewItem, type ActionId, type MergeMethod,
+  type ReviewItem, type ActionId, type MergeMethod, type ReviewActions,
   actionsFor, mergeable, reasonNotMergeable,
 } from "../dataset/kinds/review";
 import {
@@ -111,4 +111,63 @@ export function reviewCardHtml(
   return `<div class="review-card" data-kind="${esc(item.kind)}" data-state="${d.state}">` +
     `${head}<div class="rc-body">${snippet(d.body)}</div>${meta}` +
     `<div class="rc-actions">${actionBarHtml(item, st)}</div></div>`;
+}
+
+export interface MountOpts extends ReviewCardOpts {
+  actions?: ReviewActions;
+  onChange?: (item: ReviewItem) => void;
+}
+
+export function mountReviewCard(host: HTMLElement, item: ReviewItem, opts: MountOpts = {}): void {
+  const cur: ReviewItem = structuredClone(item);
+  const st: CardState = {
+    armed: null, busy: false, error: "",
+    method: opts.defaultMergeMethod ?? "squash",
+  };
+  let collapsed = opts.collapsed ?? false;
+  const { actions } = opts;
+
+  function render(): void {
+    host.innerHTML = reviewCardHtml(cur, { ...opts, collapsed }, st);
+  }
+
+  function patch(p: Partial<ReviewItem["details"]>): void {
+    Object.assign(cur.details, p);
+    opts.onChange?.(cur);
+  }
+
+  async function run(id: ActionId, payload: string): Promise<void> {
+    if (!actions) return;
+    st.busy = true; render();
+    try {
+      if (id === "merge") { await actions.merge(cur, st.method); patch({ state: "merged" }); }
+      else if (id === "close") { await actions.close(cur); patch({ state: "closed" }); }
+      else if (id === "comment") { await actions.comment(cur, payload); patch({ comments: cur.details.comments + 1 }); }
+      else if (id === "label") { await actions.addLabels(cur, [payload]); patch({ labels: [...cur.details.labels, { name: payload, color: "888888" }] }); }
+      else if (id === "assign") { await actions.assign(cur, [payload]); patch({ assignees: [...cur.details.assignees, { login: payload, avatarUrl: "", kind: "human" }] }); }
+      st.error = "";
+    } catch (e) {
+      st.error = String((e as Error)?.message ?? e);
+    }
+    st.busy = false; st.armed = null; render();
+  }
+
+  host.addEventListener("click", (e) => {
+    const t = e.target as HTMLElement;
+    if (t.closest("[data-cancel]")) { st.armed = null; render(); return; }
+    if (t.closest("[data-confirm]")) {
+      const sel = host.querySelector<HTMLSelectElement>("[data-method]");
+      if (sel) st.method = sel.value as MergeMethod;
+      const input = host.querySelector<HTMLInputElement | HTMLTextAreaElement>("[data-input]");
+      void run(st.armed!, input?.value ?? "");
+      return;
+    }
+    const act = t.closest("[data-action]")?.getAttribute("data-action");
+    if (!act) return;
+    if (act === "open") return;                       // plain anchor
+    if (act === "expand") { collapsed = false; render(); return; }
+    st.armed = act as ActionId; st.error = ""; render();
+  });
+
+  render();
 }
