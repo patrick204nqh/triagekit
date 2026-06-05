@@ -1,10 +1,11 @@
 import type { Scope, Source } from "../ingest/source";
+import { providerOf } from "../ingest/source";
 import type { CredStore } from "./cred-store";
 
 export type Health = "connected" | "needs-token" | "upcoming";
 export function healthOf(source: Source, creds: CredStore): Health {
   if (source.status === "upcoming") return "upcoming";
-  return creds.has(source.id) ? "connected" : "needs-token";
+  return creds.has(providerOf(source)) ? "connected" : "needs-token";
 }
 // Generic, provider-agnostic summary built from the source's own scopeSchema.
 export function scopeSummary(source: Source, scope: Scope): string {

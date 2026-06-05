@@ -1,6 +1,6 @@
 import type { TriageConfigT } from "../../config/schema";
 import { isCompiledConfig } from "./mode";
-import { getSource, listSources, type Source } from "../ingest/source";
+import { getSource, listSources, providerOf, type Source } from "../ingest/source";
 import { listArtifacts, GROUP_LABEL, GROUP_ORDER, type Artifact } from "../dataset/artifact";
 import { resolveScorer, type Scorer } from "../scoring/registry";
 import { tierOf } from "../scoring/tier";
@@ -30,7 +30,7 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
   const creds = new CredStore();
   const scopes = new ScopeStore();
   const liveSource = getSource(config.source);
-  if (isCompiledConfig(config)) scopes.set(liveSource.id, config.scope!);
+  if (isCompiledConfig(config)) scopes.set(providerOf(liveSource), config.scope!);
   const hasInsights = config.views.includes("insights");
 
   const sourcesFor = (a: Artifact) => listSources().filter(s => s.kinds.some(k => a.kinds.includes(k)));
@@ -63,7 +63,7 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
     onThemeChange: () => syncTheme(),
     onRefreshChange: () => applyRefreshTimer(),
   });
-  const openSettings = () => settings.open(primarySource(active).id);
+  const openSettings = () => settings.open(providerOf(primarySource(active)));
   status.addEventListener("click", openSettings);
   gear.addEventListener("click", openSettings);
   refresh.addEventListener("click", () => { lastRows = []; render(); });
@@ -90,12 +90,12 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
     else {
       const missing = srcs.some(s => healthOf(s, creds) !== "connected");
       cls = missing ? "warn" : "ok";
-      if (srcs.length === 1) tail = missing ? "no token" : scopeSummary(lead, scopes.get(lead.id));
+      if (srcs.length === 1) tail = missing ? "no token" : scopeSummary(lead, scopes.get(providerOf(lead)));
       else tail = missing ? `${srcs.length} providers · no token` : `${srcs.length} providers`;
     }
     status.className = "status-chip " + cls;
-    const label = srcs.length > 1 ? `${esc(lead.id)} +${srcs.length - 1}` : esc(lead.id);
-    status.innerHTML = `${providerIcon(lead.id, 15)}<span class="sid">${label}</span><span class="sep">·</span><span class="muted">${esc(tail)}</span>`;
+    const label = srcs.length > 1 ? `${esc(providerOf(lead))} +${srcs.length - 1}` : esc(providerOf(lead));
+    status.innerHTML = `${providerIcon(providerOf(lead), 15)}<span class="sid">${label}</span><span class="sep">·</span><span class="muted">${esc(tail)}</span>`;
   }
 
   function updateSync() {
@@ -156,7 +156,7 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
       const live = s.status === "ready";
       const chip = document.createElement("button");
       chip.className = "prov-chip" + (live && selected.has(s.id) ? " on" : "") + (live ? "" : " soon");
-      chip.innerHTML = `${providerIcon(s.id, 14)}<span>${esc(s.id)}</span>${live ? "" : `<span class="chip">upcoming</span>`}`;
+      chip.innerHTML = `${providerIcon(providerOf(s), 14)}<span>${esc(providerOf(s))}</span>${live ? "" : `<span class="chip">upcoming</span>`}`;
       if (live) chip.addEventListener("click", () => {
         selected.has(s.id) ? selected.delete(s.id) : selected.add(s.id);
         lastRows = []; lastFetchedAt = null; buildNav(); refreshBar(); render();
@@ -171,7 +171,7 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
   const render = (silent = false) => {
     const live = liveSourcesFor(active);
     if (!live.length) {   // upcoming artifact placeholder
-      const provs = sourcesFor(active).map(s => `<li>${providerIcon(s.id, 14)} ${esc(s.id)}</li>`).join("");
+      const provs = sourcesFor(active).map(s => `<li>${providerIcon(providerOf(s), 14)} ${esc(providerOf(s))}</li>`).join("");
       root.innerHTML = `<div class="upcoming"><h2>${esc(active.label)} <span class="badge">upcoming</span></h2>
         <p class="muted">On the roadmap. Will triage from:</p><ul class="prov-roadmap">${provs}</ul></div>`;
       lastFetchedAt = null; updateSync();
@@ -179,15 +179,15 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
     }
     if (!silent && view === "insights" && lastRows.length) { renderInsights(root, lastRows, active.kinds); return; }
 
-    const usable = live.filter(s => selected.has(s.id) && creds.get(s.id) && Object.keys(scopes.get(s.id)).length);
+    const usable = live.filter(s => selected.has(s.id) && creds.get(providerOf(s)) && Object.keys(scopes.get(providerOf(s))).length);
     if (!usable.length) {
-      const needScope = live.some(s => selected.has(s.id) && creds.get(s.id) && !Object.keys(scopes.get(s.id)).length);
+      const needScope = live.some(s => selected.has(s.id) && creds.get(providerOf(s)) && !Object.keys(scopes.get(providerOf(s))).length);
       root.innerHTML = `<p class="muted">Open Settings to ${needScope ? "choose your scope" : "connect a token"}.</p>`;
       lastFetchedAt = null; updateSync();
       return;
     }
     if (!silent) renderTableSkeleton(root);
-    Promise.all(usable.map(s => s.fetch(scopes.get(s.id), creds.get(s.id)!)
+    Promise.all(usable.map(s => s.fetch(scopes.get(providerOf(s)), creds.get(providerOf(s))!)
       .then(r => r, (e): { items: never[]; errors: { target: string; message: string }[] } =>
         ({ items: [], errors: [{ target: s.id, message: e?.message ?? String(e) }] }))))
       .then(results => {
