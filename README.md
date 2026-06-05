@@ -146,6 +146,20 @@ export const score = (item: TriageItem): number => {
 
 It is bundled into the HTML at build time.
 
+## Insights
+
+Alongside the table, the **Insights** view (add `insights` to `views`) renders a grid of
+charts for the loaded items — a separate surface so the table stays a clean cockpit.
+
+- **Snapshot-only.** Every chart is compositional (distribution / ranking / ratio) —
+  never a time-series. A backend-free fetch has no history to trend.
+- **Contributed per kind/source.** Charts register against a kind: generic ones
+  (priority distribution, age buckets tinted by worst tier, top locations) apply to
+  everything; `dependency-vuln` adds a fix-available "quick wins" ratio and a runtime-vs-
+  development split. New sources light up their own charts automatically — the Insights
+  view itself never changes.
+- Switching to Insights reuses the rows already loaded for the table (no refetch).
+
 ## Security posture
 
 - **Single file, no external scripts.** The build inlines everything; CI fails if any
