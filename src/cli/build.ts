@@ -7,12 +7,10 @@ import type { TriageConfigT } from "../config/schema.js";
 import { configPlugin } from "../vite/config-plugin.js";
 import { buildCspMeta, SOURCE_CONNECT_SRC } from "../vite/csp-plugin.js";
 
-// Generic build: nothing org-specific baked in. The user supplies org + repos + token
-// at runtime, so the artifact is safe to share/commit publicly.
+// Generic build: no scope baked in. The user supplies scope + token at runtime,
+// so the artifact is safe to share/commit publicly.
 const GENERIC_CONFIG: TriageConfigT = {
-  org: "",
   source: "github",
-  repos: [],
   views: ["security-alerts"],
   branding: { title: "Triage" },
 };
@@ -51,7 +49,7 @@ export async function runBuild(configPath: string, opts: BuildOptions = {}) {
     );
   } else {
     console.warn(
-      `\n⚠  dist/triage.html contains your org ("${config.org}") and repo names.\n` +
+      `\n⚠  dist/triage.html bakes in your configured scope (e.g. repo names).\n` +
       `   Safe to share within your team; do NOT commit it to a public repo.\n` +
       `   No token is embedded — each user pastes their own at runtime.\n`,
     );

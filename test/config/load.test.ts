@@ -8,9 +8,9 @@ describe("loadConfig", () => {
   it("parses and validates a yaml config file", () => {
     const dir = mkdtempSync(join(tmpdir(), "tk-"));
     const p = join(dir, "triage.config.yml");
-    writeFileSync(p, "org: acme-corp\nsource: github\nrepos: [web-app]\nviews: [security-alerts]\n");
+    writeFileSync(p, "source: github\nviews: [security-alerts]\n");
     const cfg = loadConfig(p);
-    expect(cfg.repos).toEqual(["web-app"]);
+    expect(cfg.source).toBe("github");
   });
 
   it("throws a clear error when the file is missing", () => {

@@ -1,4 +1,5 @@
 import type { TriageConfigT } from "../../config/schema";
+import { isCompiledConfig } from "./mode";
 import { getSource, listSources } from "../ingest/source";
 import { getView } from "../views/registry";
 import { getDomain } from "../dataset/domain";
@@ -19,6 +20,7 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
   const creds = new CredStore();
   const scopes = new ScopeStore();
   const source = getSource(config.source);
+  if (isCompiledConfig(config)) scopes.set(source.id, config.scope!);
   const upcoming = listSources().filter(s => s.status === "upcoming");
 
   // Reflection-only command bar — all config lives in the Settings slide-over.
