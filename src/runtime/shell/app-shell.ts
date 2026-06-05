@@ -15,6 +15,7 @@ import { providerIcon } from "./provider-icons";
 import { getThemeChoice, cycleTheme } from "./theme";
 import { getRefreshInterval, relativeSince } from "./refresh";
 import "../views/security-alerts/view";   // register view + scorer + ready source + charts
+import "../views/review/view";            // register review surface + scorer + github-review source
 import "../ingest/upcoming";              // register roadmap sources
 
 // Product mark: a funnel (many signals in → a triaged few out) whose drip is the
