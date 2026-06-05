@@ -2,13 +2,23 @@
 
 > Compile a config into a shareable, backend-free repo-triage dashboard.
 
-`triagekit` is a vendor-agnostic engine that compiles a private config plus optional
-domain logic into a single, self-contained HTML triage dashboard. The built file runs
-entirely in the browser — no backend, no build server, no third-party scripts. You
-paste your own token at runtime; nothing is ever embedded at build time.
+`triagekit` builds a single, self-contained HTML triage dashboard that runs entirely in
+the browser — no backend, no build server, no third-party scripts. You paste your own
+token at runtime; nothing is ever embedded at build time.
 
 GitHub is the first provider, shipping with a **security-alerts** view that scores and
 tiers your open Dependabot alerts.
+
+## Two build modes
+
+| Mode | Command | org/repos | Artifact |
+| --- | --- | --- | --- |
+| **Generic** | `triagekit build --generic` | entered at runtime, in-browser | nothing baked in → **safe to share or commit publicly** |
+| **Compiled** | `triagekit build` | baked in from `triage.config.yml` | contains your org/repo names → team-internal only |
+
+Generic mode is the general-purpose tool: build it once, hand the HTML to anyone, and
+each user types their org, repos, and token in the UI. Compiled mode pre-bakes a
+specific org/repo set for a turnkey team dashboard. **Neither mode ever embeds a token.**
 
 ## The public / private boundary
 
@@ -25,7 +35,21 @@ in inputs that are gitignored:
 
 The engine has **zero** code path that reads or embeds a credential.
 
-## Quickstart
+## Quickstart — generic (no config)
+
+```bash
+# 1. Build the general-purpose dashboard
+npx triagekit build --generic    # writes dist/triage.html
+
+# 2. Open it
+open dist/triage.html            # or double-click — it's just a file
+```
+
+In the page, enter your **org**, your **repos** (comma-separated), and a **fine-grained
+personal access token** with read access to Dependabot alerts, then click **Load
+alerts**. Org/repos persist locally for convenience; the token stays in this tab only.
+
+## Quickstart — compiled (config-baked)
 
 ```bash
 # 1. Configure (the copy is gitignored)
@@ -35,12 +59,9 @@ $EDITOR triage.config.yml        # set your org, repos, branding
 # 2. Build the single-file dashboard
 npx triagekit build              # writes dist/triage.html
 
-# 3. Open it
-open dist/triage.html            # or double-click — it's just a file
+# 3. Open it, paste a token, and click Refresh
+open dist/triage.html
 ```
-
-Then paste a **fine-grained personal access token** with read access to Dependabot
-alerts, and click **Refresh**.
 
 ### Example config
 
@@ -69,11 +90,14 @@ branding:
   Dependabot-alert read permission.
 - Never paste a token into a tracked file, a screenshot, or a commit.
 
-## ⚠ The built HTML is sensitive-by-default
+## Sharing the built HTML
 
-`dist/triage.html` contains the **org and repo names** you configured. It is safe to
-share within your team, but **do not commit it to a public repository**. No token is
-embedded — each user pastes their own.
+- **Generic build (`--generic`)** bakes in nothing org-specific — safe to share or
+  commit to a public repo. Each user supplies org/repos/token at runtime.
+- **Compiled build** ⚠ contains the **org and repo names** you configured. Safe to share
+  within your team, but **do not commit it to a public repository**.
+
+Neither build embeds a token — each user always pastes their own.
 
 ## Customizing the scoring
 
