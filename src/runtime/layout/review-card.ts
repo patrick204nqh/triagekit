@@ -140,8 +140,12 @@ export function mountReviewCard(host: HTMLElement, item: ReviewItem, opts: Mount
   async function expand(): Promise<void> {
     if (enriched || !opts.onExpand) return;
     enriched = true;
-    const patchData = await opts.onExpand(cur);
-    if (patchData) patch(patchData);
+    try {
+      const patchData = await opts.onExpand(cur);
+      if (patchData) patch(patchData);
+    } catch {
+      enriched = false;   // allow a retry on the next expand
+    }
     render();
   }
 

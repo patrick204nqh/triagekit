@@ -101,4 +101,10 @@ describe("enrichReview", () => {
     expect(await enrichReview(item, "t")).toEqual({});
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("returns an empty patch when the network throws", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("network down"); }));
+    const item = { kind: "pull-request", location: "acme/web", details: { number: 7 } } as unknown as TriageItem<ReviewDetails>;
+    expect(await enrichReview(item, "t")).toEqual({});
+  });
 });

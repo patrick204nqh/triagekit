@@ -75,24 +75,28 @@ function rollupChecks(runs: any[]): CheckStatus["state"] {
 // requested reviewers. Issues have no CI, so it is a no-op. Reuses GH_HEADERS.
 export async function enrichReview(item: TriageItem<ReviewDetails>, token: string): Promise<Partial<ReviewDetails>> {
   if (item.kind !== PULL_REQUEST) return {};
-  const [owner, name] = item.location.split("/");
-  const n = item.details.number;
-  const headers = GH_HEADERS(token);
-  const prRes = await fetch(`https://api.github.com/repos/${owner}/${name}/pulls/${n}`, { headers });
-  if (!prRes.ok) return {};
-  const pr = await prRes.json();
-  const reviewers: Actor[] = (pr.requested_reviewers ?? []).map(toActor);
-  const conflicts = pr.mergeable === false || pr.mergeable_state === "dirty";
-  let checks: CheckStatus = { state: "pending", conflicts };
-  const sha = pr.head?.sha;
-  if (sha) {
-    const crRes = await fetch(`https://api.github.com/repos/${owner}/${name}/commits/${sha}/check-runs`, { headers });
-    if (crRes.ok) {
-      const cr = await crRes.json();
-      checks = { state: rollupChecks(cr.check_runs ?? []), conflicts };
+  try {
+    const [owner, name] = item.location.split("/");
+    const n = item.details.number;
+    const headers = GH_HEADERS(token);
+    const prRes = await fetch(`https://api.github.com/repos/${owner}/${name}/pulls/${n}`, { headers });
+    if (!prRes.ok) return {};
+    const pr = await prRes.json();
+    const reviewers: Actor[] = (pr.requested_reviewers ?? []).map(toActor);
+    const conflicts = pr.mergeable === false || pr.mergeable_state === "dirty";
+    let checks: CheckStatus = { state: "pending", conflicts };
+    const sha = pr.head?.sha;
+    if (sha) {
+      const crRes = await fetch(`https://api.github.com/repos/${owner}/${name}/commits/${sha}/check-runs`, { headers });
+      if (crRes.ok) {
+        const cr = await crRes.json();
+        checks = { state: rollupChecks(cr.check_runs ?? []), conflicts };
+      }
     }
+    return { checks, reviewers };
+  } catch {
+    return {};   // network error: leave the card showing "open to load" rather than rejecting
   }
-  return { checks, reviewers };
 }
 
 export const githubReviewSource: Source = {
