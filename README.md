@@ -11,14 +11,15 @@ tiers your open Dependabot alerts.
 
 ## Two build modes
 
-| Mode | Command | org/repos | Artifact |
+| Mode | Command | scope | Artifact |
 | --- | --- | --- | --- |
-| **Generic** | `triagekit build --generic` | entered at runtime, in-browser | nothing baked in → **safe to share or commit publicly** |
-| **Compiled** | `triagekit build` | baked in from `triage.config.yml` | contains your org/repo names → team-internal only |
+| **Generic** | `triagekit build --generic` | chosen at runtime in **Settings** | nothing baked in → **safe to share or commit publicly** |
+| **Compiled** | `triagekit build` | a `scope` bag baked from `triage.config.yml` | contains your repo names → team-internal only |
 
 Generic mode is the general-purpose tool: build it once, hand the HTML to anyone, and
-each user types their org, repos, and token in the UI. Compiled mode pre-bakes a
-specific org/repo set for a turnkey team dashboard. **Neither mode ever embeds a token.**
+each user connects a token and picks their repos in **Settings** (⚙). Compiled mode
+pre-bakes a specific scope for a turnkey team dashboard. **Neither mode ever embeds a
+token.**
 
 ## The public / private boundary
 
@@ -29,9 +30,9 @@ in inputs that are gitignored:
 | File | Tracked? | Contains |
 | --- | --- | --- |
 | `triage.config.example.yml` | ✅ committed | fictional `acme-corp` example |
-| `triage.config.yml` | 🚫 gitignored | your real org + repos |
+| `triage.config.yml` | 🚫 gitignored | your real scope (repo names) |
 | `triage.hooks.ts` | 🚫 gitignored | your optional scoring overrides |
-| `dist/triage.html` | 🚫 gitignored | the built dashboard (your org/repo names) |
+| `dist/triage.html` | 🚫 gitignored | the built dashboard (your repo names) |
 
 The engine has **zero** code path that reads or embeds a credential.
 
@@ -45,9 +46,10 @@ npx triagekit build --generic    # writes dist/triage.html
 open dist/triage.html            # or double-click — it's just a file
 ```
 
-In the page, enter your **org**, your **repos** (comma-separated), and a **fine-grained
-personal access token** with read access to Dependabot alerts, then click **Load
-alerts**. Org/repos persist locally for convenience; the token stays in this tab only.
+In the page, open **Settings** (⚙) and connect a **fine-grained personal access token**
+with read access to Dependabot alerts, then use **"Find repositories I can access"** to
+pick your repos and click **Load**. Your scope persists locally for convenience; the
+token stays in this tab only.
 
 ### Hosted version
 
@@ -61,7 +63,7 @@ fresh build.
 ```bash
 # 1. Configure (the copy is gitignored)
 cp triage.config.example.yml triage.config.yml
-$EDITOR triage.config.yml        # set your org, repos, branding
+$EDITOR triage.config.yml        # set your scope (repos) + branding
 
 # 2. Build the single-file dashboard
 npx triagekit build              # writes dist/triage.html
@@ -73,12 +75,13 @@ open dist/triage.html
 ### Example config
 
 ```yaml
-org: acme-corp
 source: github
-repos:
-  - web-app
-  - api-gateway
-  - billing-service
+# Compiled mode bakes a per-source scope bag (no token is ever embedded).
+scope:
+  repos:
+    - acme-corp/web-app
+    - acme-corp/api-gateway
+    - acme-corp/billing-service
 views:
   - security-alerts
 branding:
@@ -91,20 +94,38 @@ branding:
 
 - **You** paste your own token at runtime; it is never read at build time and never
   embedded in the HTML.
-- Tokens are stored in **`sessionStorage` by default** — cleared when you close the tab,
-  never persisted across browser sessions.
+- Credentials are managed **per source** in Settings and stored in **`sessionStorage`** —
+  cleared when you close the tab, never persisted across browser sessions or embedded.
 - Use a **fine-grained PAT** scoped to only the repos you triage, with the minimum
   Dependabot-alert read permission.
 - Never paste a token into a tracked file, a screenshot, or a commit.
 
 ## Sharing the built HTML
 
-- **Generic build (`--generic`)** bakes in nothing org-specific — safe to share or
-  commit to a public repo. Each user supplies org/repos/token at runtime.
-- **Compiled build** ⚠ contains the **org and repo names** you configured. Safe to share
+- **Generic build (`--generic`)** bakes in nothing source-specific — safe to share or
+  commit to a public repo. Each user supplies their scope and token at runtime in Settings.
+- **Compiled build** ⚠ contains the **repo names** in your baked `scope`. Safe to share
   within your team, but **do not commit it to a public repository**.
 
 Neither build embeds a token — each user always pastes their own.
+
+## Settings & connections
+
+All configuration lives in the **Settings** slide-over (⚙ in the command bar) — the
+command bar itself only *reflects* state (a scope summary pill + a connection-health
+badge). Settings is a multi-provider manager:
+
+- **Connections list** — every source, grouped by domain, with a health dot
+  (`connected` / `no token` / `upcoming`) and a scope summary.
+- **Per-source credential** — provider-appropriate (GitHub fine-grained PAT, …),
+  **session-only** (`sessionStorage`), one per source, never persisted or embedded.
+- **Schema-driven scope** — each source declares its own scope fields; discoverable
+  fields (e.g. GitHub repositories) offer **"Find … I can access"**, which calls the
+  source's `discover()` and lists the targets your credential can actually reach. Scope
+  is non-secret, so it persists in `localStorage` keyed per source.
+
+Compiled builds seed their baked `scope` automatically, so a turnkey dashboard only needs
+a token.
 
 ## Customizing the scoring
 

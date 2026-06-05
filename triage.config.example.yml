@@ -1,10 +1,12 @@
 # Copy to triage.config.yml (gitignored) and edit with your real values.
-org: acme-corp
 source: github
-repos:
-  - web-app
-  - api-gateway
-  - billing-service
+# Compiled mode bakes a per-source scope bag. No token is ever embedded — each
+# user still pastes their own at runtime. Scope is non-secret (just repo names).
+scope:
+  repos:
+    - acme-corp/web-app
+    - acme-corp/api-gateway
+    - acme-corp/billing-service
 views:
   - security-alerts
 branding:
