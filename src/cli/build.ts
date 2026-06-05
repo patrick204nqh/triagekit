@@ -5,13 +5,13 @@ import { dirname, resolve } from "node:path";
 import { loadConfig } from "../config/load.js";
 import type { TriageConfigT } from "../config/schema.js";
 import { configPlugin } from "../vite/config-plugin.js";
-import { buildCspMeta, PROVIDER_CONNECT_SRC } from "../vite/csp-plugin.js";
+import { buildCspMeta, SOURCE_CONNECT_SRC } from "../vite/csp-plugin.js";
 
 // Generic build: nothing org-specific baked in. The user supplies org + repos + token
 // at runtime, so the artifact is safe to share/commit publicly.
 const GENERIC_CONFIG: TriageConfigT = {
   org: "",
-  provider: "github",
+  source: "github",
   repos: [],
   views: ["security-alerts"],
   branding: { title: "Triage" },
@@ -39,7 +39,7 @@ export async function runBuild(configPath: string, opts: BuildOptions = {}) {
 
   // Inject a strict, hash-based CSP computed over the final inlined HTML. connect-src
   // origins come from the configured provider (mirrors the adapter's connectSrc).
-  const connectSrc = PROVIDER_CONNECT_SRC[config.provider] ?? [];
+  const connectSrc = SOURCE_CONNECT_SRC[config.source] ?? [];
   const withCsp = buildCspMeta(readFileSync(outFile, "utf8"), connectSrc);
   writeFileSync(outFile, withCsp);
 

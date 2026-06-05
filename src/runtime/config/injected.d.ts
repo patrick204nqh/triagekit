@@ -4,6 +4,6 @@ declare module "virtual:triagekit-config" {
 }
 
 declare module "virtual:triagekit-hooks" {
-  import type { Scorer } from "../scoring/hooks";
+  import type { Scorer } from "../scoring/registry";
   export const score: Scorer | undefined;
 }

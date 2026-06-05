@@ -8,7 +8,7 @@ describe("loadConfig", () => {
   it("parses and validates a yaml config file", () => {
     const dir = mkdtempSync(join(tmpdir(), "tk-"));
     const p = join(dir, "triage.config.yml");
-    writeFileSync(p, "org: acme-corp\nprovider: github\nrepos: [web-app]\nviews: [security-alerts]\n");
+    writeFileSync(p, "org: acme-corp\nsource: github\nrepos: [web-app]\nviews: [security-alerts]\n");
     const cfg = loadConfig(p);
     expect(cfg.repos).toEqual(["web-app"]);
   });

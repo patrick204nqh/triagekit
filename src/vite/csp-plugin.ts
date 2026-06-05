@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 // Build-time map of provider id → origins the runtime must reach. Kept here (Node
 // side) so the CLI can compute connect-src without importing the browser runtime's
 // adapter registry. Mirrors each adapter's declared `connectSrc`.
-export const PROVIDER_CONNECT_SRC: Record<string, string[]> = {
+export const SOURCE_CONNECT_SRC: Record<string, string[]> = {
   github: ["https://api.github.com"],
 };
 
