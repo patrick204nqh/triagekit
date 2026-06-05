@@ -8,3 +8,7 @@ triage.hooks.ts
 *.local.yml
 scripts/anon-denylist.txt
 .claude/
+docs/superpowers/
+
+# brainstorming visual companion
+.superpowers/
