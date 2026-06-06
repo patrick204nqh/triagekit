@@ -39,6 +39,14 @@ describe("evalScoreModel", () => {
     const m: ScoreModel = { ...model, signals: { s: { from: "signal", transform: { type: "linear", in: [0, 100] } } }, formula: "s * 100" };
     expect(evalScoreModel(m, { ...item, signal: 50 })).toBe(50);
   });
+  it("returns 0 for signals when details is null, without throwing", () => {
+    // details typed as unknown; cast lets us test the null-guard in readField
+    expect(evalScoreModel(model, { ...item, details: null } as TriageItem)).toBe(0);
+  });
+  it("applies scale to the formula result before rounding", () => {
+    const m: ScoreModel = { ...model, formula: "severity", scale: 50 };
+    expect(evalScoreModel(m, item)).toBe(50); // severity=1 * scale=50
+  });
 });
 
 describe("tierFromBands", () => {
@@ -46,6 +54,9 @@ describe("tierFromBands", () => {
     expect(tierFromBands(100, model.tiers)).toBe("P0");
     expect(tierFromBands(65, model.tiers)).toBe("P1");
     expect(tierFromBands(0, model.tiers)).toBe("P3");
+  });
+  it("falls back to the lowest band when score is below every minimum", () => {
+    expect(tierFromBands(-5, [{ name: "P0", min: 80 }, { name: "P3", min: 0 }])).toBe("P3");
   });
 });
 
@@ -64,5 +75,9 @@ describe("validateModel", () => {
   it("flags non-decreasing tier cutoffs", () => {
     const bad: ScoreModel = { ...model, tiers: [{ name: "P0", min: 50 }, { name: "P1", min: 60 }] };
     expect(validateModel(bad, fields).some(e => e.includes("decrease"))).toBe(true);
+  });
+  it("flags a prototype-named signal (e.g. constructor) as unknown", () => {
+    const bad: ScoreModel = { ...model, formula: "constructor + severity" };
+    expect(validateModel(bad, fields).some(e => e.includes("unknown signal"))).toBe(true);
   });
 });

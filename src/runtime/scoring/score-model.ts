@@ -48,7 +48,8 @@ export function validateModel(model: ScoreModel, fields: FieldDef[]): string[] {
   try {
     const expr = parseFormula(model.formula);
     for (const v of formulaVars(expr)) {
-      if (!(v in model.signals)) errs.push(`formula uses unknown signal "${v}"`);
+      if (!Object.prototype.hasOwnProperty.call(model.signals, v))
+        errs.push(`formula uses unknown signal "${v}"`);
     }
   } catch (e) {
     errs.push(e instanceof FormulaError ? `formula: ${e.message}` : String(e));
