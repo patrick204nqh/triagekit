@@ -38,6 +38,13 @@ describe("applyFacets (registry-driven)", () => {
     const multi = [row({ id: "a", source: "github" }), row({ id: "b", source: "gitlab" })];
     expect(applyFacets(multi, withAxes({ provider: ["gitlab"] })).map(r => r.id)).toEqual(["b"]);
   });
+  it("filters by labels axis", () => {
+    const rs = [
+      row({ id: "a", details: { labels: [{ name: "security", color: "" }] } }),
+      row({ id: "b", details: { labels: [{ name: "bug", color: "" }] } }),
+    ];
+    expect(applyFacets(rs, withAxes({ labels: ["security"] })).map(r => r.id)).toEqual(["a"]);
+  });
   it("empty axis value array = no filter", () => {
     expect(applyFacets(rows, withAxes({ scope: [] })).map(r => r.id)).toEqual(["a", "b", "c"]);
   });
