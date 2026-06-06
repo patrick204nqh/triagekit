@@ -20,4 +20,16 @@ describe("PolicyStore", () => {
     localStorage.setItem("triagekit.policy.tiers", "not json");
     expect(new PolicyStore().getTiers()).toEqual(DEFAULT_THRESHOLDS);
   });
+
+  it("defaults bot logins to empty and round-trips a set list", () => {
+    const p = new PolicyStore();
+    expect(p.getBotLogins()).toEqual([]);
+    p.setBotLogins(["renovate", "internal-deploy-bot"]);
+    expect(new PolicyStore().getBotLogins()).toEqual(["renovate", "internal-deploy-bot"]);
+  });
+
+  it("returns [] when stored bot logins are corrupt", () => {
+    localStorage.setItem("triagekit.policy.botLogins", "{not json");
+    expect(new PolicyStore().getBotLogins()).toEqual([]);
+  });
 });
