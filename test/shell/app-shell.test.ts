@@ -112,6 +112,7 @@ describe("mountShell artifact navigation", () => {
       await flush();
 
       const tiers = [...document.querySelectorAll<HTMLElement>("#root .surface-body .tier")].map(t => t.textContent);
+      expect(tiers.length).toBeGreaterThan(0);
       if (tiers.length) expect(tiers.every(t => t === "P3")).toBe(true);
     } finally {
       fetchSpy.mockRestore();

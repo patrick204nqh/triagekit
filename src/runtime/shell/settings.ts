@@ -115,7 +115,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       const inp = host.querySelector<HTMLInputElement>(`[data-tier-input="${k}"]`);
       if (!inp) return;
       inp.value = String(t[k]);
-      inp.oninput = () => { const v = Number(inp.value); if (!inp.value.trim() || !Number.isFinite(v)) return; draftTiers = { ...getTierDraft(), [k]: v }; };
+      inp.oninput = () => { const v = Number(inp.value); if (!inp.value.trim() || !Number.isFinite(v) || v < 0) return; draftTiers = { ...getTierDraft(), [k]: v }; };
     });
   }
 
