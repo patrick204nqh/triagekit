@@ -45,6 +45,17 @@ describe("renderTriageList + DetailPanel", () => {
     expect(root.querySelector<HTMLElement>(".drawer")!.hidden).toBe(true);
   });
 
+  it("Escape closes the open drawer", () => {
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+    renderTriageList(root, [row({})], []);
+    (root.querySelector(".alert-row") as HTMLElement).click();
+    const drawer = root.querySelector<HTMLElement>(".drawer")!;
+    expect(drawer.hidden).toBe(false);
+    document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    expect(drawer.hidden).toBe(true);
+  });
+
   it("falls back to a default detail when the kind has no detail()", () => {
     const root = document.createElement("div");
     renderTriageList(root, [row({ kind: "code-scanning", title: "XSS" })], []);
