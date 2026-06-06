@@ -158,15 +158,20 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 .sheet.open { transform:none; }
 
 /* table drawer — standalone slide-over toggled by [hidden] (no .open class) */
-.drawer { position:fixed; top:0; right:0; height:100dvh; width:min(440px,92vw); background:var(--carbon); border-left:1px solid var(--line); box-shadow:-8px 0 32px var(--drawer-shadow); overflow-y:auto; padding:28px; z-index:11; }
+.drawer { position:fixed; top:0; right:0; height:100dvh; width:min(440px,92vw); background:var(--carbon); border-left:1px solid var(--line); box-shadow:-8px 0 32px var(--drawer-shadow); overflow-y:auto; z-index:11; }
 .drawer[hidden] { display:none; }
 .drawer h3 { margin:0 0 4px; font-size:1.125rem; font-weight:600; font-family:var(--mono); display:flex; align-items:center; gap:10px; }
 .drawer .muted { margin:0 0 20px; font-size:13px; }
 .drawer dl { display:grid; grid-template-columns:max-content 1fr; gap:10px 18px; margin:0 0 24px; }
 .drawer dt { color:var(--muted); font-size:13px; } .drawer dd { margin:0; }
 .drawer dd a, .drawer a { color:var(--accent); word-break:break-all; }
-.drawer-close { background:transparent; color:var(--fg); border:1px solid var(--line-strong); padding:8px 14px; border-radius:8px; }
-.drawer-close:hover { background:var(--slate); }
+.drawer-head { display:flex; justify-content:flex-end; padding:6px 6px 0; }
+.drawer-close { background:none; border:0; color:var(--muted); font-size:18px; line-height:1; cursor:pointer; padding:4px 8px; border-radius:6px; }
+.drawer-close:hover { color:var(--fg); }
+.drawer-content { padding:0 14px 14px; }
+.drawer-content .review-card { border:0; padding:0; }
+.drawer-inner { padding:14px 0 0; }
+@media (max-width:768px) { .drawer { left:0; right:0; width:auto; } }
 
 /* settings panel */
 .panel { width:min(420px,94vw); display:flex; flex-direction:column; }
