@@ -2,6 +2,12 @@
 import { describe, it, expect } from "vitest";
 import { renderTriageList, type ScoredItem } from "../../src/runtime/layout/triage-table";
 import "../../src/runtime/views/review/view";   // registers PR + issue kind renderers
+import { getFilterAxis } from "../../src/runtime/layout/facet-registry";
+
+it("registers review label + assignee axes", () => {
+  expect(getFilterAxis("label")).toBeDefined();
+  expect(getFilterAxis("assignee")).toBeDefined();
+});
 
 function pr(over: Partial<ScoredItem> = {}): ScoredItem {
   return {

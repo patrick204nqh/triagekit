@@ -23,8 +23,33 @@ registerKindRenderer(renderer);
 registerView({ id: "security-alerts", kind: DEPENDENCY_VULN });
 
 import { registerChart } from "../../layout/charts/registry";
+import { registerFilterAxis, registerSortKey } from "../../layout/facet-registry";
 
 const dv = (r: import("../../layout/triage-table").ScoredItem) => r.details as DependencyVulnDetails;
+
+const SEV_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, moderate: 2, low: 1 };
+
+registerFilterAxis({
+  id: "severity", label: "Severity", widget: "chips", quick: false,
+  appliesTo: (rows) => rows.some(r => r.kind === DEPENDENCY_VULN),
+  optionsFrom: (rows) => [...new Set(rows.filter(r => r.kind === DEPENDENCY_VULN).map(r => dv(r).severity))]
+    .sort((a, b) => (SEV_RANK[b] ?? 0) - (SEV_RANK[a] ?? 0)).map(s => ({ value: s, label: s })),
+  test: (i, sel) => i.kind === DEPENDENCY_VULN && sel.includes(dv(i).severity),
+});
+registerFilterAxis({
+  id: "fix-available", label: "Fix", widget: "chips", quick: false,
+  appliesTo: (rows) => rows.some(r => r.kind === DEPENDENCY_VULN),
+  optionsFrom: () => [{ value: "yes", label: "Fix available" }, { value: "no", label: "No fix" }],
+  test: (i, sel) => i.kind === DEPENDENCY_VULN && sel.includes(dv(i).fixAvailable ? "yes" : "no"),
+});
+registerSortKey({
+  id: "severity", label: "Severity",
+  compare: (a, b) => {
+    const sa = a.kind === DEPENDENCY_VULN ? (SEV_RANK[dv(a).severity] ?? 0) : 0;
+    const sb = b.kind === DEPENDENCY_VULN ? (SEV_RANK[dv(b).severity] ?? 0) : 0;
+    return (sb - sa) || (b.score - a.score);
+  },
+});
 
 registerChart({
   id: "dv-fixable", title: "Quick wins · fix available", kinds: [DEPENDENCY_VULN],

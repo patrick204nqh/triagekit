@@ -2,6 +2,13 @@
 import { describe, it, expect } from "vitest";
 import { renderTriageList, type ScoredItem } from "../../src/runtime/layout/triage-table";
 import "../../src/runtime/views/security-alerts/view";
+import { getFilterAxis, getSortKey } from "../../src/runtime/layout/facet-registry";
+
+it("registers vuln severity + fix-available axes and a severity sort", () => {
+  expect(getFilterAxis("severity")).toBeDefined();
+  expect(getFilterAxis("fix-available")).toBeDefined();
+  expect(getSortKey("severity")).toBeDefined();
+});
 
 describe("vuln detail in shared panel", () => {
   it("renders severity + fix into the drawer on row click", () => {

@@ -27,3 +27,21 @@ for (const kind of [PULL_REQUEST, ISSUE] as const) {
   const renderer: KindRenderer = { kind, columns: reviewColumns, detail };
   registerKindRenderer(renderer);
 }
+
+import { registerFilterAxis } from "../../layout/facet-registry";
+
+const isReview = (k: string) => k === PULL_REQUEST || k === ISSUE;
+registerFilterAxis({
+  id: "label", label: "Label", widget: "chips", quick: false,
+  appliesTo: (rows) => rows.some(r => isReview(r.kind) && det(r).labels.length > 0),
+  optionsFrom: (rows) => [...new Set(rows.filter(r => isReview(r.kind)).flatMap(r => det(r).labels.map(l => l.name)))]
+    .sort().map(n => ({ value: n, label: n })),
+  test: (i, sel) => isReview(i.kind) && det(i).labels.some(l => sel.includes(l.name)),
+});
+registerFilterAxis({
+  id: "assignee", label: "Assignee", widget: "chips", quick: false,
+  appliesTo: (rows) => rows.some(r => isReview(r.kind) && det(r).assignees.length > 0),
+  optionsFrom: (rows) => [...new Set(rows.filter(r => isReview(r.kind)).flatMap(r => det(r).assignees.map(a => a.login)))]
+    .sort().map(l => ({ value: l, label: l })),
+  test: (i, sel) => isReview(i.kind) && det(i).assignees.some(a => sel.includes(a.login)),
+});
