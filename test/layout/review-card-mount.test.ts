@@ -132,4 +132,22 @@ describe("mountReviewCard", () => {
     expect(calls).toBe(1);
     expect(host.querySelector(".review-card")).toBeTruthy();   // expanded card rendered, did not crash
   });
+
+  it("fires onExpand once on mount when shown non-collapsed", async () => {
+    const host = document.createElement("div"); document.body.appendChild(host);
+    let calls = 0;
+    const item = pr({ checks: null });
+    mountReviewCard(host, item, { collapsed: false, onExpand: () => { calls++; return Promise.resolve({}); } });
+    await Promise.resolve(); await Promise.resolve();
+    expect(calls).toBe(1);
+  });
+
+  it("does NOT fire onExpand on mount when collapsed", async () => {
+    const host = document.createElement("div"); document.body.appendChild(host);
+    let calls = 0;
+    const item = pr({ checks: null });
+    mountReviewCard(host, item, { collapsed: true, onExpand: () => { calls++; return Promise.resolve({}); } });
+    await Promise.resolve(); await Promise.resolve();
+    expect(calls).toBe(0);
+  });
 });

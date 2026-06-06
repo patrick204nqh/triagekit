@@ -68,6 +68,7 @@ describe("mountShell artifact navigation", () => {
       expect(document.querySelector("#root .facet-bar")).toBeTruthy();
       const body = document.querySelector<HTMLElement>("#root .surface-body");
       expect(body).toBeTruthy();
+      expect(document.querySelector("#root .surface-body table.alerts, #root .surface-body .empty")).toBeTruthy();
       expect(fetchSpy).toHaveBeenCalledTimes(1);
 
       // (b) a facet change re-renders the body without refetching.

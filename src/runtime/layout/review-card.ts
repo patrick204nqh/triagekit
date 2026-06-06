@@ -193,4 +193,5 @@ export function mountReviewCard(host: HTMLElement, item: ReviewItem, opts: Mount
   });
 
   render();
+  if (!collapsed && opts.onExpand) void expand();   // non-collapsed (panel) mount: load CI immediately
 }

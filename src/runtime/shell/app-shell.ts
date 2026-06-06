@@ -4,8 +4,7 @@ import { getSource, listSources, providerOf, type Source, type TriageError } fro
 import { listArtifacts, GROUP_LABEL, GROUP_ORDER, type Artifact } from "../dataset/artifact";
 import { resolveScorer, type Scorer } from "../scoring/registry";
 import { tierOf } from "../scoring/tier";
-import { renderTriageTable, renderTableSkeleton, esc, type ScoredItem } from "../layout/triage-table";
-import { resolveSurface } from "../layout/surface";
+import { renderTriageList, renderTableSkeleton, esc, type ScoredItem } from "../layout/triage-table";
 import { renderInsights } from "../layout/insights";
 import { renderFacetBar, applyFacets, emptyFacetState, type FacetState } from "../layout/facet-bar";
 import { CredStore } from "./cred-store";
@@ -215,9 +214,7 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
     const body = root.querySelector<HTMLElement>(".surface-body")!;
     const drawBody = () => {
       const shown = applyFacets(rows, facetState);
-      const surface = resolveSurface(active.id);
-      if (surface) surface(body, shown, errors, { token });
-      else renderTriageTable(body, shown, errors);
+      renderTriageList(body, shown, errors, { token });
     };
     const drawBar = () => renderFacetBar(facetHost, active, rows, facetState, next => {
       facetState = next; drawBar(); drawBody();
