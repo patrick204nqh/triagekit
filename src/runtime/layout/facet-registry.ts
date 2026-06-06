@@ -49,6 +49,13 @@ const TIERS: Tier[] = ["P0", "P1", "P2", "P3"];
 
 // ── Built-in axes ──
 registerFilterAxis({
+  id: "provider", label: "Provider", widget: "chips", quick: true,
+  // Universal facet: only meaningful once >=2 providers are loaded together.
+  appliesTo: (rows) => new Set(rows.map(r => r.source)).size >= 2,
+  optionsFrom: (rows) => [...new Set(rows.map(r => r.source))].sort().map(v => ({ value: v, label: v })),
+  test: (i, sel) => sel.includes(i.source),
+});
+registerFilterAxis({
   id: "scope", label: "Repo", widget: "select", quick: true,
   appliesTo: (rows) => rows.length > 0,
   optionsFrom: (rows) => [...new Set(rows.map(r => r.location))].sort().map(v => ({ value: v, label: v })),
