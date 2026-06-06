@@ -101,4 +101,13 @@ describe("renderFacetBar", () => {
     host.querySelector<HTMLElement>("[data-tier='P0']")!.click();
     expect([...next.tiers]).toEqual(["P0"]);
   });
+
+  it("toggling an already-selected tier chip removes it", () => {
+    const host = document.createElement("div");
+    let next = emptyFacetState();
+    const pre = { ...emptyFacetState(), tiers: new Set(["P0"] as const) };
+    renderFacetBar(host, reviewArtifact, rows, pre, s => { next = s; });
+    host.querySelector<HTMLElement>("[data-tier='P0']")!.click();
+    expect([...next.tiers]).toEqual([]);
+  });
 });
