@@ -2,6 +2,7 @@ import type { Source, Scope, DiscoveryOption } from "../ingest/source";
 import { providerOf } from "../ingest/source";
 import type { CredStore } from "./cred-store";
 import type { ScopeStore } from "./scope-store";
+import type { PolicyStore } from "./policy-store";
 import { scopeSummary } from "./health";
 import { providerIcon } from "./provider-icons";
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from "./theme";
@@ -11,7 +12,7 @@ function esc(s: unknown): string {
   return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
 }
 interface Opts {
-  sources: Source[]; creds: CredStore; scopes: ScopeStore;
+  sources: Source[]; creds: CredStore; scopes: ScopeStore; policy?: PolicyStore;
   onChange: () => void;            // credentials/scope committed or cleared
   onThemeChange?: () => void;      // theme applied (resync the top-right toggle)
   onRefreshChange?: () => void;    // auto-refresh cadence changed (reset the timer)

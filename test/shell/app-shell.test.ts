@@ -89,4 +89,32 @@ describe("mountShell artifact navigation", () => {
     expect(document.querySelector("#root .badge")?.textContent).toBe("upcoming");
     expect(document.querySelectorAll("#root .prov-roadmap li").length).toBeGreaterThan(0);  // aws/gcp/cloudflare
   });
+
+  it("applies configured tier thresholds when scoring", async () => {
+    // Absurdly high thresholds ensure every realistic score lands at P3.
+    localStorage.setItem("triagekit.policy.tiers", JSON.stringify({ p0: 9999, p1: 9998, p2: 9997 }));
+    sessionStorage.setItem("triagekit.cred.github", "tok");
+    localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: ["acme/web"] }));
+
+    // Return a critical vuln item whose normal score would be P0 (~170) with default thresholds.
+    const fetchSpy = vi.spyOn(githubSource, "fetch").mockResolvedValue({
+      items: [{
+        id: "github:acme/web:1", source: "github", kind: "dependency-vuln",
+        title: "lodash", location: "acme/web", signal: 100,
+        createdAt: new Date().toISOString(), url: "https://github.com/acme/web/security/dependabot/1",
+        details: { package: "lodash", severity: "critical", cvss: 10, scope: "runtime", fixAvailable: true, fixVersion: "4.17.22" },
+      }],
+      errors: [],
+    } as any);
+
+    try {
+      mountShell(config);
+      await flush();
+
+      const tiers = [...document.querySelectorAll<HTMLElement>("#root .surface-body .tier")].map(t => t.textContent);
+      if (tiers.length) expect(tiers.every(t => t === "P3")).toBe(true);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
 });

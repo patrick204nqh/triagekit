@@ -9,6 +9,7 @@ import { renderInsights } from "../layout/insights";
 import { renderFacetBar, applyFacets, emptyFacetState, type FacetState } from "../layout/facet-bar";
 import { CredStore } from "./cred-store";
 import { ScopeStore } from "./scope-store";
+import { PolicyStore } from "./policy-store";
 import { healthOf, scopeSummary } from "./health";
 import { mountSettings } from "./settings";
 import { providerIcon } from "./provider-icons";
@@ -31,6 +32,7 @@ const REFRESH = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" str
 export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
   const creds = new CredStore();
   const scopes = new ScopeStore();
+  const policy = new PolicyStore();
   const liveSource = getSource(config.source);
   if (isCompiledConfig(config)) scopes.set(providerOf(liveSource), config.scope!);
   const hasInsights = config.views.includes("insights");
@@ -61,7 +63,7 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
 
   const settingsHost = document.getElementById("settings-host")!;
   const settings = mountSettings(settingsHost, {
-    sources: listSources(), creds, scopes,
+    sources: listSources(), creds, scopes, policy,
     onChange: () => { lastRows = []; refreshBar(); render(); },
     onThemeChange: () => syncTheme(),
     onRefreshChange: () => applyRefreshTimer(),
@@ -197,7 +199,7 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
         const items = results.flatMap(r => r.items).filter(it => active.kinds.includes(it.kind));
         const errors = results.flatMap(r => r.errors);
         const rows: ScoredItem[] = items
-          .map(it => { const score = resolveScorer(it.kind, scoreOverride)(it); return { ...it, score, tier: tierOf(score) }; })
+          .map(it => { const score = resolveScorer(it.kind, scoreOverride)(it); return { ...it, score, tier: tierOf(score, policy.getTiers()) }; })
           .sort((a, b) => b.score - a.score);
         lastRows = rows; lastFetchedAt = Date.now(); updateSync();
         if (view === "insights") { renderInsights(root, rows, active.kinds); return; }
