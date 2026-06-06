@@ -12,7 +12,16 @@ describe("artifacts", () => {
     expect(byId.vulnerabilities).toBe("findings");
     expect(byId.secrets).toBe("findings");
     expect(byId.misconfigurations).toBe("findings");
-    expect(byId.tickets).toBe("work");
+    expect(byId.tasks).toBe("work");
+  });
+
+  it("exposes a Tasks artifact (renamed from tickets) under work", () => {
+    const a = listArtifacts().find(x => x.id === "tasks");
+    expect(a).toBeDefined();
+    expect(a!.label).toBe("Tasks");
+    expect(a!.group).toBe("work");
+    expect(a!.kinds).toEqual(["work-item"]);
+    expect(listArtifacts().some(x => x.id === "tickets")).toBe(false);
   });
 
   it("maps a kind back to its artifact", () => {
