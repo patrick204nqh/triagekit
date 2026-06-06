@@ -54,7 +54,7 @@ export function renderSignalEditor(host: HTMLElement, opts: SignalEditorOpts): v
     <button class="btn-ghost mini" data-remove aria-label="Remove ${esc(name)}">×</button>
   </div>`;
 
-  const emit = (transform: Transform, from: string = signal.from) => opts.onChange(from, { from, transform });
+  const emit = (transform: Transform, from: string = signal.from) => opts.onChange(name, { from, transform });
 
   host.querySelector<HTMLInputElement>("[data-name]")!.addEventListener("change", (e) => {
     const v = (e.target as HTMLInputElement).value.trim();

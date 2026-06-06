@@ -52,8 +52,19 @@ describe("renderSignalEditor", () => {
     expect(host.querySelector('[data-enum="low"]')).not.toBeNull();   // from field.values, default 0
     const c = host.querySelector<HTMLInputElement>('[data-enum="critical"]')!;
     c.value = "0.9"; c.dispatchEvent(new Event("change"));
-    expect(onChange).toHaveBeenCalledWith("severity",
+    expect(onChange).toHaveBeenCalledWith("cvss",
       { from: "severity", transform: { type: "enum", map: { critical: 0.9, high: 0.7, low: 0 } } });
+  });
+  it("keys onChange by the signal name, not the field", () => {
+    const onChange = vi.fn();
+    const host = document.createElement("div");
+    renderSignalEditor(host, {
+      name: "fix", signal: { from: "fixAvailable", transform: { type: "bool" } }, fields,
+      onChange, onRename: () => {}, onRemove: () => {},
+    });
+    host.querySelector<HTMLSelectElement>("[data-type]")!.value = "linear";
+    host.querySelector<HTMLSelectElement>("[data-type]")!.dispatchEvent(new Event("change"));
+    expect(onChange.mock.calls[0][0]).toBe("fix");   // keyed by name, not "fixAvailable"
   });
   it("fires onRename and onRemove", () => {
     const onRename = vi.fn(); const onRemove = vi.fn();
