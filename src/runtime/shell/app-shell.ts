@@ -10,6 +10,7 @@ import { renderFacetBar, applyFacets, emptyFacetState, type FacetState } from ".
 import { CredStore } from "./cred-store";
 import { ScopeStore } from "./scope-store";
 import { PolicyStore } from "./policy-store";
+import { withBotPolicy } from "./author-policy";
 import { healthOf, scopeSummary } from "./health";
 import { mountSettings } from "./settings";
 import { providerIcon } from "./provider-icons";
@@ -198,7 +199,9 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
       .then(results => {
         const items = results.flatMap(r => r.items).filter(it => active.kinds.includes(it.kind));
         const errors = results.flatMap(r => r.errors);
+        const botLogins = policy.getBotLogins();
         const rows: ScoredItem[] = items
+          .map(it => withBotPolicy(it, botLogins))
           .map(it => { const score = resolveScorer(it.kind, scoreOverride)(it); return { ...it, score, tier: tierOf(score, policy.getTiers()) }; })
           .sort((a, b) => b.score - a.score);
         lastRows = rows; lastFetchedAt = Date.now(); updateSync();

@@ -38,6 +38,12 @@ function authorKind(i: ScoredItem): string | undefined {
   return (i.details as { author?: { kind?: string } } | null | undefined)?.author?.kind;
 }
 
+// labels live on review items; read defensively.
+function labelsOf(i: ScoredItem): string[] {
+  const ls = (i.details as { labels?: { name: string }[] } | null | undefined)?.labels;
+  return Array.isArray(ls) ? ls.map(l => l.name) : [];
+}
+
 const KIND_LABEL: Record<string, string> = {
   "pull-request": "Pull requests", "issue": "Issues",
   "dependency-vuln": "Dependency", "code-scanning": "Code scanning",
@@ -78,6 +84,13 @@ registerFilterAxis({
   appliesTo: (rows) => rows.length > 0 && rows.every(r => authorKind(r) !== undefined),
   optionsFrom: () => [{ value: "human", label: "Human" }, { value: "bot", label: "Bot" }],
   test: (i, sel) => { const k = authorKind(i); return k !== undefined && sel.includes(k); },
+});
+
+registerFilterAxis({
+  id: "labels", label: "Labels", widget: "chips", quick: false,
+  appliesTo: (rows) => rows.some(r => labelsOf(r).length > 0),
+  optionsFrom: (rows) => [...new Set(rows.flatMap(labelsOf))].sort().map(v => ({ value: v, label: v })),
+  test: (i, sel) => labelsOf(i).some(n => sel.includes(n)),
 });
 
 // ── Built-in sorts ──

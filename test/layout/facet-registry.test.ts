@@ -86,4 +86,19 @@ describe("facet-registry built-ins", () => {
     expect(listFilterAxes().map(a => a.id)).toEqual(expect.arrayContaining(["provider", "scope", "kind", "tier", "author"]));
     expect(listSortKeys().map(s => s.id)).toEqual(expect.arrayContaining(["priority", "recent"]));
   });
+
+  it("labels axis: applies when any row has labels, options are the sorted union", () => {
+    const labels = getFilterAxis("labels");
+    expect(labels).toBeDefined();
+    const withLabels = [
+      row({ id: "a", details: { labels: [{ name: "security", color: "" }, { name: "bug", color: "" }] } }),
+      row({ id: "b", details: { labels: [{ name: "bug", color: "" }] } }),
+      row({ id: "c", details: {} }),
+    ];
+    expect(labels!.appliesTo(withLabels, rctx)).toBe(true);
+    expect(labels!.appliesTo([row({ details: {} })], rctx)).toBe(false);
+    expect(labels!.optionsFrom(withLabels, rctx).map(o => o.value)).toEqual(["bug", "security"]);
+    expect(labels!.test(withLabels[0], ["security"])).toBe(true);
+    expect(labels!.test(withLabels[1], ["security"])).toBe(false);
+  });
 });
