@@ -50,12 +50,14 @@ export function mountScoringEditor(host: HTMLElement, opts: ScoringEditorOpts) {
         <button class="btn-ghost mini" data-reset>Reset to default</button>
       </div>
       <div class="se-body" data-body></div>
+      <div class="se-tiers" data-tiers></div>
       <div class="se-errors" data-errors></div>
     </div>`;
 
     const body = host.querySelector<HTMLElement>("[data-body]")!;
     if (mode === "simple") renderSimple(body, model, weights!);
     else renderAdvanced(body, model);
+    renderTierBands(model);
     renderErrors(model, simpleAvailable);
     wireHead();
   }
@@ -118,6 +120,29 @@ export function mountScoringEditor(host: HTMLElement, opts: ScoringEditorOpts) {
         },
       });
     }
+  }
+
+  function renderTierBands(model: ScoreModel): void {
+    const tiersHost = host.querySelector<HTMLElement>("[data-tiers]")!;
+    const minOf = (name: string) => model.tiers.find(t => t.name === name)?.min ?? 0;
+    tiersHost.innerHTML = `<label class="set-label">Tier bands</label>
+      <div class="tier-thresholds">
+        <label>P0 ≥ <input type="number" step="any" data-tier-min="P0" value="${minOf("P0")}"></label>
+        <label>P1 ≥ <input type="number" step="any" data-tier-min="P1" value="${minOf("P1")}"></label>
+        <label>P2 ≥ <input type="number" step="any" data-tier-min="P2" value="${minOf("P2")}"></label>
+      </div>
+      <span class="set-helper">P3 ≥ 0 (floor). Cutoffs must strictly decrease.</span>`;
+    const read = (name: string) => Number(tiersHost.querySelector<HTMLInputElement>(`[data-tier-min="${name}"]`)!.value);
+    tiersHost.querySelectorAll<HTMLInputElement>("[data-tier-min]").forEach(inp =>
+      inp.addEventListener("change", () => commit({
+        ...model,
+        tiers: [
+          { name: "P0", min: read("P0") },
+          { name: "P1", min: read("P1") },
+          { name: "P2", min: read("P2") },
+          { name: "P3", min: 0 },
+        ],
+      })));
   }
 
   function renderErrors(model: ScoreModel, simpleAvailable: boolean): void {
