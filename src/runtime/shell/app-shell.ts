@@ -5,6 +5,7 @@ import { listArtifacts, GROUP_LABEL, GROUP_ORDER, type Artifact } from "../datas
 import type { Scorer } from "../scoring/registry";
 import { scoreAndTier } from "../scoring/configured";
 import { fieldsFor } from "../scoring/field-catalog";
+import { explainScoreModel, validateModel, type ScoreExplanation } from "../scoring/score-model";
 import { renderTriageList, renderTableSkeleton, esc, type ScoredItem } from "../layout/triage-table";
 import { renderInsights } from "../layout/insights";
 import { applicableTabs, getTab } from "../layout/tab-registry";
@@ -234,9 +235,13 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
     root.innerHTML = `<div class="facet-host"></div><div class="surface-body"></div>`;
     const facetHost = root.querySelector<HTMLElement>(".facet-host")!;
     const body = root.querySelector<HTMLElement>(".surface-body")!;
+    const scoreExplain = (i: ScoredItem): ScoreExplanation | null => {
+      const m = policy.getScoreModel(i.kind);
+      return m && validateModel(m, fieldsFor(i.kind)).length === 0 ? explainScoreModel(m, i) : null;
+    };
     const drawBody = () => {
       const shown = applyFacets(rows, facetState);
-      renderTriageList(body, shown, errors, { token });
+      renderTriageList(body, shown, errors, { token, scoreExplain });
     };
     const drawBar = () => renderFacetBar(facetHost, active, rows, facetState, next => {
       facetState = next; drawBar(); drawBody();
