@@ -2,6 +2,8 @@ import type { Source, Scope, DiscoveryOption } from "../ingest/source";
 import { providerOf } from "../ingest/source";
 import type { CredStore } from "./cred-store";
 import type { ScopeStore } from "./scope-store";
+import type { PolicyStore } from "./policy-store";
+import { type TierThresholds } from "../scoring/tier";
 import { scopeSummary } from "./health";
 import { providerIcon } from "./provider-icons";
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from "./theme";
@@ -11,7 +13,7 @@ function esc(s: unknown): string {
   return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
 }
 interface Opts {
-  sources: Source[]; creds: CredStore; scopes: ScopeStore;
+  sources: Source[]; creds: CredStore; scopes: ScopeStore; policy: PolicyStore;
   onChange: () => void;            // credentials/scope committed or cleared
   onThemeChange?: () => void;      // theme applied (resync the top-right toggle)
   onRefreshChange?: () => void;    // auto-refresh cadence changed (reset the timer)
@@ -26,7 +28,7 @@ function fingerprint(token: string): string {
 }
 
 export function mountSettings(host: HTMLElement, opts: Opts) {
-  const { sources, creds, scopes, onChange, onThemeChange, onRefreshChange } = opts;
+  const { sources, creds, scopes, policy, onChange, onThemeChange, onRefreshChange } = opts;
   // One connection per provider: pick a representative (prefer a ready source), and
   // key credentials/scope by provider so sources that share a provider share a token.
   const providerReps: Source[] = (() => {
@@ -40,22 +42,36 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   })();
   host.innerHTML = `<div class="scrim" data-scrim></div>
     <aside class="sheet panel" data-panel aria-hidden="true">
-      <div class="panel-head"><h3>Settings</h3><button class="icon-btn" data-close aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+      <div class="panel-head"><h3>Settings</h3>
+        <div class="set-tabs"><button data-tab="quick" class="on">Quick</button><button data-tab="advanced">Advanced</button></div>
+        <button class="icon-btn" data-close aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
       <div class="panel-body">
-        <section class="set-section"><label class="set-label">Appearance</label>
-          <div class="seg" data-theme-seg></div></section>
-        <section class="set-section"><label class="set-label">Auto-refresh</label>
-          <div class="seg" data-refresh-seg></div>
-          <span class="set-helper">Re-fetch on a timer. Snapshot only — there is no backend history to trend.</span></section>
-        <section class="set-section"><label class="set-label">Connections</label>
-          <input class="conn-filter" data-conn-filter type="text" placeholder="Filter integrations…" aria-label="Filter integrations"/>
-          <div class="conn-list" data-conns></div>
-          <span class="set-helper">One credential per provider — kept in this tab only (session), never persisted or embedded.</span></section>
-        <section class="set-section"><label class="set-label">Data</label>
-          <div class="data-actions">
-            <button class="btn-ghost" data-clear="creds">Clear credentials</button>
-            <button class="btn-ghost" data-clear="scope">Clear saved scope</button></div>
-          <span class="set-helper">Credentials live in this tab's session; scope is saved in this browser.</span></section>
+        <div data-pane="quick">
+          <section class="set-section"><label class="set-label">Appearance</label>
+            <div class="seg" data-theme-seg></div></section>
+          <section class="set-section"><label class="set-label">Auto-refresh</label>
+            <div class="seg" data-refresh-seg></div>
+            <span class="set-helper">Re-fetch on a timer. Snapshot only — there is no backend history to trend.</span></section>
+          <section class="set-section"><label class="set-label">Connections</label>
+            <input class="conn-filter" data-conn-filter type="text" placeholder="Filter integrations…" aria-label="Filter integrations"/>
+            <div class="conn-list" data-conns></div>
+            <span class="set-helper">One credential per provider — kept in this tab only (session), never persisted or embedded.</span></section>
+          <section class="set-section"><label class="set-label">Data</label>
+            <div class="data-actions">
+              <button class="btn-ghost" data-clear="creds">Clear credentials</button>
+              <button class="btn-ghost" data-clear="scope">Clear saved scope</button></div>
+            <span class="set-helper">Credentials live in this tab's session; scope is saved in this browser.</span></section>
+        </div>
+        <div data-pane="advanced" hidden>
+          <section class="set-section"><label class="set-label">Priority thresholds</label>
+            <p class="set-helper">Minimum score for each tier. Items below P2 are P3.</p>
+            <div class="tier-thresholds">
+              <label>P0 ≥ <input type="number" min="0" step="1" data-tier-input="p0"></label>
+              <label>P1 ≥ <input type="number" min="0" step="1" data-tier-input="p1"></label>
+              <label>P2 ≥ <input type="number" min="0" step="1" data-tier-input="p2"></label>
+            </div>
+            <span class="set-helper">Saved in this browser; re-tiers on Save.</span></section>
+        </div>
       </div>
       <div class="panel-foot"><button class="btn-ghost" data-cancel>Cancel</button><button class="btn-primary" data-save>Save</button></div>
     </aside>`;
@@ -69,6 +85,8 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   // Credential/scope edits are staged and committed on Save; theme + clear apply now.
   const draftCred = new Map<string, string>();
   const draftScope = new Map<string, Scope>();
+  let draftTiers: TierThresholds | null = null;
+  const getTierDraft = () => draftTiers ?? policy.getTiers();
   const getCred = (prov: string) => draftCred.has(prov) ? draftCred.get(prov)! : (creds.get(prov) ?? "");
   const getScope = (prov: string) => draftScope.has(prov) ? draftScope.get(prov)! : scopes.get(prov);
   const isConnected = (s: Source) => s.status !== "upcoming" && !!getCred(providerOf(s));
@@ -89,6 +107,16 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     rseg.innerHTML = REFRESH_OPTIONS.map(o => `<button data-refresh="${o.value}" class="${o.value === cur ? "on" : ""}">${esc(o.label)}</button>`).join("");
     rseg.querySelectorAll<HTMLElement>("[data-refresh]").forEach(b =>
       b.addEventListener("click", () => { setRefreshInterval(Number(b.dataset.refresh)); renderRefresh(); onRefreshChange?.(); }));
+  }
+
+  function renderAdvanced() {
+    const t = getTierDraft();
+    (["p0", "p1", "p2"] as const).forEach(k => {
+      const inp = host.querySelector<HTMLInputElement>(`[data-tier-input="${k}"]`);
+      if (!inp) return;
+      inp.value = String(t[k]);
+      inp.oninput = () => { const v = Number(inp.value); if (!inp.value.trim() || !Number.isFinite(v) || v < 0) return; draftTiers = { ...getTierDraft(), [k]: v }; };
+    });
   }
 
   // ── Integrations catalog: Connected on top, Available below, filterable ──
@@ -259,10 +287,11 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     panel.classList.toggle("open", !hidden); scrim.classList.toggle("open", !hidden);
     panel.setAttribute("aria-hidden", String(hidden));
   }
-  function discard() { draftCred.clear(); draftScope.clear(); setHidden(true); }
+  function discard() { draftCred.clear(); draftScope.clear(); draftTiers = null; setHidden(true); }
   function save() {
     for (const [prov, v] of draftCred) creds.set(prov, v);
     for (const [prov, sc] of draftScope) scopes.set(prov, sc);
+    if (draftTiers) { policy.setTiers(draftTiers); draftTiers = null; }
     draftCred.clear(); draftScope.clear(); onChange(); setHidden(true);
   }
   scrim.addEventListener("click", discard);
@@ -273,10 +302,23 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   host.querySelectorAll<HTMLElement>("[data-clear]").forEach(b =>
     b.addEventListener("click", () => clearData(b.dataset.clear as "creds" | "scope")));
 
+  host.querySelectorAll<HTMLElement>("[data-tab]").forEach(b =>
+    b.addEventListener("click", () => {
+      host.querySelectorAll<HTMLElement>("[data-tab]").forEach(x => x.classList.toggle("on", x === b));
+      const tab = b.dataset.tab!;
+      host.querySelector<HTMLElement>(`[data-pane="quick"]`)!.hidden = tab !== "quick";
+      host.querySelector<HTMLElement>(`[data-pane="advanced"]`)!.hidden = tab !== "advanced";
+      if (tab === "advanced") renderAdvanced();
+    }));
+
   return {
     open(provider?: string) {
       expanded = provider ?? (providerReps[0] ? providerOf(providerReps[0]) : null);
-      draftCred.clear(); draftScope.clear(); filter.value = "";
+      draftCred.clear(); draftScope.clear(); draftTiers = null; filter.value = "";
+      // reset to Quick tab
+      host.querySelectorAll<HTMLElement>("[data-tab]").forEach(b => b.classList.toggle("on", b.dataset.tab === "quick"));
+      host.querySelector<HTMLElement>(`[data-pane="quick"]`)!.hidden = false;
+      host.querySelector<HTMLElement>(`[data-pane="advanced"]`)!.hidden = true;
       renderTheme(); renderRefresh(); renderConns(); setHidden(false);
     },
   };
