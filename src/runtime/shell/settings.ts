@@ -4,6 +4,10 @@ import type { CredStore } from "./cred-store";
 import type { ScopeStore } from "./scope-store";
 import type { PolicyStore } from "./policy-store";
 import { type TierThresholds } from "../scoring/tier";
+import { mountScoringEditor } from "./scoring-editor";
+import { validateModel, type ScoreModel } from "../scoring/score-model";
+import { fieldsFor } from "../scoring/field-catalog";
+import type { Kind } from "../dataset/item";
 import { scopeSummary } from "./health";
 import { providerIcon } from "./provider-icons";
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from "./theme";
@@ -72,6 +76,9 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
               <label>P2 ≥ <input type="number" min="0" step="1" data-tier-input="p2"></label>
             </div>
             <span class="set-helper">Saved in this browser; re-tiers on Save.</span></section>
+          <section class="set-section"><label class="set-label">Scoring</label>
+            <p class="set-helper">Per-kind score model. Simple = weight sliders; Advanced = formula + signals. Saved in this browser.</p>
+            <div data-scoring-editor></div></section>
         </div>
       </div>
       <div class="panel-foot"><button class="btn-ghost" data-cancel>Cancel</button><button class="btn-primary" data-save>Save</button></div>
@@ -87,6 +94,15 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   const draftCred = new Map<string, string>();
   const draftScope = new Map<string, Scope>();
   let draftTiers: TierThresholds | null = null;
+  // Score-model edits per kind: a ScoreModel to persist, or "reset" to clear back to default.
+  const draftModels = new Map<string, ScoreModel | "reset">();
+  const allDraftsValid = () => {
+    for (const [k, d] of draftModels) {
+      if (d === "reset") continue;
+      if (validateModel(d, fieldsFor(k as Kind)).length) return false;
+    }
+    return true;
+  };
   const getTierDraft = () => draftTiers ?? policy.getTiers();
   const getCred = (prov: string) => draftCred.has(prov) ? draftCred.get(prov)! : (creds.get(prov) ?? "");
   const getScope = (prov: string) => draftScope.has(prov) ? draftScope.get(prov)! : scopes.get(prov);
@@ -111,6 +127,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   }
 
   function renderAdvanced() {
+    editor.render();
     const t = getTierDraft();
     (["p0", "p1", "p2"] as const).forEach(k => {
       const inp = host.querySelector<HTMLInputElement>(`[data-tier-input="${k}"]`);
@@ -291,16 +308,33 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     panel.setAttribute("aria-hidden", String(hidden));
     if (hidden) dismiss.release(); else dismiss.activate();
   }
-  function discard() { draftCred.clear(); draftScope.clear(); draftTiers = null; setHidden(true); }
+  function discard() { draftCred.clear(); draftScope.clear(); draftTiers = null; draftModels.clear(); updateSaveGate(); setHidden(true); }
   function save() {
     for (const [prov, v] of draftCred) creds.set(prov, v);
     for (const [prov, sc] of draftScope) scopes.set(prov, sc);
     if (draftTiers) { policy.setTiers(draftTiers); draftTiers = null; }
+    for (const [k, d] of draftModels) { if (d === "reset") policy.clearScoreModel(k); else policy.setScoreModel(k, d); }
+    draftModels.clear();
     draftCred.clear(); draftScope.clear(); onChange(); setHidden(true);
   }
   host.querySelector("[data-close]")!.addEventListener("click", discard);
   host.querySelector("[data-cancel]")!.addEventListener("click", discard);
-  host.querySelector("[data-save]")!.addEventListener("click", save);
+  const saveBtn = host.querySelector<HTMLButtonElement>("[data-save]")!;
+  saveBtn.addEventListener("click", save);
+  const updateSaveGate = () => { saveBtn.disabled = !allDraftsValid(); };
+  const editor = mountScoringEditor(host.querySelector<HTMLElement>("[data-scoring-editor]")!, {
+    // Seed precedence: staged draft > persisted model > (editor falls back to default).
+    // A "reset" draft returns null so the editor previews the default before Save commits the clear.
+    getDraft: (k) => {
+      const d = draftModels.get(k);
+      if (d === "reset") return null;
+      if (d) return d;
+      return policy.getScoreModel(k);
+    },
+    setDraft: (k, m) => { draftModels.set(k, m); updateSaveGate(); },
+    clearDraft: (k) => { draftModels.set(k, "reset"); updateSaveGate(); },
+    onChange: () => updateSaveGate(),
+  });
   filter.addEventListener("input", () => renderConns());
   host.querySelectorAll<HTMLElement>("[data-clear]").forEach(b =>
     b.addEventListener("click", () => clearData(b.dataset.clear as "creds" | "scope")));
@@ -317,7 +351,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   return {
     open(provider?: string) {
       expanded = provider ?? (providerReps[0] ? providerOf(providerReps[0]) : null);
-      draftCred.clear(); draftScope.clear(); draftTiers = null; filter.value = "";
+      draftCred.clear(); draftScope.clear(); draftTiers = null; draftModels.clear(); updateSaveGate(); filter.value = "";
       // reset to Quick tab
       host.querySelectorAll<HTMLElement>("[data-tab]").forEach(b => b.classList.toggle("on", b.dataset.tab === "quick"));
       host.querySelector<HTMLElement>(`[data-pane="quick"]`)!.hidden = false;
