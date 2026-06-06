@@ -13,6 +13,7 @@ import { providerIcon } from "./provider-icons";
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from "./theme";
 import { getRefreshInterval, setRefreshInterval, REFRESH_OPTIONS } from "./refresh";
 import { dismissible } from "./dismissible";
+import type { ScoredItem } from "../layout/triage-table";
 
 function esc(s: unknown): string {
   return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
@@ -22,6 +23,7 @@ interface Opts {
   onChange: () => void;            // credentials/scope committed or cleared
   onThemeChange?: () => void;      // theme applied (resync the top-right toggle)
   onRefreshChange?: () => void;    // auto-refresh cadence changed (reset the timer)
+  getRows?: () => ScoredItem[];    // loaded scored rows — for the scoring editor's live preview
 }
 
 // Discovery results cached per source+credential so re-opening Settings or
@@ -33,7 +35,7 @@ function fingerprint(token: string): string {
 }
 
 export function mountSettings(host: HTMLElement, opts: Opts) {
-  const { sources, creds, scopes, policy, onChange, onThemeChange, onRefreshChange } = opts;
+  const { sources, creds, scopes, policy, onChange, onThemeChange, onRefreshChange, getRows } = opts;
   // One connection per provider: pick a representative (prefer a ready source), and
   // key credentials/scope by provider so sources that share a provider share a token.
   const providerReps: Source[] = (() => {
@@ -334,6 +336,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     setDraft: (k, m) => { draftModels.set(k, m); updateSaveGate(); },
     clearDraft: (k) => { draftModels.set(k, "reset"); updateSaveGate(); },
     onChange: () => updateSaveGate(),
+    previewRows: (k) => (getRows?.() ?? []).filter(r => r.kind === k),
   });
   filter.addEventListener("input", () => renderConns());
   host.querySelectorAll<HTMLElement>("[data-clear]").forEach(b =>

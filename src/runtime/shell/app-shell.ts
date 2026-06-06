@@ -72,6 +72,7 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
     onChange: () => { lastRows = []; refreshBar(); render(); },
     onThemeChange: () => syncTheme(),
     onRefreshChange: () => applyRefreshTimer(),
+    getRows: () => lastRows,
   });
   const openSettings = () => settings.open(providerOf(primarySource(active)));
   status.addEventListener("click", openSettings);
