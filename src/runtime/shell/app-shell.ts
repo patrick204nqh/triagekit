@@ -6,6 +6,8 @@ import { resolveScorer, type Scorer } from "../scoring/registry";
 import { tierOf } from "../scoring/tier";
 import { renderTriageList, renderTableSkeleton, esc, type ScoredItem } from "../layout/triage-table";
 import { renderInsights } from "../layout/insights";
+import { applicableTabs, getTab } from "../layout/tab-registry";
+import "../layout/due-soon";   // register the Due soon tab (side-effect)
 import { renderFacetBar, applyFacets, emptyFacetState, type FacetState } from "../layout/facet-bar";
 import { CredStore } from "./cred-store";
 import { ScopeStore } from "./scope-store";
@@ -44,7 +46,7 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
   const primarySource = (a: Artifact): Source => liveSourcesFor(a)[0] ?? sourcesFor(a)[0];
 
   let active: Artifact = artifacts.find(a => liveSourcesFor(a).length) ?? artifacts[0];
-  let view: "list" | "insights" = "list";
+  let view: string = "list";
   let selected = new Set(liveSourcesFor(active).map(s => s.id));   // provider facet
   let lastRows: ScoredItem[] = [];
   let facetState: FacetState = emptyFacetState();
@@ -145,7 +147,7 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
   function buildNav() {
     nav.innerHTML = "";
     if (!liveSourcesFor(active).length) return;   // upcoming artifact: no tabs/facet
-    const tab = (id: "list" | "insights", label: string) => {
+    const tab = (id: string, label: string) => {
       const b = document.createElement("button");
       b.textContent = label;
       if (id === view) b.className = "active";
@@ -154,6 +156,7 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
     };
     tab("list", "List");
     if (hasInsights) tab("insights", "Insights");
+    for (const t of applicableTabs(active, lastRows)) tab(t.id, t.label);
 
     // Provider facet — toggle which similar providers feed this artifact's queue
     // (github + gitlab both pour into Vulnerabilities). Forward-compatible today.
@@ -184,6 +187,9 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
       return;
     }
     if (!silent && view === "insights" && lastRows.length) { renderInsights(root, lastRows, active.kinds); return; }
+    if (!silent && view !== "list" && view !== "insights" && lastRows.length) {
+      const t = getTab(view); if (t) { t.render(root, lastRows); return; }
+    }
 
     const usable = live.filter(s => selected.has(s.id) && creds.get(providerOf(s)) && Object.keys(scopes.get(providerOf(s))).length);
     if (!usable.length) {
@@ -206,6 +212,8 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
           .sort((a, b) => b.score - a.score);
         lastRows = rows; lastFetchedAt = Date.now(); updateSync();
         if (view === "insights") { renderInsights(root, rows, active.kinds); return; }
+        const extra = getTab(view);
+        if (extra) { extra.render(root, rows); return; }
         renderListWithFacets(rows, errors, creds.get(providerOf(usable[0]))!);
       })
       .catch(err => { root.innerHTML = `<p class="error">Failed to load: ${err?.message ?? err}</p>`; });
