@@ -72,9 +72,9 @@ describe("mountShell artifact navigation", () => {
       expect(fetchSpy).toHaveBeenCalledTimes(1);
 
       // (b) a facet change re-renders the body without refetching.
-      document.querySelector<HTMLElement>("#root [data-sort='recent']")!.click();
+      const sortSel = document.querySelector<HTMLSelectElement>("#root .facet-sort")!;
+      sortSel.value = "recent"; sortSel.dispatchEvent(new Event("change"));
       expect(document.querySelector("#root .surface-body")).toBeTruthy();
-      expect(document.querySelector("#root [data-sort='recent']")?.className).toContain("on");
       expect(fetchSpy).toHaveBeenCalledTimes(1);   // no refetch
     } finally {
       fetchSpy.mockRestore();

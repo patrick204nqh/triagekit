@@ -321,4 +321,12 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 .facet-scope { background:var(--carbon); color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:5px 10px; font:500 12px var(--sans); }
 .facet-summary { margin: 6px 0 12px; font-size: 12px; color: var(--muted); }
 .facet-label { font-size:11px; color:var(--muted); margin-right:2px; align-self:center; }
+.facet-select, .facet-sort { background:var(--carbon); color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:5px 10px; font:500 12px var(--sans); }
+.facet-add { position:relative; }
+.facet-pop { position:absolute; top:calc(100% + 6px); left:0; z-index:20; min-width:200px; max-height:320px; overflow:auto;
+  background:var(--carbon); border:1px solid var(--line); border-radius:10px; padding:8px; box-shadow:0 12px 32px var(--drawer-shadow, rgba(0,0,0,.3)); }
+.facet-pop[hidden] { display:none; }
+.pop-axis + .pop-axis { margin-top:8px; border-top:1px solid var(--line); padding-top:8px; }
+.pop-axis-label { font-size:11px; color:var(--muted); margin-bottom:4px; }
+.pop-opt { display:flex; align-items:center; gap:6px; padding:3px 2px; font-size:13px; color:var(--fg); cursor:pointer; }
 .check.ci-open { color:var(--muted); }
