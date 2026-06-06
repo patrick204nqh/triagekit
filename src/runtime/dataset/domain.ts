@@ -20,7 +20,7 @@ const DOMAINS: Domain[] = [
     purpose: "edge exposure — actively-hit WAF/DNS/TLS issues rank highest",
     kinds: ["edge-misconfig", "waf-finding"] },
   { id: "work-items", label: "Work Items",
-    purpose: "PRs, issues, and tickets — priority × age × blocker status ranks highest",
+    purpose: "PRs, issues, and tasks — priority × age × blocker status ranks highest",
     kinds: ["pull-request", "issue", "work-item"] },
 ];
 

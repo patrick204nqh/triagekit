@@ -306,12 +306,13 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 @keyframes rc-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
 
-/* Review surface — facet + sort bar above the ReviewCard list */
-.review-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
-.rq-facets, .rq-sorts { display:flex; gap:6px; }
-.rq-sorts { margin-left:auto; }
-.rq-chip { background:none; border:1px solid var(--line); color:var(--muted); border-radius:999px; padding:4px 12px; font:500 12px var(--sans); cursor:pointer; transition:color .15s, border-color .15s, background .15s; }
-.rq-chip:hover { color:var(--fg); }
-.rq-chip.on { color:var(--fg); border-color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
-.rq-repo { background:var(--carbon); color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:5px 10px; font:500 12px var(--sans); }
+/* Shared facet/sort bar — used by all surfaces via renderFacetBar */
+.facet-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.facet-group { display:flex; gap:6px; }
+.facet-group[data-axis="sort"] { margin-left:auto; }
+.facet-chip { background:none; border:1px solid var(--line); color:var(--muted); border-radius:999px; padding:4px 12px; font:500 12px var(--sans); cursor:pointer; transition:color .15s, border-color .15s, background .15s; }
+.facet-chip:hover { color:var(--fg); }
+.facet-chip.on { color:var(--fg); border-color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
+.facet-scope { background:var(--carbon); color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:5px 10px; font:500 12px var(--sans); }
+.facet-summary { margin: 6px 0 12px; font-size: 12px; color: var(--muted); }
 .check.ci-open { color:var(--muted); }
