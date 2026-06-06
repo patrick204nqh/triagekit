@@ -7,9 +7,10 @@ describe("domains", () => {
     expect(domainOf("infra-misconfig").id).toBe("cloud-posture");
     expect(domainOf("waf-finding").id).toBe("edge-security");
     expect(domainOf("work-item").id).toBe("work-items");
+    expect(domainOf("runtime-threat").id).toBe("threat-detection");
   });
-  it("registers all four domains", () => {
+  it("registers all five domains", () => {
     expect(listDomains().map(d => d.id).sort())
-      .toEqual(["cloud-posture", "code-security", "edge-security", "work-items"]);
+      .toEqual(["cloud-posture", "code-security", "edge-security", "threat-detection", "work-items"]);
   });
 });

@@ -1,6 +1,6 @@
 import type { Kind } from "./item";
 
-export type DomainId = "code-security" | "cloud-posture" | "edge-security" | "work-items";
+export type DomainId = "code-security" | "cloud-posture" | "edge-security" | "work-items" | "threat-detection";
 
 export interface Domain {
   id: DomainId;
@@ -19,6 +19,9 @@ const DOMAINS: Domain[] = [
   { id: "edge-security", label: "Edge & Network Security",
     purpose: "edge exposure — actively-hit WAF/DNS/TLS issues rank highest",
     kinds: ["edge-misconfig", "waf-finding"] },
+  { id: "threat-detection", label: "Threat Detection",
+    purpose: "active adversary behavior — live/recent, high-confidence detections rank highest",
+    kinds: ["runtime-threat"] },
   { id: "work-items", label: "Work Items",
     purpose: "PRs, issues, and tasks — priority × age × blocker status ranks highest",
     kinds: ["pull-request", "issue", "work-item"] },

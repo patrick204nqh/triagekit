@@ -1,6 +1,7 @@
 import type { TriageItem } from "../dataset/item";
 import { type DependencyVulnDetails, DEPENDENCY_VULN } from "../dataset/kinds/dependency-vuln";
 import { registerScorer, type Scorer } from "./registry";
+import { registerFieldCatalog } from "./field-catalog";
 
 export function dependencyVulnScore(item: TriageItem<DependencyVulnDetails>): number {
   const d = item.details;
@@ -14,3 +15,9 @@ export function dependencyVulnScore(item: TriageItem<DependencyVulnDetails>): nu
   return Math.round(score);
 }
 registerScorer(DEPENDENCY_VULN, dependencyVulnScore as Scorer);
+registerFieldCatalog(DEPENDENCY_VULN, [
+  { name: "severity", type: "enum", values: ["critical", "high", "medium", "low"] },
+  { name: "cvss", type: "number", range: [0, 10] },
+  { name: "fixAvailable", type: "bool" },
+  { name: "scope", type: "enum", values: ["runtime", "development"] },
+]);

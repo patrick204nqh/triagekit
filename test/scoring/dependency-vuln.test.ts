@@ -16,4 +16,14 @@ describe("dependencyVulnScore", () => {
   it("penalizes dev scope", () => {
     expect(dependencyVulnScore(item({ scope: "development" }))).toBeLessThan(dependencyVulnScore(item({})));
   });
+
+  it("publishes a field catalog for dependency-vuln", async () => {
+    await import("../../src/runtime/scoring/dependency-vuln");   // side-effect registration
+    const { fieldsFor } = await import("../../src/runtime/scoring/field-catalog");
+    const names = fieldsFor("dependency-vuln").map(f => f.name);
+    expect(names).toEqual(expect.arrayContaining(["severity", "cvss", "fixAvailable", "scope"]));
+    const sev = fieldsFor("dependency-vuln").find(f => f.name === "severity")!;
+    expect(sev.type).toBe("enum");
+    expect(sev.values).toEqual(["critical", "high", "medium", "low"]);
+  });
 });

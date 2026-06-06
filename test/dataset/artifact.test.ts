@@ -28,6 +28,14 @@ describe("artifacts", () => {
     expect(artifactOf("dependency-vuln").id).toBe("vulnerabilities");
     expect(artifactOf("work-item").group).toBe("work");
   });
+
+  it("registers a Threats artifact under findings for runtime-threat", () => {
+    const t = listArtifacts().find(a => a.id === "threats");
+    expect(t).toBeDefined();
+    expect(t!.group).toBe("findings");
+    expect(t!.kinds).toEqual(["runtime-threat"]);
+    expect(artifactOf("runtime-threat").id).toBe("threats");
+  });
 });
 
 describe("review artifact", () => {
