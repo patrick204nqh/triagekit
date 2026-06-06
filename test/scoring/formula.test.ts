@@ -33,4 +33,10 @@ describe("formula parser/evaluator", () => {
     expect(() => parseFormula("(1 + 2")).toThrow(FormulaError);
     expect(() => parseFormula("1 2")).toThrow(FormulaError);
   });
+  it("throws FormulaError for prototype-chain names not in scope (e.g. toString)", () => {
+    expect(() => ev("toString + 1", {})).toThrow(FormulaError);
+  });
+  it("throws FormulaError when clamp receives wrong arity at eval", () => {
+    expect(() => ev("clamp(x, 0)", { x: 5 })).toThrow(FormulaError);
+  });
 });

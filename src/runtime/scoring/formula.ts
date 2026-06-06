@@ -87,7 +87,8 @@ export function evalFormula(e: Expr, scope: Record<string, number>): number {
   switch (e.t) {
     case "num": return e.v;
     case "var":
-      if (!(e.name in scope)) throw new FormulaError(`unknown identifier: ${e.name}`);
+      if (!Object.prototype.hasOwnProperty.call(scope, e.name))
+        throw new FormulaError(`unknown identifier: ${e.name}`);
       return scope[e.name];
     case "neg": return -evalFormula(e.e, scope);
     case "bin": {
