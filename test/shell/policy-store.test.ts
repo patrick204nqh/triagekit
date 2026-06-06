@@ -20,4 +20,20 @@ describe("PolicyStore", () => {
     localStorage.setItem("triagekit.policy.tiers", "not json");
     expect(new PolicyStore().getTiers()).toEqual(DEFAULT_THRESHOLDS);
   });
+
+  it("stores and retrieves a score model per kind; null when absent or corrupt", () => {
+    const p = new PolicyStore();
+    expect(p.getScoreModel("dependency-vuln")).toBeNull();
+    const model = {
+      kind: "dependency-vuln" as const, scale: 1, formula: "cvss * 100",
+      signals: { cvss: { from: "cvss", transform: { type: "linear" as const, in: [0, 10] as [number, number] } } },
+      tiers: [{ name: "P0", min: 80 }, { name: "P3", min: 0 }],
+    };
+    p.setScoreModel("dependency-vuln", model);
+    expect(new PolicyStore().getScoreModel("dependency-vuln")).toEqual(model);
+    localStorage.setItem("triagekit.policy.score.dependency-vuln", "{bad");
+    expect(new PolicyStore().getScoreModel("dependency-vuln")).toBeNull();
+    p.clearScoreModel("dependency-vuln");
+    expect(new PolicyStore().getScoreModel("dependency-vuln")).toBeNull();
+  });
 });
