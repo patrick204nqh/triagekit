@@ -81,6 +81,10 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
           <section class="set-section"><label class="set-label">Scoring</label>
             <p class="set-helper">Per-kind score model. Simple = weight sliders; Advanced = formula + signals. Saved in this browser.</p>
             <div data-scoring-editor></div></section>
+          <section class="set-section"><label class="set-label">Bot accounts</label>
+            <p class="set-helper">Logins to treat as bots, in addition to provider-flagged bots. Affects the Author filter. Saved in this browser.</p>
+            <div class="bot-chips" data-bot-chips></div>
+            <input class="bot-add" data-bot-add type="text" placeholder="Add a login — Enter or comma" aria-label="Add bot login"></section>
         </div>
       </div>
       <div class="panel-foot"><button class="btn-ghost" data-cancel>Cancel</button><button class="btn-primary" data-save>Save</button></div>
@@ -98,6 +102,8 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   let draftTiers: TierThresholds | null = null;
   // Score-model edits per kind: a ScoreModel to persist, or "reset" to clear back to default.
   const draftModels = new Map<string, ScoreModel | "reset">();
+  let draftBots: string[] | null = null;
+  const getBots = () => draftBots ?? policy.getBotLogins();
   const allDraftsValid = () => {
     for (const [k, d] of draftModels) {
       if (d === "reset") continue;
@@ -128,8 +134,27 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       b.addEventListener("click", () => { setRefreshInterval(Number(b.dataset.refresh)); renderRefresh(); onRefreshChange?.(); }));
   }
 
+  function addBot(raw: string) {
+    const login = raw.replace(/,/g, "").trim();
+    if (!login) return;
+    const cur = getBots();
+    if (cur.includes(login)) return;
+    draftBots = [...cur, login];
+    renderBots();
+  }
+  function renderBots() {
+    const wrap = host.querySelector<HTMLElement>("[data-bot-chips]");
+    if (!wrap) return;
+    const bots = getBots();
+    wrap.innerHTML = bots.length
+      ? bots.map(b => `<span class="ms-chip"><span class="repo">${esc(b)}</span><button class="x" data-rm-bot="${esc(b)}" aria-label="Remove ${esc(b)}">×</button></span>`).join("")
+      : `<span class="muted">No bot logins yet.</span>`;
+    wrap.querySelectorAll<HTMLElement>("[data-rm-bot]").forEach(btn =>
+      btn.addEventListener("click", () => { draftBots = getBots().filter(b => b !== btn.dataset.rmBot); renderBots(); }));
+  }
   function renderAdvanced() {
     editor.render();
+    renderBots();
     const t = getTierDraft();
     (["p0", "p1", "p2"] as const).forEach(k => {
       const inp = host.querySelector<HTMLInputElement>(`[data-tier-input="${k}"]`);
@@ -310,13 +335,14 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     panel.setAttribute("aria-hidden", String(hidden));
     if (hidden) dismiss.release(); else dismiss.activate();
   }
-  function discard() { draftCred.clear(); draftScope.clear(); draftTiers = null; draftModels.clear(); updateSaveGate(); setHidden(true); }
+  function discard() { draftCred.clear(); draftScope.clear(); draftTiers = null; draftModels.clear(); draftBots = null; updateSaveGate(); setHidden(true); }
   function save() {
     for (const [prov, v] of draftCred) creds.set(prov, v);
     for (const [prov, sc] of draftScope) scopes.set(prov, sc);
     if (draftTiers) { policy.setTiers(draftTiers); draftTiers = null; }
     for (const [k, d] of draftModels) { if (d === "reset") policy.clearScoreModel(k); else policy.setScoreModel(k, d); }
     draftModels.clear();
+    if (draftBots) { policy.setBotLogins(draftBots); draftBots = null; }
     draftCred.clear(); draftScope.clear(); onChange(); setHidden(true);
   }
   host.querySelector("[data-close]")!.addEventListener("click", discard);
@@ -324,6 +350,13 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   const saveBtn = host.querySelector<HTMLButtonElement>("[data-save]")!;
   saveBtn.addEventListener("click", save);
   const updateSaveGate = () => { saveBtn.disabled = !allDraftsValid(); };
+  const botAdd = host.querySelector<HTMLInputElement>("[data-bot-add]");
+  botAdd?.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== ",") return;
+    e.preventDefault();
+    addBot(botAdd.value);
+    botAdd.value = "";
+  });
   const editor = mountScoringEditor(host.querySelector<HTMLElement>("[data-scoring-editor]")!, {
     // Seed precedence: staged draft > persisted model > (editor falls back to default).
     // A "reset" draft returns null so the editor previews the default before Save commits the clear.
@@ -354,7 +387,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   return {
     open(provider?: string) {
       expanded = provider ?? (providerReps[0] ? providerOf(providerReps[0]) : null);
-      draftCred.clear(); draftScope.clear(); draftTiers = null; draftModels.clear(); updateSaveGate(); filter.value = "";
+      draftCred.clear(); draftScope.clear(); draftTiers = null; draftModels.clear(); draftBots = null; updateSaveGate(); filter.value = "";
       // reset to Quick tab
       host.querySelectorAll<HTMLElement>("[data-tab]").forEach(b => b.classList.toggle("on", b.dataset.tab === "quick"));
       host.querySelector<HTMLElement>(`[data-pane="quick"]`)!.hidden = false;
