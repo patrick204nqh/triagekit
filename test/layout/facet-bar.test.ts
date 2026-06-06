@@ -34,6 +34,10 @@ describe("applyFacets (registry-driven)", () => {
   it("filters by author axis", () => {
     expect(applyFacets(rows, withAxes({ author: ["bot"] })).map(r => r.id)).toEqual(["b"]);
   });
+  it("filters by provider axis", () => {
+    const multi = [row({ id: "a", source: "github" }), row({ id: "b", source: "gitlab" })];
+    expect(applyFacets(multi, withAxes({ provider: ["gitlab"] })).map(r => r.id)).toEqual(["b"]);
+  });
   it("empty axis value array = no filter", () => {
     expect(applyFacets(rows, withAxes({ scope: [] })).map(r => r.id)).toEqual(["a", "b", "c"]);
   });

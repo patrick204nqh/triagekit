@@ -22,7 +22,8 @@ describe("facet-registry built-ins", () => {
   ];
   const rctx: AxisCtx = { artifact: reviewArtifact };
 
-  it("registers scope/kind/tier/author axes and priority/recent sorts", () => {
+  it("registers provider/scope/kind/tier/author axes and priority/recent sorts", () => {
+    expect(getFilterAxis("provider")).toBeDefined();
     expect(getFilterAxis("scope")).toBeDefined();
     expect(getFilterAxis("kind")).toBeDefined();
     expect(getFilterAxis("tier")).toBeDefined();
@@ -53,6 +54,19 @@ describe("facet-registry built-ins", () => {
     expect(author.test(rows[1], ["bot"])).toBe(true);
   });
 
+  it("provider applies only when >=2 distinct providers are present", () => {
+    const provider = getFilterAxis("provider");
+    expect(provider).toBeDefined();
+    // single provider -> auto-hidden
+    expect(provider!.appliesTo([row({ source: "github" })], rctx)).toBe(false);
+    // two providers -> shown, options distinct + sorted
+    const multi = [row({ id: "a", source: "github" }), row({ id: "b", source: "gitlab" })];
+    expect(provider!.appliesTo(multi, rctx)).toBe(true);
+    expect(provider!.optionsFrom(multi, rctx).map(o => o.value)).toEqual(["github", "gitlab"]);
+    expect(provider!.test(row({ source: "gitlab" }), ["gitlab"])).toBe(true);
+    expect(provider!.test(row({ source: "github" }), ["gitlab"])).toBe(false);
+  });
+
   it("tier is always applicable with the 4 fixed options", () => {
     const tier = getFilterAxis("tier")!;
     expect(tier.appliesTo(rows, rctx)).toBe(true);
@@ -69,7 +83,7 @@ describe("facet-registry built-ins", () => {
   });
 
   it("listFilterAxes/listSortKeys include the built-ins", () => {
-    expect(listFilterAxes().map(a => a.id)).toEqual(expect.arrayContaining(["scope", "kind", "tier", "author"]));
+    expect(listFilterAxes().map(a => a.id)).toEqual(expect.arrayContaining(["provider", "scope", "kind", "tier", "author"]));
     expect(listSortKeys().map(s => s.id)).toEqual(expect.arrayContaining(["priority", "recent"]));
   });
 });
