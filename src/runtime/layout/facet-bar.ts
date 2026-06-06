@@ -47,32 +47,34 @@ export function renderFacetBar(
   const chip = (attr: string, val: string, label: string, on: boolean) =>
     `<button class="facet-chip${on ? " on" : ""}" ${attr}="${esc(val)}">${esc(label)}</button>`;
 
+  const label = (text: string) => `<span class="facet-label">${esc(text)}</span>`;
+
   const scopeHtml = showScope
-    ? `<div class="facet-group" data-axis="scope"><select class="facet-scope" aria-label="Filter by scope">`
+    ? `<div class="facet-group" data-axis="scope">${label("Repo")}<select class="facet-scope" aria-label="Filter by scope">`
       + [`<option value="all">All repos</option>`,
          ...scopes.map(s => `<option value="${esc(s)}"${state.scope === s ? " selected" : ""}>${esc(s)}</option>`)].join("")
       + `</select></div>`
     : "";
 
   const kindHtml = showKind
-    ? `<div class="facet-group" data-axis="kind">`
+    ? `<div class="facet-group" data-axis="kind">${label("Type")}`
       + chip("data-kind", "all", "All", state.kind === "all")
       + artifact.kinds.map(k => chip("data-kind", k, kindLabel(k), state.kind === k)).join("")
       + `</div>`
     : "";
 
-  const tierHtml = `<div class="facet-group" data-axis="tier">`
+  const tierHtml = `<div class="facet-group" data-axis="tier">${label("Priority")}`
     + TIERS.map(t => chip("data-tier", t, t, state.tiers.has(t))).join("")
     + `</div>`;
 
   const authorHtml = showAuthor
-    ? `<div class="facet-group" data-axis="author">`
+    ? `<div class="facet-group" data-axis="author">${label("Author")}`
       + (["all", "bot", "human"] as const).map(a =>
           chip("data-author", a, a === "all" ? "All" : a[0].toUpperCase() + a.slice(1), state.author === a)).join("")
       + `</div>`
     : "";
 
-  const sortHtml = `<div class="facet-group" data-axis="sort">`
+  const sortHtml = `<div class="facet-group" data-axis="sort">${label("Sort")}`
     + chip("data-sort", "priority", "Priority", state.sort === "priority")
     + chip("data-sort", "recent", "Recent", state.sort === "recent")
     + `</div>`;

@@ -110,4 +110,23 @@ describe("renderFacetBar", () => {
     host.querySelector<HTMLElement>("[data-tier='P0']")!.click();
     expect([...next.tiers]).toEqual([]);
   });
+
+  it("labels each axis group so 'All' is scoped (no bare duplicate 'All')", () => {
+    const host = document.createElement("div");
+    renderFacetBar(host, reviewArtifact, rows, emptyFacetState(), () => {});
+    const labelFor = (axis: string) =>
+      host.querySelector(`[data-axis='${axis}'] .facet-label`)?.textContent;
+    expect(labelFor("kind")).toBe("Type");
+    expect(labelFor("author")).toBe("Author");
+    expect(labelFor("tier")).toBe("Priority");
+    expect(labelFor("sort")).toBe("Sort");
+    expect(host.querySelectorAll("[data-axis='kind'] [data-kind='all']").length).toBe(1);
+    expect(host.querySelectorAll("[data-axis='author'] [data-author='all']").length).toBe(1);
+  });
+
+  it("labels the scope group when shown", () => {
+    const host = document.createElement("div");
+    renderFacetBar(host, reviewArtifact, rows, emptyFacetState(), () => {});  // rows span 2 repos
+    expect(host.querySelector("[data-axis='scope'] .facet-label")?.textContent).toBe("Repo");
+  });
 });

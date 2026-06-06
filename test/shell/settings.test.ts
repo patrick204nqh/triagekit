@@ -166,6 +166,20 @@ describe("mountSettings", () => {
     expect(creds.get("github")).toBe("ghp_x");        // saved under provider, shared by both sources
   });
 
+  it("shows saved repos as chips on open, before any discovery", () => {
+    const discover = vi.fn(async () => [{ value: "acme/web", label: "web", group: "acme" }]);
+    const src: Source = { ...github, discover };
+    const host = document.createElement("div"); document.body.appendChild(host);
+    const creds = new CredStore(); const scopes = new ScopeStore();
+    creds.set("github", "tok");
+    scopes.set("github", { repos: ["acme/web", "acme/api"] });
+    const s = mountSettings(host, { sources: [src], creds, scopes, onChange: () => {} });
+    s.open("github");
+    const chips = [...host.querySelectorAll(".ms-chip .repo")].map(c => c.textContent);
+    expect(chips).toEqual(expect.arrayContaining(["acme/web", "acme/api"]));
+    expect(discover).not.toHaveBeenCalled();   // saved scope shown without discovery
+  });
+
   it("surfaces provider setup guidance (row ⓘ + form link)", () => {
     const src: Source = { ...github, setup: { hint: "Use a fine-grained PAT.", url: "https://example.test/pat" } };
     const host = document.createElement("div"); document.body.appendChild(host);
