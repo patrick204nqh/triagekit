@@ -1,12 +1,13 @@
 import type { TriageConfigT } from "../../config/schema";
 import { isCompiledConfig } from "./mode";
-import { getSource, listSources, providerOf, type Source } from "../ingest/source";
+import { getSource, listSources, providerOf, type Source, type TriageError } from "../ingest/source";
 import { listArtifacts, GROUP_LABEL, GROUP_ORDER, type Artifact } from "../dataset/artifact";
 import { resolveScorer, type Scorer } from "../scoring/registry";
 import { tierOf } from "../scoring/tier";
 import { renderTriageTable, renderTableSkeleton, esc, type ScoredItem } from "../layout/triage-table";
 import { resolveSurface } from "../layout/surface";
 import { renderInsights } from "../layout/insights";
+import { renderFacetBar, applyFacets, emptyFacetState, type FacetState } from "../layout/facet-bar";
 import { CredStore } from "./cred-store";
 import { ScopeStore } from "./scope-store";
 import { healthOf, scopeSummary } from "./health";
@@ -44,6 +45,7 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
   let view: "list" | "insights" = "list";
   let selected = new Set(liveSourcesFor(active).map(s => s.id));   // provider facet
   let lastRows: ScoredItem[] = [];
+  let facetState: FacetState = emptyFacetState();
   let lastFetchedAt: number | null = null;
   let refreshTimer: ReturnType<typeof setInterval> | undefined;
 
@@ -129,7 +131,7 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
         if (a.id === active.id) b.className = "active";
         b.addEventListener("click", () => {
           active = a; view = "list"; selected = new Set(liveSourcesFor(a).map(s => s.id));
-          lastRows = []; lastFetchedAt = null;
+          lastRows = []; facetState = emptyFacetState(); lastFetchedAt = null;
           buildRail(); buildNav(); refreshBar(); render();
         });
         section.appendChild(b);
@@ -161,7 +163,7 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
       chip.innerHTML = `${providerIcon(providerOf(s), 14)}<span>${esc(providerOf(s))}</span>${live ? "" : `<span class="chip">upcoming</span>`}`;
       if (live) chip.addEventListener("click", () => {
         selected.has(s.id) ? selected.delete(s.id) : selected.add(s.id);
-        lastRows = []; lastFetchedAt = null; buildNav(); refreshBar(); render();
+        lastRows = []; facetState = emptyFacetState(); lastFetchedAt = null; buildNav(); refreshBar(); render();
       });
       else chip.disabled = true;
       facet.appendChild(chip);
@@ -199,15 +201,30 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
           .map(it => { const score = resolveScorer(it.kind, scoreOverride)(it); return { ...it, score, tier: tierOf(score) }; })
           .sort((a, b) => b.score - a.score);
         lastRows = rows; lastFetchedAt = Date.now(); updateSync();
-        if (view === "insights") renderInsights(root, rows, active.kinds);
-        else {
-          const surface = resolveSurface(active.id);
-          if (surface) surface(root, rows, errors, { token: creds.get(providerOf(usable[0]))! });
-          else renderTriageTable(root, rows, errors);
-        }
+        if (view === "insights") { renderInsights(root, rows, active.kinds); return; }
+        renderListWithFacets(rows, errors, creds.get(providerOf(usable[0]))!);
       })
       .catch(err => { root.innerHTML = `<p class="error">Failed to load: ${err?.message ?? err}</p>`; });
   };
+
+  // List view: shell-owned FacetBar above a render-only body. Facet changes
+  // re-filter lastRows and re-render only the body — never refetch.
+  function renderListWithFacets(rows: ScoredItem[], errors: TriageError[], token: string) {
+    root.innerHTML = `<div class="facet-host"></div><div class="surface-body"></div>`;
+    const facetHost = root.querySelector<HTMLElement>(".facet-host")!;
+    const body = root.querySelector<HTMLElement>(".surface-body")!;
+    const drawBody = () => {
+      const shown = applyFacets(rows, facetState);
+      const surface = resolveSurface(active.id);
+      if (surface) surface(body, shown, errors, { token });
+      else renderTriageTable(body, shown, errors);
+    };
+    const drawBar = () => renderFacetBar(facetHost, active, rows, facetState, next => {
+      facetState = next; drawBar(); drawBody();
+    });
+    drawBar();
+    drawBody();
+  }
 
   syncTheme();
   buildRail();

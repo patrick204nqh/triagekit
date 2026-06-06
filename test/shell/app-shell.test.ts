@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mountShell } from "../../src/runtime/shell/app-shell";
+import { githubSource } from "../../src/runtime/ingest/github/adapter";
 import type { TriageConfigT } from "../../src/config/schema";
+
+const flush = () => new Promise<void>(r => setTimeout(r, 0));
 
 const config: TriageConfigT = {
   source: "github",
@@ -49,6 +52,32 @@ describe("mountShell artifact navigation", () => {
     const facet = document.querySelector("#viewswitch .facet .prov-chip");
     expect(facet?.textContent).toContain("github");
     expect(facet?.className).toContain("on");            // live provider selected by default
+  });
+
+  it("renders the list inside a shell-owned FacetBar + body, and a facet change does not refetch", async () => {
+    // A ready source with a satisfied cred + scope reaches the rendered-rows path.
+    sessionStorage.setItem("triagekit.cred.github", "tok");
+    localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: [] }));
+    const fetchSpy = vi.spyOn(githubSource, "fetch")
+      .mockResolvedValue({ items: [], errors: [] });
+    try {
+      mountShell(config);
+      await flush();
+
+      // (a) the list view renders the bar above a render-only body.
+      expect(document.querySelector("#root .facet-bar")).toBeTruthy();
+      const body = document.querySelector<HTMLElement>("#root .surface-body");
+      expect(body).toBeTruthy();
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+      // (b) a facet change re-renders the body without refetching.
+      document.querySelector<HTMLElement>("#root [data-sort='recent']")!.click();
+      expect(document.querySelector("#root .surface-body")).toBeTruthy();
+      expect(document.querySelector("#root [data-sort='recent']")?.className).toContain("on");
+      expect(fetchSpy).toHaveBeenCalledTimes(1);   // no refetch
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 
   it("switching to an upcoming artifact renders its roadmap placeholder", () => {
