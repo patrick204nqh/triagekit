@@ -66,9 +66,9 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
           <section class="set-section"><label class="set-label">Priority thresholds</label>
             <p class="set-helper">Minimum score for each tier. Items below P2 are P3.</p>
             <div class="tier-thresholds">
-              <label>P0 ≥ <input type="number" data-tier-input="p0"></label>
-              <label>P1 ≥ <input type="number" data-tier-input="p1"></label>
-              <label>P2 ≥ <input type="number" data-tier-input="p2"></label>
+              <label>P0 ≥ <input type="number" min="0" step="1" data-tier-input="p0"></label>
+              <label>P1 ≥ <input type="number" min="0" step="1" data-tier-input="p1"></label>
+              <label>P2 ≥ <input type="number" min="0" step="1" data-tier-input="p2"></label>
             </div>
             <span class="set-helper">Saved in this browser; re-tiers on Save.</span></section>
         </div>
@@ -115,7 +115,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       const inp = host.querySelector<HTMLInputElement>(`[data-tier-input="${k}"]`);
       if (!inp) return;
       inp.value = String(t[k]);
-      inp.oninput = () => { draftTiers = { ...getTierDraft(), [k]: Number(inp.value) }; };
+      inp.oninput = () => { const v = Number(inp.value); if (!inp.value.trim() || !Number.isFinite(v)) return; draftTiers = { ...getTierDraft(), [k]: v }; };
     });
   }
 

@@ -192,6 +192,21 @@ describe("mountSettings", () => {
     expect(host.querySelector(".conn-item .cmeta")?.textContent).not.toMatch(/Security/);   // domain noise gone
   });
 
+  it("ignores non-finite tier input (empty string) and leaves the default unchanged", () => {
+    localStorage.clear(); sessionStorage.clear();
+    document.body.innerHTML = `<div id="h2"></div>`;
+    const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
+    const host = document.getElementById("h2")!;
+    const s = mountSettings(host, { sources: [github], creds, scopes, policy, onChange: () => {} });
+    s.open("github");
+    // switch to Advanced
+    host.querySelector<HTMLElement>("[data-tab='advanced']")!.click();
+    const p0 = host.querySelector<HTMLInputElement>("[data-tier-input='p0']")!;
+    p0.value = ""; p0.dispatchEvent(new Event("input"));
+    host.querySelector<HTMLElement>("[data-save]")!.click();
+    expect(new PolicyStore().getTiers().p0).toBe(130);
+  });
+
   it("Advanced tab edits tier thresholds and persists on save", () => {
     localStorage.clear(); sessionStorage.clear();
     document.body.innerHTML = `<div id="h"></div>`;
