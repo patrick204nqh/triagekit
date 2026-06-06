@@ -14,6 +14,11 @@ export interface ScoreModel {
   tiers: TierBand[];        // listed high -> low; mins strictly decrease
 }
 
+export interface ScoreExplanation {
+  signals: Record<string, { from: string; raw: unknown; value: number }>;  // value normalized 0..1
+  score: number;
+}
+
 function readField(item: TriageItem, from: string): unknown {
   if (Object.prototype.hasOwnProperty.call(item, from)) {
     return (item as unknown as Record<string, unknown>)[from];
@@ -22,14 +27,22 @@ function readField(item: TriageItem, from: string): unknown {
   return d ? d[from] : undefined;
 }
 
-export function evalScoreModel(model: ScoreModel, item: TriageItem, now: number = Date.now()): number {
+export function explainScoreModel(model: ScoreModel, item: TriageItem, now: number = Date.now()): ScoreExplanation {
+  const signals: Record<string, { from: string; raw: unknown; value: number }> = {};
   const scope: Record<string, number> = {};
   for (const [name, spec] of Object.entries(model.signals)) {
-    scope[name] = applyTransform(readField(item, spec.from), spec.transform, now);
+    const raw = readField(item, spec.from);
+    const value = applyTransform(raw, spec.transform, now);
+    signals[name] = { from: spec.from, raw, value };
+    scope[name] = value;
   }
   const expr = parseFormula(model.formula);
-  const raw = evalFormula(expr, scope) * model.scale;
-  return Number.isFinite(raw) ? Math.round(raw) : 0;
+  const out = evalFormula(expr, scope) * model.scale;
+  return { signals, score: Number.isFinite(out) ? Math.round(out) : 0 };
+}
+
+export function evalScoreModel(model: ScoreModel, item: TriageItem, now: number = Date.now()): number {
+  return explainScoreModel(model, item, now).score;
 }
 
 export function tierFromBands(score: number, tiers: TierBand[]): string {
