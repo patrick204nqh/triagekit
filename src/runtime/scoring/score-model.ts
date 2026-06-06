@@ -63,6 +63,9 @@ export function validateModel(model: ScoreModel, fields: FieldDef[]): string[] {
   } catch (e) {
     errs.push(e instanceof FormulaError ? `formula: ${e.message}` : String(e));
   }
+  for (const t of model.tiers) {
+    if (!/^P[0-3]$/.test(t.name)) errs.push(`tier name "${t.name}" must be one of P0-P3`);
+  }
   const mins = model.tiers.map(t => t.min);
   for (let i = 1; i < mins.length; i++) {
     if (mins[i] >= mins[i - 1]) { errs.push("tier cutoffs must strictly decrease"); break; }

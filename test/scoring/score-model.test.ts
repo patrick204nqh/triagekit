@@ -84,4 +84,8 @@ describe("validateModel", () => {
     const bad: ScoreModel = { ...model, formula: "clamp(cvss, 0)" };
     expect(validateModel(bad, fields).some(e => e.includes("clamp"))).toBe(true);
   });
+  it("flags a tier band name outside P0-P3", () => {
+    const bad: ScoreModel = { ...model, tiers: [{ name: "Critical", min: 80 }, { name: "P3", min: 0 }] };
+    expect(validateModel(bad, fields).some(e => e.includes("tier name"))).toBe(true);
+  });
 });

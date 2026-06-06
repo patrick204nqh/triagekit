@@ -118,4 +118,42 @@ describe("mountShell artifact navigation", () => {
       fetchSpy.mockRestore();
     }
   });
+
+  it("uses the stored score model's tier bands (not the threshold fallback) when ranking rows", async () => {
+    // Absurd thresholds: fallback path would yield P3 for any realistic score.
+    localStorage.setItem("triagekit.policy.tiers", JSON.stringify({ p0: 9999, p1: 9998, p2: 9997 }));
+
+    // Stored model for dependency-vuln: cvss * 100, P0 at ≥ 80.
+    localStorage.setItem("triagekit.policy.score.dependency-vuln", JSON.stringify({
+      kind: "dependency-vuln", scale: 1, formula: "cvss * 100",
+      signals: { cvss: { from: "cvss", transform: { type: "linear", in: [0, 10] } } },
+      tiers: [{ name: "P0", min: 80 }, { name: "P3", min: 0 }],
+    }));
+
+    sessionStorage.setItem("triagekit.cred.github", "tok");
+    localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: ["acme/web"] }));
+
+    // Item with cvss: 10 → normalised to 1.0 → score 100 → P0 under the stored model.
+    const fetchSpy = vi.spyOn(githubSource, "fetch").mockResolvedValue({
+      items: [{
+        id: "github:acme/web:2", source: "github", kind: "dependency-vuln",
+        title: "axios", location: "acme/web", signal: 100,
+        createdAt: new Date().toISOString(), url: "https://github.com/acme/web/security/dependabot/2",
+        details: { package: "axios", severity: "critical", cvss: 10, scope: "runtime", fixAvailable: true, fixVersion: "1.7.0" },
+      }],
+      errors: [],
+    } as any);
+
+    try {
+      mountShell(config);
+      await flush();
+
+      const tiers = [...document.querySelectorAll<HTMLElement>("#root .surface-body .tier")].map(t => t.textContent);
+      expect(tiers.length).toBeGreaterThan(0);
+      // The stored model's bands must win: P0, not P3 from the absurd-threshold fallback.
+      expect(tiers.every(t => t === "P0")).toBe(true);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
 });
