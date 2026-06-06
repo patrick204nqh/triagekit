@@ -315,4 +315,5 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 .facet-chip.on { color:var(--fg); border-color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
 .facet-scope { background:var(--carbon); color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:5px 10px; font:500 12px var(--sans); }
 .facet-summary { margin: 6px 0 12px; font-size: 12px; color: var(--muted); }
+.facet-label { font-size:11px; color:var(--muted); margin-right:2px; align-self:center; }
 .check.ci-open { color:var(--muted); }
