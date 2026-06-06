@@ -222,6 +222,14 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 .conn-item.ok .cstat { color:var(--accent); }
 .panel-foot { padding:18px 24px; border-top:1px solid var(--line); position:sticky; bottom:0; background:var(--carbon); display:flex; gap:10px; justify-content:flex-end; }
 
+/* Settings Quick/Advanced tabs */
+.set-tabs { display:flex; gap:4px; margin-left:auto; margin-right:8px; }
+.set-tabs button { background:none; border:1px solid var(--line); color:var(--muted); border-radius:8px; padding:3px 10px; font:500 12px var(--sans); cursor:pointer; }
+.set-tabs button.on { color:var(--fg); border-color:var(--accent); }
+.tier-thresholds { display:flex; gap:12px; flex-wrap:wrap; }
+.tier-thresholds label { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--fg); }
+.tier-thresholds input { width:80px; background:var(--carbon); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:4px 8px; }
+
 /* ── Upcoming placeholder ──────────────────────────────────────────── */
 .upcoming { padding:56px 8px; max-width:60ch; }
 .upcoming h2 { display:flex; align-items:center; gap:12px; margin:0 0 12px; font-size:1.25rem; font-weight:600; }

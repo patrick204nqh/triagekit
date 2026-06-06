@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mountSettings } from "../../src/runtime/shell/settings";
 import { CredStore } from "../../src/runtime/shell/cred-store";
 import { ScopeStore } from "../../src/runtime/shell/scope-store";
+import { PolicyStore } from "../../src/runtime/shell/policy-store";
 import type { Source } from "../../src/runtime/ingest/source";
 
 const github: Source = {
@@ -15,9 +16,9 @@ const github: Source = {
 function mount(extra?: Partial<Parameters<typeof mountSettings>[1]>) {
   vi.stubGlobal("matchMedia", (q: string) => ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} }) as any);
   const host = document.createElement("div"); document.body.appendChild(host);
-  const creds = new CredStore(); const scopes = new ScopeStore();
-  const s = mountSettings(host, { sources: [github], creds, scopes, onChange: () => {}, ...extra });
-  return { host, creds, scopes, s };
+  const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
+  const s = mountSettings(host, { sources: [github], creds, scopes, policy, onChange: () => {}, ...extra });
+  return { host, creds, scopes, policy, s };
 }
 
 describe("mountSettings", () => {
@@ -106,7 +107,7 @@ describe("mountSettings", () => {
     const host = document.createElement("div"); document.body.appendChild(host);
     const creds = new CredStore(); const scopes = new ScopeStore();
     creds.set("github", "ghp_x");
-    const s = mountSettings(host, { sources: [src], creds, scopes, onChange: () => {} });
+    const s = mountSettings(host, { sources: [src], creds, scopes, policy: new PolicyStore(), onChange: () => {} });
     s.open("github");
 
     host.querySelector<HTMLElement>('[data-discover="repos"]')!.click();
@@ -155,7 +156,7 @@ describe("mountSettings", () => {
     const reviews: Source = { ...alerts, id: "github-review", provider: "github", kinds: ["pull-request"] };
     const host = document.createElement("div"); document.body.appendChild(host);
     const creds = new CredStore(); const scopes = new ScopeStore();
-    const s = mountSettings(host, { sources: [alerts, reviews], creds, scopes, onChange: () => {} });
+    const s = mountSettings(host, { sources: [alerts, reviews], creds, scopes, policy: new PolicyStore(), onChange: () => {} });
     s.open("github");
 
     // one row for the shared provider, not two
@@ -173,7 +174,7 @@ describe("mountSettings", () => {
     const creds = new CredStore(); const scopes = new ScopeStore();
     creds.set("github", "tok");
     scopes.set("github", { repos: ["acme/web", "acme/api"] });
-    const s = mountSettings(host, { sources: [src], creds, scopes, onChange: () => {} });
+    const s = mountSettings(host, { sources: [src], creds, scopes, policy: new PolicyStore(), onChange: () => {} });
     s.open("github");
     const chips = [...host.querySelectorAll(".ms-chip .repo")].map(c => c.textContent);
     expect(chips).toEqual(expect.arrayContaining(["acme/web", "acme/api"]));
@@ -183,11 +184,29 @@ describe("mountSettings", () => {
   it("surfaces provider setup guidance (row ⓘ + form link)", () => {
     const src: Source = { ...github, setup: { hint: "Use a fine-grained PAT.", url: "https://example.test/pat" } };
     const host = document.createElement("div"); document.body.appendChild(host);
-    const s = mountSettings(host, { sources: [src], creds: new CredStore(), scopes: new ScopeStore(), onChange: () => {} });
+    const s = mountSettings(host, { sources: [src], creds: new CredStore(), scopes: new ScopeStore(), policy: new PolicyStore(), onChange: () => {} });
     s.open("github");
     expect(host.querySelector(".conn-item .info")?.getAttribute("title")).toBe("Use a fine-grained PAT.");
     const link = host.querySelector<HTMLAnchorElement>(".set-link");
     expect(link?.getAttribute("href")).toBe("https://example.test/pat");
     expect(host.querySelector(".conn-item .cmeta")?.textContent).not.toMatch(/Security/);   // domain noise gone
+  });
+
+  it("Advanced tab edits tier thresholds and persists on save", () => {
+    localStorage.clear(); sessionStorage.clear();
+    document.body.innerHTML = `<div id="h"></div>`;
+    const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
+    let changed = 0;
+    const host = document.getElementById("h")!;
+    const s = mountSettings(host, { sources: [github], creds, scopes, policy, onChange: () => { changed++; } });
+    s.open("github");
+    // switch to Advanced
+    host.querySelector<HTMLElement>("[data-tab='advanced']")!.click();
+    const p0 = host.querySelector<HTMLInputElement>("[data-tier-input='p0']")!;
+    expect(p0.value).toBe("130");
+    p0.value = "150"; p0.dispatchEvent(new Event("input"));
+    host.querySelector<HTMLElement>("[data-save]")!.click();
+    expect(new PolicyStore().getTiers().p0).toBe(150);
+    expect(changed).toBeGreaterThan(0);
   });
 });
