@@ -5,6 +5,7 @@ export type Kind =
   | "infra-misconfig"   // cloud-posture (roadmap)
   | "edge-misconfig"    // edge-security (roadmap)
   | "waf-finding"       // edge-security (roadmap)
+  | "runtime-threat"    // threat-detection (active adversary behavior; roadmap)
   | "pull-request"      // work (review surface)
   | "issue"             // work (review surface)
   | "work-item";        // work-items (roadmap)
