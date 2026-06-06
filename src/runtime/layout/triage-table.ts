@@ -1,6 +1,7 @@
 import type { Kind, TriageItem } from "../dataset/item";
 import type { TriageError } from "../ingest/source";
 import type { Tier } from "../scoring/tier";
+import { dismissible } from "../shell/dismissible";
 
 export interface ScoredItem extends TriageItem { score: number; tier: Tier; }
 export interface DetailCtx { token?: string; onChange?: (i: ScoredItem) => void; }
@@ -53,7 +54,11 @@ export function renderTriageList(root: HTMLElement, rows: ScoredItem[], errors: 
     + `<aside class="drawer" hidden><div class="drawer-head"><button class="drawer-close" aria-label="Close">×</button></div><div class="drawer-content"></div></aside>`;
   const drawer = root.querySelector<HTMLElement>(".drawer")!;
   const content = drawer.querySelector<HTMLElement>(".drawer-content")!;
-  drawer.querySelector<HTMLElement>(".drawer-close")!.addEventListener("click", () => { drawer.hidden = true; });
+  // Non-modal inspector: Escape closes it and focus returns to the row, but the list
+  // behind stays interactive (no scrim, no focus-trap).
+  const dismiss = dismissible(drawer, { onDismiss: () => closeDrawer() });
+  function closeDrawer() { drawer.hidden = true; dismiss.release(); }
+  drawer.querySelector<HTMLElement>(".drawer-close")!.addEventListener("click", closeDrawer);
   root.querySelectorAll<HTMLElement>(".alert-row").forEach(tr => {
     tr.addEventListener("click", () => {
       const r = rows[Number(tr.dataset.i)];
@@ -61,6 +66,7 @@ export function renderTriageList(root: HTMLElement, rows: ScoredItem[], errors: 
       const kr = renderers.get(r.kind);
       if (kr?.detail) kr.detail(content, r, ctx); else defaultDetail(content, r);
       drawer.hidden = false;
+      dismiss.activate();
     });
   });
 }

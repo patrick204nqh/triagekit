@@ -8,6 +8,7 @@ import { scopeSummary } from "./health";
 import { providerIcon } from "./provider-icons";
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from "./theme";
 import { getRefreshInterval, setRefreshInterval, REFRESH_OPTIONS } from "./refresh";
+import { dismissible } from "./dismissible";
 
 function esc(s: unknown): string {
   return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
@@ -283,9 +284,12 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     renderConns(); onChange();
   }
 
+  // Modal sheet: Escape / scrim dismiss, Tab trapped within, background inert, focus restored.
+  const dismiss = dismissible(panel, { onDismiss: () => discard(), scrim, modal: true });
   function setHidden(hidden: boolean) {
     panel.classList.toggle("open", !hidden); scrim.classList.toggle("open", !hidden);
     panel.setAttribute("aria-hidden", String(hidden));
+    if (hidden) dismiss.release(); else dismiss.activate();
   }
   function discard() { draftCred.clear(); draftScope.clear(); draftTiers = null; setHidden(true); }
   function save() {
@@ -294,7 +298,6 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     if (draftTiers) { policy.setTiers(draftTiers); draftTiers = null; }
     draftCred.clear(); draftScope.clear(); onChange(); setHidden(true);
   }
-  scrim.addEventListener("click", discard);
   host.querySelector("[data-close]")!.addEventListener("click", discard);
   host.querySelector("[data-cancel]")!.addEventListener("click", discard);
   host.querySelector("[data-save]")!.addEventListener("click", save);

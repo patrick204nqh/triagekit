@@ -239,4 +239,16 @@ describe("mountSettings", () => {
     expect(new PolicyStore().getTiers().p0).toBe(150);
     expect(changed).toBeGreaterThan(0);
   });
+
+  it("Escape closes the sheet without saving", () => {
+    const { host, creds, s } = mount();
+    s.open("github");
+    const panel = host.querySelector<HTMLElement>("[data-panel]")!;
+    expect(panel.classList.contains("open")).toBe(true);
+    const input = host.querySelector<HTMLInputElement>("[data-cred]")!;
+    input.value = "ghp_x"; input.dispatchEvent(new Event("input"));
+    document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    expect(panel.classList.contains("open")).toBe(false);            // dismissed
+    expect(creds.has("github")).toBe(false);                          // draft discarded, not saved
+  });
 });
