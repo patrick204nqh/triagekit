@@ -1,7 +1,7 @@
 import type { Kind, TriageItem } from "../dataset/item";
 import type { Transform } from "./signal-transform";
 import { applyTransform } from "./signal-transform";
-import { parseFormula, evalFormula, formulaVars, FormulaError } from "./formula";
+import { parseFormula, evalFormula, formulaVars, FormulaError, type Expr } from "./formula";
 import type { FieldDef } from "./field-catalog";
 
 export interface SignalSpec { from: string; transform: Transform; }
@@ -51,6 +51,15 @@ export function validateModel(model: ScoreModel, fields: FieldDef[]): string[] {
       if (!Object.prototype.hasOwnProperty.call(model.signals, v))
         errs.push(`formula uses unknown signal "${v}"`);
     }
+    const checkCalls = (n: Expr): void => {
+      if (n.t === "call") {
+        if (n.fn === "clamp" && n.args.length !== 3)
+          errs.push("clamp requires exactly 3 arguments: clamp(x, lo, hi)");
+        n.args.forEach(checkCalls);
+      } else if (n.t === "neg") checkCalls(n.e);
+      else if (n.t === "bin") { checkCalls(n.a); checkCalls(n.b); }
+    };
+    checkCalls(expr);
   } catch (e) {
     errs.push(e instanceof FormulaError ? `formula: ${e.message}` : String(e));
   }

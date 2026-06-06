@@ -203,7 +203,7 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
           .map(it => {
             const { score, tier } = scoreAndTier(it, {
               getModel: (k) => policy.getScoreModel(k),
-              getFields: (k) => fieldsFor(k as never),
+              getFields: (k) => fieldsFor(k),
               getThresholds: () => policy.getTiers(),
               override: scoreOverride,
             });

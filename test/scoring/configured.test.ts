@@ -26,13 +26,23 @@ describe("scoreAndTier", () => {
   });
   it("falls back to the built-in scorer + thresholds when no model", () => {
     const r = scoreAndTier(item, { getModel: () => null, getFields: () => fields, getThresholds: () => DEFAULT_THRESHOLDS });
-    // built-in dependency-vuln scorer is registered on import; just assert it's a number tiered by thresholds
-    expect(typeof r.score).toBe("number");
+    // built-in dependency-vuln scorer is NOT registered in this test file; fallback returns item.signal (42)
+    expect(r.score).toBe(42);
     expect(["P0", "P1", "P2", "P3"]).toContain(r.tier);
   });
   it("falls back when the stored model is invalid (does not throw)", () => {
     const broken: ScoreModel = { ...validModel, formula: "cvss + mystery" };
     const r = scoreAndTier(item, { getModel: () => broken, getFields: () => fields, getThresholds: () => DEFAULT_THRESHOLDS });
-    expect(["P0", "P1", "P2", "P3"]).toContain(r.tier);   // used fallback, not the broken model
+    expect(r.score).toBe(42);   // used fallback (item.signal), not the broken model
+    expect(["P0", "P1", "P2", "P3"]).toContain(r.tier);
+  });
+  it("falls back (no throw) for a model whose formula would throw at eval", () => {
+    const throwy: ScoreModel = { ...validModel, formula: "clamp(cvss, 0)" };
+    const r = scoreAndTier(item, { getModel: () => throwy, getFields: () => fields, getThresholds: () => DEFAULT_THRESHOLDS });
+    expect(r.score).toBe(42);   // built-in fallback (item.signal)
+  });
+  it("uses ctx.override scorer in the fallback path", () => {
+    const r = scoreAndTier(item, { getModel: () => null, getFields: () => fields, getThresholds: () => DEFAULT_THRESHOLDS, override: () => 7 });
+    expect(r.score).toBe(7);
   });
 });

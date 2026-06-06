@@ -80,4 +80,8 @@ describe("validateModel", () => {
     const bad: ScoreModel = { ...model, formula: "constructor + severity" };
     expect(validateModel(bad, fields).some(e => e.includes("unknown signal"))).toBe(true);
   });
+  it("flags clamp with the wrong number of arguments", () => {
+    const bad: ScoreModel = { ...model, formula: "clamp(cvss, 0)" };
+    expect(validateModel(bad, fields).some(e => e.includes("clamp"))).toBe(true);
+  });
 });
