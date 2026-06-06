@@ -65,9 +65,6 @@ export function renderTriageList(root: HTMLElement, rows: ScoredItem[], errors: 
   });
 }
 
-/** @deprecated use renderTriageList */
-export const renderTriageTable = renderTriageList;
-
 // Shimmer placeholder shown while a fetch is in flight (no spinner).
 export function renderTableSkeleton(root: HTMLElement): void {
   const rows = Array.from({ length: 8 }).map(() =>
