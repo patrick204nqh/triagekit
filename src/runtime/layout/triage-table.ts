@@ -3,10 +3,11 @@ import type { TriageError } from "../ingest/source";
 import type { Tier } from "../scoring/tier";
 
 export interface ScoredItem extends TriageItem { score: number; tier: Tier; }
+export interface DetailCtx { token?: string; onChange?: (i: ScoredItem) => void; }
 export interface KindRenderer {
   kind: Kind;
   columns?: { header: string; cell: (i: ScoredItem) => string }[];
-  drawer?: (i: ScoredItem) => string;
+  detail?: (host: HTMLElement, i: ScoredItem, ctx: DetailCtx) => void;
 }
 const renderers = new Map<Kind, KindRenderer>();
 export function registerKindRenderer(r: KindRenderer) { renderers.set(r.kind, r); }
@@ -30,14 +31,14 @@ function tableHtml(rows: ScoredItem[], extra: KindRenderer["columns"]): string {
   }).join("");
   return `<table class="alerts"><thead>${head}</thead><tbody>${body}</tbody></table>`;
 }
-function defaultDrawer(r: ScoredItem): string {
-  return `<div class="drawer-inner"><h3>${esc(r.title)} <span class="tier tier-${r.tier}">${r.tier}</span></h3>
+function defaultDetail(host: HTMLElement, r: ScoredItem): void {
+  host.innerHTML = `<div class="drawer-inner"><h3>${esc(r.title)} <span class="tier tier-${r.tier}">${r.tier}</span></h3>
     <p class="muted">${esc(r.location)} · score ${r.score}</p>
-    ${r.url ? `<p><a href="${esc(r.url)}" target="_blank" rel="noreferrer">${esc(r.url)}</a></p>` : ""}
-    <button class="drawer-close">Close</button></div>`;
+    ${r.url ? `<p><a href="${esc(r.url)}" target="_blank" rel="noreferrer">${esc(r.url)}</a></p>` : ""}</div>`;
 }
-// Pure layout: render pre-scored rows + non-fatal errors; wire the drawer. No fetch/score.
-export function renderTriageTable(root: HTMLElement, rows: ScoredItem[], errors: TriageError[]): void {
+// Pure layout: render pre-scored rows + non-fatal errors; open a shared right-side
+// DetailPanel per row, populated by the row's kind renderer. No fetch/score.
+export function renderTriageList(root: HTMLElement, rows: ScoredItem[], errors: TriageError[], ctx: DetailCtx = {}): void {
   const warnings = warningsHtml(errors);
   if (!rows.length) {
     root.innerHTML = warnings + `<div class="empty">
@@ -48,17 +49,24 @@ export function renderTriageTable(root: HTMLElement, rows: ScoredItem[], errors:
     return;
   }
   const r0 = renderers.get(rows[0].kind);
-  root.innerHTML = warnings + tableHtml(rows, r0?.columns) + `<aside class="drawer" hidden></aside>`;
+  root.innerHTML = warnings + tableHtml(rows, r0?.columns)
+    + `<aside class="drawer" hidden><div class="drawer-head"><button class="drawer-close" aria-label="Close">×</button></div><div class="drawer-content"></div></aside>`;
   const drawer = root.querySelector<HTMLElement>(".drawer")!;
+  const content = drawer.querySelector<HTMLElement>(".drawer-content")!;
+  drawer.querySelector<HTMLElement>(".drawer-close")!.addEventListener("click", () => { drawer.hidden = true; });
   root.querySelectorAll<HTMLElement>(".alert-row").forEach(tr => {
     tr.addEventListener("click", () => {
-      const row = rows[Number(tr.dataset.i)];
-      drawer.innerHTML = r0?.drawer?.(row) ?? defaultDrawer(row);
+      const r = rows[Number(tr.dataset.i)];
+      content.innerHTML = "";
+      const kr = renderers.get(r.kind);
+      if (kr?.detail) kr.detail(content, r, ctx); else defaultDetail(content, r);
       drawer.hidden = false;
-      drawer.querySelector(".drawer-close")?.addEventListener("click", () => { drawer.hidden = true; });
     });
   });
 }
+
+/** @deprecated use renderTriageList */
+export const renderTriageTable = renderTriageList;
 
 // Shimmer placeholder shown while a fetch is in flight (no spinner).
 export function renderTableSkeleton(root: HTMLElement): void {
