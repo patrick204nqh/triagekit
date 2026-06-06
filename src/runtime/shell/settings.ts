@@ -157,10 +157,11 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       inp.addEventListener("change", () => { draftScope.set(prov, { ...getScope(prov), [inp.dataset.field!]: inp.value.split(/[\s,]+/).filter(Boolean) }); renderMeta(prov); }));
     body.querySelectorAll<HTMLElement>("[data-discover]").forEach(btn =>
       btn.addEventListener("click", () => runDiscover(s, btn.dataset.discover!, true)));
-    // Re-show cached results without an API call when the form re-opens.
+    // Always surface the *selected* scope as chips (independent of discovery);
+    // the "Find/Re-scan" button loads the option list to add more.
     for (const f of s.scopeSchema) if (f.discoverable && getCred(prov)) {
-      const cached = discoverCache.get(`${prov}:${fingerprint(getCred(prov))}`);
-      if (cached) mountMultiSelect(body.querySelector<HTMLElement>(`[data-list="${f.key}"]`)!, s, f.key, cached);
+      const cached = discoverCache.get(`${prov}:${fingerprint(getCred(prov))}`) ?? [];
+      mountMultiSelect(body.querySelector<HTMLElement>(`[data-list="${f.key}"]`)!, s, f.key, cached);
     }
   }
 
@@ -227,7 +228,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       const avail = options.filter(o => !sel.has(o.value) && (!ql || labelOf(o.value).toLowerCase().includes(ql)));
       opts.innerHTML = avail.length
         ? avail.map(o => `<button class="opt-row" data-add="${esc(o.value)}"><span class="repo">${o.group ? `<span class="org">${esc(o.group)}/</span>` : ""}${esc(o.label)}</span><span class="plus">+</span></button>`).join("")
-        : `<div class="muted ms-none">${ql ? "No matches." : "All added."}</div>`;
+        : `<div class="muted ms-none">${ql ? "No matches." : options.length ? "All added." : `Use “Find ${esc(noun)}” to load more.`}</div>`;
       opts.querySelectorAll<HTMLElement>("[data-add]").forEach(b =>
         b.addEventListener("click", () => { sel.add(b.dataset.add!); commit(); drawChips(); drawOptions(); drawCount(); }));
     };
