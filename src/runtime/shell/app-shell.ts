@@ -2,8 +2,9 @@ import type { TriageConfigT } from "../../config/schema";
 import { isCompiledConfig } from "./mode";
 import { getSource, listSources, providerOf, type Source, type TriageError } from "../ingest/source";
 import { listArtifacts, GROUP_LABEL, GROUP_ORDER, type Artifact } from "../dataset/artifact";
-import { resolveScorer, type Scorer } from "../scoring/registry";
-import { tierOf } from "../scoring/tier";
+import type { Scorer } from "../scoring/registry";
+import { scoreAndTier } from "../scoring/configured";
+import { fieldsFor } from "../scoring/field-catalog";
 import { renderTriageList, renderTableSkeleton, esc, type ScoredItem } from "../layout/triage-table";
 import { renderInsights } from "../layout/insights";
 import { applicableTabs, getTab } from "../layout/tab-registry";
@@ -208,7 +209,15 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
         const botLogins = policy.getBotLogins();
         const rows: ScoredItem[] = items
           .map(it => withBotPolicy(it, botLogins))
-          .map(it => { const score = resolveScorer(it.kind, scoreOverride)(it); return { ...it, score, tier: tierOf(score, policy.getTiers()) }; })
+          .map(it => {
+            const { score, tier } = scoreAndTier(it, {
+              getModel: (k) => policy.getScoreModel(k),
+              getFields: (k) => fieldsFor(k),
+              getThresholds: () => policy.getTiers(),
+              override: scoreOverride,
+            });
+            return { ...it, score, tier };
+          })
           .sort((a, b) => b.score - a.score);
         lastRows = rows; lastFetchedAt = Date.now(); updateSync();
         if (view === "insights") { renderInsights(root, rows, active.kinds); return; }
