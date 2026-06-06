@@ -11,14 +11,13 @@ const renderer: KindRenderer = {
     { header: "Package", cell: (r) => esc(det(r).package) },
     { header: "Severity", cell: (r) => { const s = det(r).severity; return `<span class="sev sev-${esc(s)}">${esc(s)}</span>`; } },
   ],
-  drawer: (r) => { const d = det(r); return `<div class="drawer-inner">
+  detail: (host, r) => { const d = det(r); host.innerHTML = `<div class="drawer-inner">
     <h3>${esc(d.package)} <span class="tier tier-${r.tier}">${r.tier}</span></h3>
     <p class="muted">${esc(r.location)} · score ${r.score}</p>
     <dl><dt>Severity</dt><dd>${esc(d.severity)} (CVSS ${d.cvss})</dd>
     <dt>Scope</dt><dd>${esc(d.scope ?? "unknown")}</dd>
     <dt>Fix</dt><dd>${d.fixAvailable ? (d.fixVersion ? "available: " + esc(d.fixVersion) : "available") : "none yet"}</dd>
-    <dt>Advisory</dt><dd>${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noreferrer">${esc(r.url)}</a>` : "—"}</dd></dl>
-    <button class="drawer-close">Close</button></div>`; },
+    <dt>Advisory</dt><dd>${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noreferrer">${esc(r.url)}</a>` : "—"}</dd></dl></div>`; },
 };
 registerKindRenderer(renderer);
 registerView({ id: "security-alerts", kind: DEPENDENCY_VULN });
