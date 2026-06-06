@@ -237,7 +237,8 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
     const body = root.querySelector<HTMLElement>(".surface-body")!;
     const scoreExplain = (i: ScoredItem): ScoreExplanation | null => {
       const m = policy.getScoreModel(i.kind);
-      return m && validateModel(m, fieldsFor(i.kind)).length === 0 ? explainScoreModel(m, i) : null;
+      if (!m || validateModel(m, fieldsFor(i.kind)).length !== 0) return null;
+      try { return explainScoreModel(m, i); } catch { return null; }
     };
     const drawBody = () => {
       const shown = applyFacets(rows, facetState);
