@@ -1,5 +1,8 @@
 /* Self-hosted fonts — woff2 inlined as base64 by vite-plugin-singlefile (no CDN, CSP-safe).
-   JetBrains Mono (OFL) is bundled. Satoshi is NOT bundled (Fontshare requires an account
-   download); --sans therefore falls back to system-ui via the chain in tokens.css. */
+   Both families are OFL-licensed and bundled:
+   - Space Grotesk (display/body sans) — one variable woff2, latin subset, weight axis 300–700.
+   - JetBrains Mono (numbers/code) — static 400/600.
+   --sans/--mono in tokens.css resolve to these; the system-ui chain remains a fallback only. */
+@font-face { font-family:"Space Grotesk"; font-weight:300 700; font-display:swap; src:url("./fonts/space-grotesk-var.woff2") format("woff2"); }
 @font-face { font-family:"JetBrains Mono"; font-weight:400; font-display:swap; src:url("./fonts/jetbrains-mono-400.woff2") format("woff2"); }
 @font-face { font-family:"JetBrains Mono"; font-weight:600; font-display:swap; src:url("./fonts/jetbrains-mono-600.woff2") format("woff2"); }
