@@ -2,7 +2,7 @@
 // test/layout/review-card-body.test.ts
 import { describe, it, expect } from "vitest";
 import { reviewCardHtml } from "../../src/runtime/layout/review-card";
-import type { ReviewItem } from "../../src/runtime/dataset/kinds/review";
+import type { ReviewItem } from "../../src/runtime/dataset/shapes/review";
 
 const item: ReviewItem = {
   id: "github:acme/api:7", source: "github", kind: "change-request",

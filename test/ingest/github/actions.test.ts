@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest";
 import { makeGithubActions } from "../../../src/runtime/ingest/github/actions";
-import type { ReviewItem } from "../../../src/runtime/dataset/kinds/review";
+import type { ReviewItem } from "../../../src/runtime/dataset/shapes/review";
 
 function item(kind: ReviewItem["kind"] = "change-request"): ReviewItem {
   return {

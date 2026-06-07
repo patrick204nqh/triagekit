@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { reviewScore } from "../../src/runtime/scoring/review";
 import { tierOf } from "../../src/runtime/scoring/tier";
 import type { TriageItem } from "../../src/runtime/dataset/item";
-import type { ReviewDetails } from "../../src/runtime/dataset/kinds/review";
+import type { ReviewDetails } from "../../src/runtime/dataset/shapes/review";
 
 const now = new Date().toISOString();
 function item(over: Partial<ReviewDetails> = {}, kind: "change-request" | "issue" = "change-request", createdAt = now): TriageItem<ReviewDetails> {

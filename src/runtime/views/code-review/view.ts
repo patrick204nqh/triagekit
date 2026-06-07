@@ -1,7 +1,7 @@
 import { type ScoredItem, type KindRenderer, type DetailCtx, esc } from "../../layout/triage-table";
 import { mountReviewCard } from "../../layout/review-card";
-import type { ReviewItem, ReviewDetails } from "../../dataset/kinds/review";
-import { CHANGE_REQUEST, ISSUE } from "../../dataset/kinds/review";
+import type { ReviewItem, ReviewDetails } from "../../dataset/shapes/review";
+import { CHANGE_REQUEST, ISSUE } from "../../dataset/shapes/review";
 import { makeGithubActions } from "../../ingest/github/actions";
 import { enrichReview } from "../../ingest/github/change-request-source";   // also pins the source's registerSource() side-effect
 import { type FilterAxis } from "../../layout/axis-registry";

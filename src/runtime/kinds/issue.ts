@@ -5,7 +5,7 @@ import type { Scorer } from "../scoring/registry";
 import { reviewScore } from "../scoring/review";
 import { issueRenderer, labelAxis, assigneeAxis } from "../views/code-review/view";
 
-// Honest detail-level keys on ReviewDetails (dataset/kinds/review.ts) that the
+// Honest detail-level keys on ReviewDetails (dataset/shapes/review.ts) that the
 // scorer + filter axes actually read:
 //   labels    — labelWeight() in reviewScore + labelAxis     (enum of label names)
 //   assignees — reviewScore reviewSignal + assigneeAxis       (bool: any assigned)

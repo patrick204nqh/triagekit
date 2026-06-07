@@ -2,7 +2,7 @@ import { esc } from "./triage-table";
 import {
   type ReviewItem, type ActionId, type MergeMethod, type ReviewActions,
   CHANGE_REQUEST,
-} from "../dataset/kinds/review";
+} from "../dataset/shapes/review";
 import {
   type Sla, tierBadgeHtml, slaTagHtml, actorChipHtml, labelChipHtml,
   checkIndicatorHtml, relationStripHtml,

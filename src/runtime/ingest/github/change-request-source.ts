@@ -2,7 +2,7 @@ import type { TriageItem } from "../../dataset/item";
 import type { Actor, Label, CheckStatus } from "../../dataset/shared";
 import {
   type ReviewDetails, type ReviewState, CHANGE_REQUEST, ISSUE,
-} from "../../dataset/kinds/review";
+} from "../../dataset/shapes/review";
 import { type Source, type TriageError, type DiscoveryOption, registerSource } from "../source";
 import { ghPaginate, GH_HEADERS } from "./paginate";
 
