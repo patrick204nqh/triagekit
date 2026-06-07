@@ -29,6 +29,9 @@ export function mountScoringEditor(host: HTMLElement, opts: ScoringEditorOpts) {
   const stage = (m: ScoreModel) => { opts.setDraft(activeKind!, m); opts.onChange?.(); };
   // Stage + full re-render (for structural changes).
   const commit = (m: ScoreModel) => { stage(m); render(); };
+  // The kind <select> options (shared by the Default and Custom branches).
+  const kindSelect = () =>
+    kinds.map(k => `<option value="${esc(k)}" ${k === activeKind ? "selected" : ""}>${esc(k)}</option>`).join("");
 
   function render(): void {
     if (!activeKind) {
@@ -37,19 +40,16 @@ export function mountScoringEditor(host: HTMLElement, opts: ScoringEditorOpts) {
     }
     // Default state: no saved model and no real draft. Show an explainer + Customize fork.
     if (opts.getDraft(activeKind) === null) {
-      const kindOpts = kinds.map(k => `<option value="${esc(k)}" ${k === activeKind ? "selected" : ""}>${esc(k)}</option>`).join("");
       host.innerHTML = `<div class="scoring-editor" data-scoring-state="default">
         <div class="se-head">
-          <select data-kind aria-label="Kind">${kindOpts}</select>
+          <select data-kind aria-label="Kind">${kindSelect()}</select>
           <span class="se-badge" data-scoring-badge>Default</span>
         </div>
         <p class="se-explainer muted">This kind uses TriageKit's built-in scoring and default cutoffs. Customize to edit the formula, signal weights, and tier bands for this kind.</p>
         <button class="btn-ghost" data-customize>Customize scoring</button>
       </div>`;
       host.querySelector<HTMLButtonElement>("[data-customize]")?.addEventListener("click", () => {
-        opts.setDraft(activeKind!, defaultModelFor(activeKind!)!);
-        opts.onChange?.();
-        render();
+        commit(defaultModelFor(activeKind!)!);
       });
       wireHead();
       return;
@@ -61,10 +61,9 @@ export function mountScoringEditor(host: HTMLElement, opts: ScoringEditorOpts) {
     const simpleAvailable = weights !== null;
     if (mode === "simple" && !simpleAvailable) mode = "advanced";
 
-    const kindOpts = kinds.map(k => `<option value="${esc(k)}" ${k === activeKind ? "selected" : ""}>${esc(k)}</option>`).join("");
     host.innerHTML = `<div class="scoring-editor" data-scoring-state="custom">
       <div class="se-head">
-        <select data-kind aria-label="Kind">${kindOpts}</select>
+        <select data-kind aria-label="Kind">${kindSelect()}</select>
         <span class="se-badge" data-scoring-badge>Custom</span>
         <div class="seg se-mode">
           <button data-mode="simple" class="${mode === "simple" ? "on" : ""}" ${simpleAvailable ? "" : "disabled"}>Simple</button>

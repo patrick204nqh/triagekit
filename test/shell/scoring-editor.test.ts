@@ -110,6 +110,48 @@ describe("mountScoringEditor", () => {
     expect(cleared.has(KIND)).toBe(true);
   });
 
+  it("Custom state (seeded draft) shows editor, Custom badge, tier bands, and Reset", () => {
+    const { host } = harness({ [KIND]: def });
+    const container = host.querySelector("[data-scoring-state]")!;
+    expect(container.getAttribute("data-scoring-state")).toBe("custom");
+    expect(host.querySelector("[data-scoring-badge]")!.textContent).toContain("Custom");
+    // Simple-mode weight sliders render (one per signal).
+    expect(host.querySelectorAll("[data-weight]").length).toBe(2);
+    // Tier-bands block and Reset affordance present.
+    expect(host.querySelector("[data-tiers]")).not.toBeNull();
+    expect(host.querySelector("[data-reset]")).not.toBeNull();
+  });
+
+  it("tier bands render ONLY in Custom state, never in Default", () => {
+    // Default state: no draft → no tier bands.
+    const defaultHarness = harness();
+    expect(defaultHarness.host.querySelector("[data-scoring-state]")!.getAttribute("data-scoring-state")).toBe("default");
+    expect(defaultHarness.host.querySelector("[data-tiers]")).toBeNull();
+    // Custom state: seeded draft → tier bands present.
+    const customHarness = harness({ [KIND]: def });
+    expect(customHarness.host.querySelector("[data-scoring-state]")!.getAttribute("data-scoring-state")).toBe("custom");
+    expect(customHarness.host.querySelector("[data-tiers]")).not.toBeNull();
+  });
+
+  it("Reset re-renders into Default state (tier bands gone) when the draft clears", () => {
+    // getDraft returns null after a clear → editor falls back to the Default branch.
+    const drafts = new Map<string, ScoreModel>([[KIND, def]]);
+    const host = document.createElement("div");
+    const editor = mountScoringEditor(host, {
+      getDraft: (k) => drafts.get(k) ?? null,
+      setDraft: (k, m) => { drafts.set(k, m); },
+      clearDraft: (k) => { drafts.delete(k); },
+      onChange: () => {},
+    });
+    editor.render();
+    expect(host.querySelector("[data-scoring-state]")!.getAttribute("data-scoring-state")).toBe("custom");
+    expect(host.querySelector("[data-tiers]")).not.toBeNull();
+    host.querySelector<HTMLButtonElement>("[data-reset]")!.click();
+    expect(host.querySelector("[data-scoring-state]")!.getAttribute("data-scoring-state")).toBe("default");
+    expect(host.querySelector("[data-tiers]")).toBeNull();
+    expect(host.querySelector("[data-reset]")).toBeNull();
+  });
+
   it("renders nothing actionable when no kind has a default", () => {
     _resetDefaultModels();
     const { host } = harness();
