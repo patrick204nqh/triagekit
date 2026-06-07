@@ -6,6 +6,7 @@ import type { ScoredItem } from "../../src/runtime/layout/triage-table";
 import { githubSource } from "../../src/runtime/ingest/github/dependency-vuln-source";
 import { registerProvider } from "../../src/runtime/core/provider-registry";
 import { github } from "../../src/runtime/providers/github";
+import { readUrlState } from "../../src/runtime/shell/url-state";
 import type { TriageConfigT } from "../../src/config/schema";
 
 const flush = () => new Promise<void>(r => setTimeout(r, 0));
@@ -146,6 +147,19 @@ describe("mountShell artifact navigation", () => {
     // Returning to an artifact that has it again → selection restored (state never reset).
     const backToA = toolbarPropsFromShell({ ...base, rows: [row("acme/api"), row("acme/web")], activeRepo: "acme/api" });
     expect(backToA.activeRepo).toBe("acme/api");
+  });
+
+  it("writes state changes to the URL query string", async () => {
+    history.replaceState(null, "", "/");
+    bootstrap(config);
+    await flush();
+    const rail = document.getElementById("domainRail")!;
+    const buttons = rail.querySelectorAll("button");
+    (buttons[0] as HTMLElement).click();   // pick the first artifact
+    await flush();
+    const state = readUrlState(location.search);
+    expect(state.artifact).toBeTruthy();   // artifact id was written
+    expect(state.view).toBe("list");        // rail click resets view to list
   });
 
   it("switching to an upcoming artifact renders its roadmap placeholder", () => {

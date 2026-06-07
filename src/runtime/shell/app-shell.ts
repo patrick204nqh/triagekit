@@ -17,6 +17,7 @@ import { healthOf, scopeSummary } from "./health";
 import { mountSettings } from "./settings";
 import { providerIcon } from "./provider-icons";
 import { getThemeChoice, cycleTheme } from "./theme";
+import { writeUrlState, readUrlState } from "./url-state";
 import { getRefreshInterval, relativeSince } from "./refresh";
 import { scopeKey } from "../core/scope-key";
 import { getProvider } from "../core/provider-registry";
@@ -112,8 +113,22 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     try { return explainScoreModel(m, i); } catch { return null; }
   };
 
+  // Assemble the current page state and mirror it to the URL query string.
+  // Called from every state-mutation handler (replaceState — no history spam).
+  const syncUrl = () => {
+    const { sort, axes } = facetState;
+    writeUrlState({
+      provider: activeProvider || undefined,
+      repo: activeRepo || undefined,
+      artifact: active?.id,
+      view,
+      sort,
+      axes,
+    });
+  };
+
   // Facet change: update state, re-derive from the store (no refetch).
-  const onFacetChange = (next: ListState) => { facetState = next; core.rerender(); };
+  const onFacetChange = (next: ListState) => { facetState = next; syncUrl(); core.rerender(); };
 
   // Dispatcher view: owns view-mode selection (mirrors the original post-fetch
   // branching). insights/tab render directly; list mode delegates to the DOM view.
@@ -231,6 +246,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
         b.addEventListener("click", () => {
           active = a; view = "list"; activeProvider = (liveSourcesFor(a)[0] ?? sourcesFor(a)[0])?.id ?? "";
           lastRows = []; facetState = emptyListState(); lastFetchedAt = null;
+          syncUrl();
           buildRail(); buildNav(); refreshBar(); render();
         });
         section.appendChild(b);
@@ -253,15 +269,17 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     renderToolbar(nav, {
       ...base,
       onFacetChange,
-      onViewChange: (id) => { view = id; buildNav(); render(); },
+      onViewChange: (id) => { view = id; syncUrl(); buildNav(); render(); },
       onProviderSelect: (id) => {
         activeProvider = id;
         activeRepo = "";
         lastRows = []; facetState = emptyListState(); lastFetchedAt = null;
+        syncUrl();
         buildNav(); refreshBar(); render();
       },
       onRepoSelect: (id) => {
         activeRepo = id;
+        syncUrl();
         core.rerender();      // client-side re-derive, no refetch
         buildNav();           // re-render tabs so the active one updates
       },
