@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { createCore } from "../../src/runtime/core/core";
 import { createStore } from "../../src/runtime/core/store";
-import { emptyFacetState } from "../../src/runtime/layout/facet-bar";
+import { emptyListState } from "../../src/runtime/layout/filter-state";
 import type { ViewModel } from "../../src/runtime/core/view-model";
 import type { ProviderPort } from "../../src/runtime/core/ports";
 import type { TriageItem } from "../../src/runtime/dataset/item";
@@ -27,7 +27,7 @@ describe("createCore", () => {
       activeKinds: () => ["issue"],
       botLogins: () => [],
       scoreContext: () => score,
-      facets: () => emptyFacetState(),
+      facets: () => emptyListState(),
     });
 
     await core.refreshNow();
@@ -46,7 +46,7 @@ describe("createCore", () => {
     const core = createCore({
       store, view: { render: (m) => { renders++; vm = m; } },
       jobsFor: () => [{ provider: "github", scopeKey: "r1", scope: {}, token: "t", port: gh }],
-      activeKinds: () => ["issue"], botLogins: () => [], scoreContext: () => score, facets: () => emptyFacetState(),
+      activeKinds: () => ["issue"], botLogins: () => [], scoreContext: () => score, facets: () => emptyListState(),
     });
 
     core.rerender();

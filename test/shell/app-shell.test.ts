@@ -66,7 +66,7 @@ describe("mountShell artifact navigation", () => {
       expect(document.querySelector("#viewswitch .toolbar")).toBeTruthy();
       const body = document.querySelector<HTMLElement>("#root .surface-body");
       expect(body).toBeTruthy();
-      expect(document.querySelector("#root .facet-bar")).toBeNull();   // retired from the surface
+      expect(document.querySelector("#root .filter-bar")).toBeNull();   // retired from the surface
       expect(document.querySelector("#root .surface-body table.alerts, #root .surface-body .empty")).toBeTruthy();
       expect(fetchSpy).toHaveBeenCalledTimes(1);
 

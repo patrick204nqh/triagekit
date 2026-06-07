@@ -2,7 +2,7 @@
 import type { Kind, TriageItem } from "../dataset/item";
 import { scoreAndTier, type ScoreContext } from "../scoring/configured";
 import { withBotPolicy } from "./author-policy";
-import { applyFacets, type FacetState } from "../layout/facet-bar";
+import { applyFilters, type ListState } from "../layout/filter-state";
 import type { ScoredItem } from "../layout/triage-table";
 
 export interface DeriveInput {
@@ -10,7 +10,7 @@ export interface DeriveInput {
   activeKinds: readonly Kind[];
   botLogins: string[];
   score: ScoreContext;
-  facets: FacetState;
+  facets: ListState;
 }
 export interface Derived {
   scored: ScoredItem[];   // active-kind items, bot-policy applied, scored + sorted (pre-facet)
@@ -27,6 +27,6 @@ export function derive(input: DeriveInput): Derived {
       return { ...it, score, tier } as ScoredItem;
     })
     .sort((a, b) => b.score - a.score);
-  const shown = applyFacets(scored, input.facets);
+  const shown = applyFilters(scored, input.facets);
   return { scored, shown };
 }

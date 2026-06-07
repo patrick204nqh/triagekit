@@ -2,7 +2,7 @@
 import type { Kind } from "../dataset/item";
 import type { TriageError } from "../ingest/source";
 import type { ScoreContext } from "../scoring/configured";
-import type { FacetState } from "../layout/facet-bar";
+import type { ListState } from "../layout/filter-state";
 import { derive } from "./derivation";
 import { refresh, type ProviderJob } from "./orchestrator";
 import type { DatasetStore } from "./store";
@@ -15,7 +15,7 @@ export interface CoreDeps {
   activeKinds(): Kind[];
   botLogins(): string[];
   scoreContext(): ScoreContext;
-  facets(): FacetState;
+  facets(): ListState;
 }
 
 export function createCore(deps: CoreDeps) {

@@ -1,7 +1,7 @@
 import type { ScoredItem } from "./triage-table";
 import type { Artifact } from "../dataset/artifact";
 import { esc } from "./triage-table";
-import { type FacetState } from "./facet-bar";
+import { type ListState } from "./filter-state";
 import { listFilterAxes, listSortKeys, type AxisCtx, type FilterAxis } from "./facet-registry";
 import { dismissible } from "../shell/dismissible";
 
@@ -10,16 +10,16 @@ export interface ToolbarProvider { id: string; label: string; on: boolean; live:
 export interface ToolbarProps {
   artifact: Artifact;
   rows: ScoredItem[];
-  facets: FacetState;
+  facets: ListState;
   viewModes: ToolbarViewMode[];
   activeView: string;
   providers: ToolbarProvider[];
-  onFacetChange: (next: FacetState) => void;
+  onFacetChange: (next: ListState) => void;
   onViewChange: (id: string) => void;
   onProviderToggle: (id: string) => void;
 }
 
-function activeFilterCount(state: FacetState): number {
+function activeFilterCount(state: ListState): number {
   return Object.values(state.axes).reduce((n, v) => n + (v?.length ?? 0), 0);
 }
 
@@ -65,9 +65,9 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
   host.querySelectorAll<HTMLElement>(".tb-view").forEach(b =>
     b.addEventListener("click", () => p.onViewChange(b.dataset.view!)));
 
-  // Emit helper for facet mutations (clone like facet-bar does).
-  const emit = (mut: (s: FacetState) => void) => {
-    const clone: FacetState = { axes: {}, sort: p.facets.sort };
+  // Emit helper for filter mutations (clone like filter-state does).
+  const emit = (mut: (s: ListState) => void) => {
+    const clone: ListState = { axes: {}, sort: p.facets.sort };
     for (const [k, v] of Object.entries(p.facets.axes)) clone.axes[k] = [...v];
     mut(clone); p.onFacetChange(clone);
   };

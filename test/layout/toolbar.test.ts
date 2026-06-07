@@ -2,7 +2,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { renderToolbar, type ToolbarProps } from "../../src/runtime/layout/toolbar";
 import type { ScoredItem } from "../../src/runtime/layout/triage-table";
-import { emptyFacetState } from "../../src/runtime/layout/facet-bar";
+import { emptyListState } from "../../src/runtime/layout/filter-state";
 
 const rows: ScoredItem[] = [{
   id: "1", source: "github", kind: "change-request", title: "t", location: "acme/api",
@@ -13,7 +13,7 @@ const rows: ScoredItem[] = [{
 function props(over: Partial<ToolbarProps> = {}): ToolbarProps {
   return {
     artifact: { id: "change-request", label: "Pull requests", group: "work", kinds: ["change-request"] },
-    rows, facets: emptyFacetState(),
+    rows, facets: emptyListState(),
     viewModes: [{ id: "list", label: "List" }, { id: "insights", label: "Insights" }],
     activeView: "list",
     providers: [{ id: "github-review", label: "github", on: true, live: true }],

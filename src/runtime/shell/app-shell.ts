@@ -8,7 +8,7 @@ import { explainScoreModel, validateModel, type ScoreExplanation } from "../scor
 import { renderTableSkeleton, esc, type ScoredItem } from "../layout/triage-table";
 import { renderInsights } from "../layout/insights";
 import { applicableTabs, getTab } from "../layout/tab-registry";
-import { emptyFacetState, type FacetState } from "../layout/facet-bar";
+import { emptyListState, type ListState } from "../layout/filter-state";
 import { renderToolbar, type ToolbarProps } from "../layout/toolbar";
 import { CredStore } from "./cred-store";
 import { ScopeStore } from "./scope-store";
@@ -43,7 +43,7 @@ const AUTO = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke
 const REFRESH = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>`;
 
 export interface ToolbarPropsInput {
-  artifact: Artifact; rows: ScoredItem[]; facets: FacetState;
+  artifact: Artifact; rows: ScoredItem[]; facets: ListState;
   hasInsights: boolean; activeView: string;
   sources: { id: string; provider: string; status: string }[];
   selected: Set<string>;
@@ -79,7 +79,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   let view: string = "list";
   let selected = new Set(liveSourcesFor(active).map(s => s.id));   // provider facet
   let lastRows: ScoredItem[] = [];
-  let facetState: FacetState = emptyFacetState();
+  let facetState: ListState = emptyListState();
   let lastFetchedAt: number | null = null;
   let cancelRefresh: (() => void) | undefined;
 
@@ -95,7 +95,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   };
 
   // Facet change: update state, re-derive from the store (no refetch).
-  const onFacetChange = (next: FacetState) => { facetState = next; core.rerender(); };
+  const onFacetChange = (next: ListState) => { facetState = next; core.rerender(); };
 
   // Dispatcher view: owns view-mode selection (mirrors the original post-fetch
   // branching). insights/tab render directly; list mode delegates to the DOM view.
@@ -217,7 +217,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
         if (a.id === active.id) b.className = "active";
         b.addEventListener("click", () => {
           active = a; view = "list"; selected = new Set(liveSourcesFor(a).map(s => s.id));
-          lastRows = []; facetState = emptyFacetState(); lastFetchedAt = null;
+          lastRows = []; facetState = emptyListState(); lastFetchedAt = null;
           buildRail(); buildNav(); refreshBar(); render();
         });
         section.appendChild(b);
@@ -242,7 +242,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       onViewChange: (id) => { view = id; buildNav(); render(); },
       onProviderToggle: (id) => {
         selected.has(id) ? selected.delete(id) : selected.add(id);
-        lastRows = []; facetState = emptyFacetState(); lastFetchedAt = null;
+        lastRows = []; facetState = emptyListState(); lastFetchedAt = null;
         buildNav(); refreshBar(); render();
       },
     });
