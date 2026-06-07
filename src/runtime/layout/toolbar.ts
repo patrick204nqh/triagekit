@@ -25,7 +25,10 @@ function activeFilterCount(state: FacetState): number {
 
 export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
   const ctx: AxisCtx = { artifact: p.artifact };
-  const axes = listFilterAxes().filter(a => a.appliesTo(p.rows, ctx));
+  // The provider dimension is owned by the "Provider sources" fetch toggle below,
+  // not a filter axis — exclude the registry `provider` axis to avoid two redundant
+  // provider controls in the same popover for multi-provider artifacts.
+  const axes = listFilterAxes().filter(a => a.id !== "provider" && a.appliesTo(p.rows, ctx));
   const sorts = listSortKeys().filter(s => !s.appliesTo || s.appliesTo(ctx));
   const sel = (id: string) => p.facets.axes[id] ?? [];
   const fcount = activeFilterCount(p.facets);
