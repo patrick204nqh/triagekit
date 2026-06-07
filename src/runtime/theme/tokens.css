@@ -198,7 +198,7 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 .cat-icon { flex:none; width:20px; height:20px; }
 .cat.on { color:var(--fg); background:color-mix(in srgb,var(--accent) 12%,transparent); box-shadow:inset 3px 0 0 var(--accent); }
 .cat .unsaved-dot { display:none; }
-.cat[data-unsaved] .unsaved-dot, .cat .unsaved-dot[data-unsaved] { display:block; width:7px; height:7px; border-radius:50%; background:var(--p2); flex:none; margin-left:auto; }
+.cat .unsaved-dot[data-unsaved] { display:block; width:7px; height:7px; border-radius:50%; background:var(--p2); flex:none; margin-left:auto; }
 
 /* Content — visible pane stacks its sections with the old panel-body gap */
 .set-content { padding:22px 24px; overflow-y:auto; min-width:0; }
@@ -258,7 +258,6 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 
 /* ── Scoring editor (per-kind score model) ─────────────────────────── */
 .scoring-editor { display:flex; flex-direction:column; gap:16px; }
-.scoring-editor[data-scoring-state] { gap:16px; }
 .scoring-editor[data-scoring-state="default"] { gap:12px; }
 /* head: kind select + mode seg + reset + badge on one wrap-safe row */
 .se-head { display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
@@ -353,7 +352,7 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
   .set-sidebar { flex-direction:row; gap:6px; overflow-x:auto; flex-wrap:nowrap; padding:12px 16px; border-right:none; border-bottom:1px solid var(--line); }
   .cat { flex:none; width:auto; padding:7px 12px; box-shadow:none; border:1px solid var(--line); border-radius:999px; }
   .cat.on { box-shadow:none; border-color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
-  .cat[data-unsaved] .unsaved-dot, .cat .unsaved-dot[data-unsaved] { margin-left:4px; }
+  .cat .unsaved-dot[data-unsaved] { margin-left:4px; }
   .set-content { padding:18px 16px; }
 }
 
