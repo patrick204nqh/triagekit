@@ -1,9 +1,10 @@
-import type { Kind } from "../dataset/item";
+import type { Kind, TriageItem } from "../dataset/item";
 import { type ScoreModel, validateModel } from "../scoring/score-model";
 import { fieldsFor } from "../scoring/field-catalog";
 import { listDefaultModels, defaultModelFor } from "../scoring/default-model";
 import { weightsToFormula, formulaToWeights } from "../scoring/weights";
 import { renderSignalEditor } from "./signal-editor";
+import { previewRerank } from "../scoring/preview";
 
 function esc(s: unknown): string {
   return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
@@ -14,6 +15,7 @@ export interface ScoringEditorOpts {
   setDraft(kind: string, model: ScoreModel): void;
   clearDraft(kind: string): void;
   onChange?(): void;
+  previewRows?(kind: string): TriageItem[];
 }
 
 export function mountScoringEditor(host: HTMLElement, opts: ScoringEditorOpts) {
@@ -50,13 +52,17 @@ export function mountScoringEditor(host: HTMLElement, opts: ScoringEditorOpts) {
         <button class="btn-ghost mini" data-reset>Reset to default</button>
       </div>
       <div class="se-body" data-body></div>
+      <div class="se-tiers" data-tiers></div>
       <div class="se-errors" data-errors></div>
+      <div class="se-preview" data-preview></div>
     </div>`;
 
     const body = host.querySelector<HTMLElement>("[data-body]")!;
     if (mode === "simple") renderSimple(body, model, weights!);
     else renderAdvanced(body, model);
+    renderTierBands(model);
     renderErrors(model, simpleAvailable);
+    renderPreview(model);
     wireHead();
   }
 
@@ -74,7 +80,9 @@ export function mountScoringEditor(host: HTMLElement, opts: ScoringEditorOpts) {
         weights[slider.dataset.weight!] = Number(slider.value);
         const label = body.querySelector<HTMLElement>(`[data-wval="${slider.dataset.weight}"]`);
         if (label) label.textContent = Number(slider.value).toFixed(2);
-        stage({ ...model, formula: weightsToFormula(next) });   // no full re-render: keep the slider alive mid-drag
+        const staged = { ...model, formula: weightsToFormula(next) };
+        stage(staged);                 // no full re-render: keep the slider alive mid-drag
+        renderPreview(staged);         // live re-rank; rewrites only the preview panel
       }));
   }
 
@@ -118,6 +126,47 @@ export function mountScoringEditor(host: HTMLElement, opts: ScoringEditorOpts) {
         },
       });
     }
+  }
+
+  function renderTierBands(model: ScoreModel): void {
+    const tiersHost = host.querySelector<HTMLElement>("[data-tiers]")!;
+    const minOf = (name: string) => model.tiers.find(t => t.name === name)?.min ?? 0;
+    tiersHost.innerHTML = `<label class="set-label">Tier bands</label>
+      <div class="tier-thresholds">
+        <label>P0 ≥ <input type="number" step="any" data-tier-min="P0" value="${minOf("P0")}"></label>
+        <label>P1 ≥ <input type="number" step="any" data-tier-min="P1" value="${minOf("P1")}"></label>
+        <label>P2 ≥ <input type="number" step="any" data-tier-min="P2" value="${minOf("P2")}"></label>
+      </div>
+      <span class="set-helper">P3 ≥ 0 (floor). Cutoffs must strictly decrease.</span>`;
+    const read = (name: string) => Number(tiersHost.querySelector<HTMLInputElement>(`[data-tier-min="${name}"]`)!.value);
+    tiersHost.querySelectorAll<HTMLInputElement>("[data-tier-min]").forEach(inp =>
+      inp.addEventListener("change", () => commit({
+        ...model,
+        tiers: [
+          { name: "P0", min: read("P0") },
+          { name: "P1", min: read("P1") },
+          { name: "P2", min: read("P2") },
+          { name: "P3", min: 0 },
+        ],
+      })));
+  }
+
+  function renderPreview(model: ScoreModel): void {
+    const box = host.querySelector<HTMLElement>("[data-preview]")!;
+    if (!opts.previewRows || !activeKind) { box.innerHTML = ""; return; }
+    const rows = opts.previewRows(activeKind);
+    if (!rows.length) {
+      box.innerHTML = `<label class="set-label">Preview</label><p class="muted">No loaded ${esc(activeKind)} items to preview.</p>`;
+      return;
+    }
+    if (validateModel(model, fieldsFor(activeKind)).length) {
+      box.innerHTML = `<label class="set-label">Preview</label><p class="muted">Fix the errors above to preview.</p>`;
+      return;
+    }
+    const top = previewRerank(model, rows, 8);
+    box.innerHTML = `<label class="set-label">Preview · top ${top.length} of ${esc(activeKind)}</label>
+      <ol class="se-preview-list">${top.map(r =>
+        `<li><span class="pv-title">${esc(r.item.title)}</span><span class="pv-score num">${r.score}</span><span class="tier tier-${r.tier}">${esc(r.tier)}</span></li>`).join("")}</ol>`;
   }
 
   function renderErrors(model: ScoreModel, simpleAvailable: boolean): void {
