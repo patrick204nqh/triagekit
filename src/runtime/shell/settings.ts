@@ -264,7 +264,10 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       ? `<span class="set-helper">${esc(s.setup.hint)}${s.setup.url ? ` <a class="set-link" href="${esc(s.setup.url)}" target="_blank" rel="noopener noreferrer">Create one ↗</a>` : ""}</span>`
       : "";
     let html = `<div class="set-group"><label class="set-label">Credential</label>
-        <input type="password" data-cred ${off ? "disabled" : ""} value="${getCred(prov) ? "••••••••" : ""}" placeholder="token / key — stored in this tab only"/>
+        <div class="cred-row">
+          <input type="password" data-cred ${off ? "disabled" : ""} value="${getCred(prov) ? "••••••••" : ""}" placeholder="token / key — stored in this tab only"/>
+          <button type="button" class="btn-ghost mini" data-cred-toggle ${off ? "disabled" : ""}>show</button>
+        </div>
         ${setup}<span class="set-helper">Session-only, never persisted or embedded.</span></div>`;
     for (const f of s.scopeSchema) {
       html += `<div class="set-group"><label class="set-label">${esc(f.label)}</label>`;
@@ -283,6 +286,12 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
 
     const cred = body.querySelector<HTMLInputElement>("[data-cred]");
     cred?.addEventListener("input", () => { draftCred.set(prov, cred.value.includes("•") ? getCred(prov) : cred.value); renderMeta(prov); });
+    const credToggle = body.querySelector<HTMLButtonElement>("[data-cred-toggle]");
+    credToggle?.addEventListener("click", () => {
+      const i = body.querySelector<HTMLInputElement>("[data-cred]")!;
+      if (i.type === "password") { i.type = "text"; if (i.value.includes("•")) i.value = getCred(prov); credToggle.textContent = "hide"; }
+      else { i.type = "password"; if (getCred(prov)) i.value = "••••••••"; credToggle.textContent = "show"; }
+    });
     body.querySelectorAll<HTMLInputElement>("[data-field]").forEach(inp =>
       inp.addEventListener("change", () => { draftScope.set(prov, { ...getScope(prov), [inp.dataset.field!]: inp.value.split(/[\s,]+/).filter(Boolean) }); renderMeta(prov); }));
     body.querySelectorAll<HTMLElement>("[data-discover]").forEach(btn =>

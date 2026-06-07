@@ -216,6 +216,8 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 .conn + .conn { margin-top:6px; }
 .conn.open { border-color:var(--line-strong); }
 .conn-body { padding:4px 12px 14px; display:flex; flex-direction:column; gap:14px; }
+.cred-row { display:flex; gap:6px; }
+.cred-row input { flex:1; }
 .conn-item .chev { color:var(--muted); flex:none; transition:transform .18s; }
 .conn.open .conn-item .chev { transform:rotate(180deg); }
 .data-actions { display:flex; gap:10px; flex-wrap:wrap; }
