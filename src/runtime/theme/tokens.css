@@ -41,6 +41,7 @@ body {
 .domains    { grid-area:rail; }
 .viewswitch { grid-area:view; }
 main        { grid-area:main; }
+
 /* Fixed grain overlay — breaks flat-dark sterility. Inline fractal-noise SVG
    (CSP: img-src data: allowed). Tiny, non-interactive, adapts via blend mode. */
 body::after {
