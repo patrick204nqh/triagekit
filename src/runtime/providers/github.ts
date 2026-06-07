@@ -5,7 +5,7 @@ import { githubSource } from "../ingest/github/dependency-vuln-source";
 // Declarative provider metadata. NOTE: GitHub exposes MULTIPLE Sources today
 // (githubSource for dependency-vuln, githubReviewSource for change-request/issue),
 // selected per-artifact via listSources(). The single makeAdapter() returns the
-// primary alerts source as a representative; the running shell drives data from
+// primary dependency-vuln source as a representative; the running shell drives data from
 // listSources(), not from this manifest. This manifest is forward-facing metadata.
 export const github: ProviderManifest = {
   id: "github",
