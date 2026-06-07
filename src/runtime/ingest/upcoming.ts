@@ -8,7 +8,8 @@ const stub = (id: string, domain: DomainId, kinds: Kind[]): Source => ({
 });
 // Roadmap placeholders — advertised under their domain, never fetched.
 [
-  stub("gitlab",     "code-security", ["dependency-vuln"]),
+  stub("gitlab",     "code-security", ["dependency-vuln", "change-request", "issue"]),
+  stub("bitbucket",  "code-security", ["dependency-vuln", "change-request", "issue"]),
   stub("aws",        "cloud-posture", ["cloud-misconfig"]),
   stub("gcp",        "cloud-posture", ["cloud-misconfig"]),
   stub("cloudflare", "edge-security", ["edge-misconfig", "waf-finding"]),
