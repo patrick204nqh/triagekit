@@ -240,6 +240,56 @@ describe("mountSettings", () => {
     expect(changed).toBeGreaterThan(0);
   });
 
+  it("labels the global cutoffs as the built-in scoring default", () => {
+    localStorage.clear(); sessionStorage.clear();
+    document.body.innerHTML = `<div id="hbid"></div>`;
+    const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
+    const host = document.getElementById("hbid")!;
+    const s = mountSettings(host, { sources: [github], creds, scopes, policy, onChange: () => {} });
+    s.open("github");
+    host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
+    expect(host.querySelector<HTMLElement>("[data-cat-pane='scoring']")!.textContent).toContain("built-in scoring");
+  });
+
+  it("flags non-decreasing global cutoffs inline (presentational only)", () => {
+    localStorage.clear(); sessionStorage.clear();
+    document.body.innerHTML = `<div id="hgv"></div>`;
+    const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
+    const host = document.getElementById("hgv")!;
+    const s = mountSettings(host, { sources: [github], creds, scopes, policy, onChange: () => {} });
+    s.open("github");
+    host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
+    const pane = host.querySelector<HTMLElement>("[data-cat-pane='scoring']")!;
+    const p0 = host.querySelector<HTMLInputElement>("[data-tier-input='p0']")!;
+    const p1 = host.querySelector<HTMLInputElement>("[data-tier-input='p1']")!;
+    // p0 below p1 → non-decreasing ordering
+    p1.value = "60"; p1.dispatchEvent(new Event("input"));
+    p0.value = "50"; p0.dispatchEvent(new Event("input"));
+    expect(pane.querySelector("[data-tier-invalid]")).toBeTruthy();
+    expect(p0.getAttribute("aria-invalid")).toBe("true");
+    // does not block Save / persist semantics
+    expect(host.querySelector<HTMLButtonElement>("[data-save]")!.disabled).toBe(false);
+  });
+
+  it("clears the inline flag when global cutoffs strictly decrease", () => {
+    localStorage.clear(); sessionStorage.clear();
+    document.body.innerHTML = `<div id="hgv2"></div>`;
+    const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
+    const host = document.getElementById("hgv2")!;
+    const s = mountSettings(host, { sources: [github], creds, scopes, policy, onChange: () => {} });
+    s.open("github");
+    host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
+    const pane = host.querySelector<HTMLElement>("[data-cat-pane='scoring']")!;
+    const p0 = host.querySelector<HTMLInputElement>("[data-tier-input='p0']")!;
+    const p1 = host.querySelector<HTMLInputElement>("[data-tier-input='p1']")!;
+    const p2 = host.querySelector<HTMLInputElement>("[data-tier-input='p2']")!;
+    p2.value = "10"; p2.dispatchEvent(new Event("input"));
+    p1.value = "50"; p1.dispatchEvent(new Event("input"));
+    p0.value = "100"; p0.dispatchEvent(new Event("input"));
+    expect(pane.querySelector("[data-tier-invalid]")).toBeNull();
+    expect(p0.getAttribute("aria-invalid")).toBe("false");
+  });
+
   it("offers four sidebar categories", () => {
     const { host, s } = mount();
     s.open("github");

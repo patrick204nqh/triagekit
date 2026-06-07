@@ -72,8 +72,8 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
               <span class="set-helper">One credential per provider — kept in this tab only (session), never persisted or embedded.</span></section>
           </div>
           <div class="cat-pane" data-cat-pane="scoring" hidden>
-            <section class="set-section"><label class="set-label">Priority thresholds</label>
-              <p class="set-helper">Minimum score for each tier. Items below P2 are P3.</p>
+            <section class="set-section"><label class="set-label">Default priority cutoffs</label>
+              <p class="set-helper">Minimum score for each tier, applied to any kind using built-in scoring (no custom model). Items below P2 are P3.</p>
               <div class="tier-thresholds">
                 <label>P0 ≥ <input type="number" min="0" step="1" data-tier-input="p0"></label>
                 <label>P1 ≥ <input type="number" min="0" step="1" data-tier-input="p1"></label>
@@ -169,6 +169,28 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     wrap.querySelectorAll<HTMLElement>("[data-rm-bot]").forEach(btn =>
       btn.addEventListener("click", () => { draftBots = getBots().filter(b => b !== btn.dataset.rmBot); renderBots(); updateSaveGate(); }));
   }
+  // Inline mirror of the tier "strictly decrease" rule for the GLOBAL cutoffs
+  // (equivalent of scoring-editor's per-kind renderTierBands hint — that closure
+  // can't be imported here). Presentational only: flags offending [data-tier-input]
+  // with aria-invalid and renders a [data-tier-invalid] hint; never blocks Save.
+  function updateGlobalTierValidity() {
+    const keys = ["p0", "p1", "p2"] as const;
+    const inputs = keys.map(k => host.querySelector<HTMLInputElement>(`[data-tier-input="${k}"]`));
+    if (inputs.some(inp => !inp)) return;
+    // Read the live input values; chain ends at the implicit P3 floor of 0.
+    const chain = [...inputs.map(inp => Number(inp!.value)), 0];
+    const offending = new Set<number>();
+    for (let i = 0; i < chain.length - 1; i++) {
+      if (chain[i] <= chain[i + 1]) { offending.add(i); offending.add(i + 1); }
+    }
+    keys.forEach((_, i) => inputs[i]!.setAttribute("aria-invalid", offending.has(i) ? "true" : "false"));
+    const pane = host.querySelector<HTMLElement>("[data-cat-pane='scoring']")!;
+    pane.querySelector("[data-tier-invalid]")?.remove();
+    if ([...offending].some(i => i < keys.length)) {
+      pane.querySelector(".tier-thresholds")!.insertAdjacentHTML("afterend",
+        `<span class="se-error" data-tier-invalid>Cutoffs must strictly decrease.</span>`);
+    }
+  }
   function renderScoring() {
     editor.render();
     const t = getTierDraft();
@@ -176,8 +198,13 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       const inp = host.querySelector<HTMLInputElement>(`[data-tier-input="${k}"]`);
       if (!inp) return;
       inp.value = String(t[k]);
-      inp.oninput = () => { const v = Number(inp.value); if (!inp.value.trim() || !Number.isFinite(v) || v < 0) return; draftTiers = { ...getTierDraft(), [k]: v }; };
+      inp.oninput = () => {
+        const v = Number(inp.value);
+        if (inp.value.trim() && Number.isFinite(v) && v >= 0) draftTiers = { ...getTierDraft(), [k]: v };
+        updateGlobalTierValidity();
+      };
     });
+    updateGlobalTierValidity();
   }
 
   // ── Integrations catalog: Connected on top, Available below, filterable ──
