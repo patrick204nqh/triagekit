@@ -50,8 +50,8 @@ export interface ToolbarPropsInput {
   extraTabs: { id: string; label: string }[];
 }
 
-// Pure assembly of the toolbar's view-mode/provider/facet props from the shell's
-// state, extracted so it's testable without mounting the whole shell.
+// Pure assembly of the toolbar's view-mode / provider-scope / facet props from the
+// shell's state, extracted so it's testable without mounting the whole shell.
 export function toolbarPropsFromShell(i: ToolbarPropsInput): Omit<ToolbarProps, "onFacetChange" | "onViewChange" | "onProviderSelect"> {
   const viewModes = [{ id: "list", label: "List" }];
   if (i.hasInsights) viewModes.push({ id: "insights", label: "Insights" });

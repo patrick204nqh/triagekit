@@ -29,6 +29,7 @@ describe("toolbarPropsFromShell", () => {
     });
     expect(props.providers.filter(p => p.on)).toHaveLength(1);
     expect(props.providers.find(p => p.id === "github")!.on).toBe(true);
+    expect(props.providers.find(p => p.id === "gitlab")!.on).toBe(false);
     expect(props.providers.find(p => p.id === "gitlab")!.live).toBe(false);
   });
 });
