@@ -48,12 +48,6 @@ const TIERS: Tier[] = ["P0", "P1", "P2", "P3"];
 
 // ── Built-in axes ──
 registerFilterAxis({
-  id: "scope", label: "Repo", widget: "select", quick: true,
-  appliesTo: (rows) => rows.length > 0,
-  optionsFrom: (rows) => [...new Set(rows.map(r => r.location))].sort().map(v => ({ value: v, label: v })),
-  test: (i, sel) => sel.includes(i.location),
-});
-registerFilterAxis({
   id: "tier", label: "Priority", widget: "chips", quick: true,
   appliesTo: (rows) => rows.length > 0,
   optionsFrom: () => TIERS.map(t => ({ value: t, label: t })),
