@@ -9,8 +9,9 @@
   --fg:#ECECEE; --muted:#8A8A92; --accent:#2E9E96; --on-accent:#0A0A0B;
   --p0:#D6504A; --p1:#C9783F; --p2:#C2A23E; --p3:#5E9E6A; --inert:#6E7681;
   --drawer-shadow:rgba(10,10,11,0.45); --scrim:rgba(10,10,11,0.55);
+  --shadow-accent:0 2px 14px color-mix(in srgb,var(--accent) 26%,transparent);
   --spring:cubic-bezier(.22,1,.36,1);
-  --sans:'Satoshi','Satoshi-Variable',ui-sans-serif,system-ui,sans-serif;
+  --sans:'Space Grotesk',ui-sans-serif,system-ui,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,'SF Mono',monospace;
 }
 [data-theme="light"] {
@@ -19,6 +20,7 @@
   --fg:#1A1A1E; --muted:#6B6B73; --accent:#1F7E77; --on-accent:#FFFFFF;
   --p0:#C13A35; --p1:#B0632F; --p2:#9A7C20; --p3:#3E7E4C; --inert:#6E7681;
   --drawer-shadow:rgba(9,9,11,0.18); --scrim:rgba(9,9,11,0.28);
+  --shadow-accent:0 2px 14px color-mix(in srgb,var(--accent) 20%,transparent);
 }
 * { box-sizing:border-box; }
 html,body { margin:0; }
@@ -27,6 +29,14 @@ body {
   font:400 14px/1.5 var(--sans); -webkit-font-smoothing:antialiased;
   letter-spacing:-0.005em;
 }
+/* Fixed grain overlay — breaks flat-dark sterility. Inline fractal-noise SVG
+   (CSP: img-src data: allowed). Tiny, non-interactive, adapts via blend mode. */
+body::after {
+  content:""; position:fixed; inset:0; z-index:1; pointer-events:none;
+  opacity:.035; mix-blend-mode:overlay;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+@media (prefers-reduced-motion: reduce) { body::after { opacity:.02; } }
 .tnum { font-family:var(--mono); font-variant-numeric:tabular-nums; }
 svg { display:block; }
 .muted { color:var(--muted); }
@@ -34,7 +44,7 @@ svg { display:block; }
 
 /* ── Command bar (#appbar header) ──────────────────────────────────── */
 #appbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:14px 32px; border-bottom:1px solid var(--line); }
-.brand { display:inline-flex; align-items:center; gap:9px; font-weight:700; font-size:clamp(1.25rem,1rem + 1vw,1.625rem); letter-spacing:-0.02em; }
+.brand { display:inline-flex; align-items:center; gap:9px; font-weight:640; font-size:clamp(1.3rem,1rem + 1.1vw,1.7rem); letter-spacing:-0.035em; }
 .brand-mark { flex:none; }
 .brand .dot { color:var(--accent); }
 
@@ -47,8 +57,8 @@ svg { display:block; }
 .status-chip .sep { color:var(--muted); }
 .spacer { flex:1 1 auto; }
 button { font:600 14px var(--sans); cursor:pointer; border-radius:8px; }
-.btn-primary { background:var(--accent); color:var(--on-accent); border:1px solid var(--accent); padding:8px 18px; min-height:38px; transition:transform .08s var(--spring), filter .15s; }
-.btn-primary:hover { filter:brightness(1.06); } .btn-primary:active { transform:translateY(1px); }
+.btn-primary { background:var(--accent); color:var(--on-accent); border:1px solid var(--accent); padding:8px 18px; min-height:38px; box-shadow:var(--shadow-accent); transition:transform .08s var(--spring), filter .15s, box-shadow .15s; }
+.btn-primary:hover { filter:brightness(1.06); box-shadow:0 4px 18px color-mix(in srgb,var(--accent) 32%,transparent); } .btn-primary:active { transform:translateY(1px); box-shadow:var(--shadow-accent); }
 .btn-ghost { background:transparent; color:var(--fg); border:1px solid var(--line-strong); padding:8px 14px; min-height:38px; transition:transform .08s var(--spring), background .15s; }
 .btn-ghost:hover { background:var(--carbon); } .btn-ghost:active { transform:translateY(1px); }
 .icon-btn { display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; padding:0; font-size:1rem; background:transparent; color:var(--muted); border:1px solid var(--line-strong); border-radius:8px; transition:color .15s, background .15s; }
@@ -154,11 +164,11 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 /* ── Slide-over base (table drawer + settings panel) ───────────────── */
 .scrim { position:fixed; inset:0; background:var(--scrim); opacity:0; pointer-events:none; transition:opacity .25s; z-index:10; }
 .scrim.open { opacity:1; pointer-events:auto; }
-.sheet { position:fixed; top:0; right:0; height:100dvh; background:var(--carbon); border-left:1px solid var(--line); box-shadow:-8px 0 32px var(--drawer-shadow); overflow-y:auto; transform:translateX(100%); transition:transform .32s var(--spring); z-index:11; }
+.sheet { position:fixed; top:0; right:0; height:100dvh; background:var(--carbon); border-left:1px solid var(--line); box-shadow:-8px 0 32px var(--drawer-shadow), -1px 0 0 color-mix(in srgb,var(--accent) 22%,transparent); overflow-y:auto; transform:translateX(100%); transition:transform .32s var(--spring); z-index:11; }
 .sheet.open { transform:none; }
 
 /* table drawer — standalone slide-over toggled by [hidden] (no .open class) */
-.drawer { position:fixed; top:0; right:0; height:100dvh; width:min(440px,92vw); background:var(--carbon); border-left:1px solid var(--line); box-shadow:-8px 0 32px var(--drawer-shadow); overflow-y:auto; z-index:11; }
+.drawer { position:fixed; top:0; right:0; height:100dvh; width:min(440px,92vw); background:var(--carbon); border-left:1px solid var(--line); box-shadow:-8px 0 32px var(--drawer-shadow), -1px 0 0 color-mix(in srgb,var(--accent) 22%,transparent); overflow-y:auto; z-index:11; }
 .drawer[hidden] { display:none; }
 .drawer h3 { margin:0 0 4px; font-size:1.125rem; font-weight:600; font-family:var(--mono); display:flex; align-items:center; gap:10px; }
 .drawer .muted { margin:0 0 20px; font-size:13px; }
