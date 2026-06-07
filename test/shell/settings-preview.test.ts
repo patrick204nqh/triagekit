@@ -43,6 +43,7 @@ describe("Settings → scoring preview wiring", () => {
 
   it("feeds getRows (filtered to the active kind) into the editor preview", () => {
     const { host } = setup([row("low", 2), row("high", 9)]);
+    host.querySelector<HTMLButtonElement>("[data-scoring-editor] [data-customize]")!.click();
     const titles = [...host.querySelectorAll("[data-scoring-editor] [data-preview] .pv-title")].map(e => e.textContent);
     expect(titles).toEqual(["pkg-high", "pkg-low"]);
   });

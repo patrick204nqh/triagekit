@@ -35,6 +35,7 @@ describe("scoring editor — tier bands", () => {
 
   it("renders P0/P1/P2 min inputs seeded from the model, P3 as floor", () => {
     const { host } = harness();
+    host.querySelector<HTMLButtonElement>("[data-customize]")!.click();
     expect(host.querySelector<HTMLInputElement>('[data-tier-min="P0"]')!.value).toBe("80");
     expect(host.querySelector<HTMLInputElement>('[data-tier-min="P1"]')!.value).toBe("50");
     expect(host.querySelector<HTMLInputElement>('[data-tier-min="P2"]')!.value).toBe("25");
@@ -42,6 +43,7 @@ describe("scoring editor — tier bands", () => {
   });
   it("editing a cutoff stages a draft with the new min and P3 floor preserved", () => {
     const { host, drafts } = harness();
+    host.querySelector<HTMLButtonElement>("[data-customize]")!.click();
     const p0 = host.querySelector<HTMLInputElement>('[data-tier-min="P0"]')!;
     p0.value = "90"; p0.dispatchEvent(new Event("change"));
     expect(drafts.get(KIND)!.tiers).toEqual([
@@ -50,6 +52,7 @@ describe("scoring editor — tier bands", () => {
   });
   it("surfaces the existing 'decrease' error for non-decreasing cutoffs", () => {
     const { host } = harness();
+    host.querySelector<HTMLButtonElement>("[data-customize]")!.click();
     const p0 = host.querySelector<HTMLInputElement>('[data-tier-min="P0"]')!;
     p0.value = "40"; p0.dispatchEvent(new Event("change"));   // 40 < P1's 50
     expect(host.querySelector("[data-errors]")!.textContent).toContain("decrease");
