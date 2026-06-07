@@ -2,7 +2,7 @@ import type { ScoredItem } from "./triage-table";
 import type { Artifact } from "../dataset/artifact";
 import { esc } from "./triage-table";
 import { type ListState } from "./filter-state";
-import { listFilterAxes, listSortKeys, type AxisCtx, type FilterAxis } from "./facet-registry";
+import { listFilterAxes, listSortKeys, type AxisCtx, type FilterAxis } from "./axis-registry";
 import { dismissible } from "../shell/dismissible";
 
 export interface ToolbarViewMode { id: string; label: string; }

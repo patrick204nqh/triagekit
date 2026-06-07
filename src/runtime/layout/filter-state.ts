@@ -1,5 +1,5 @@
 import type { ScoredItem } from "./triage-table";
-import { getFilterAxis, getSortKey } from "./facet-registry";
+import { getFilterAxis, getSortKey } from "./axis-registry";
 
 // Pure filter+sort state for a triage list. WHERE (provider) is handled outside
 // this type — at the fetch level in app-shell — not as an axis here.

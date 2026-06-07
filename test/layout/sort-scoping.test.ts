@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 // Importing the views registers their sort keys as module side-effects.
 import "../../src/runtime/views/code-security/code-scanning";
 import "../../src/runtime/views/code-security/view";
-import { getSortKey } from "../../src/runtime/layout/facet-registry";
-import type { AxisCtx } from "../../src/runtime/layout/facet-registry";
+import { getSortKey } from "../../src/runtime/layout/axis-registry";
+import type { AxisCtx } from "../../src/runtime/layout/axis-registry";
 
 // Kind-specific severity sort keys must be scoped via appliesTo, otherwise they
 // leak onto every tab — and since two of them share the label "Severity", an

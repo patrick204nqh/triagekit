@@ -3,7 +3,7 @@ import type { KindManifest } from "./manifest";
 import { registerScorer } from "../scoring/registry";
 import { registerFieldCatalog } from "../scoring/field-catalog";
 import { registerKindRenderer } from "../layout/triage-table";
-import { registerFilterAxis } from "../layout/facet-registry";
+import { registerFilterAxis } from "../layout/axis-registry";
 import { registerDefaultModel } from "../scoring/default-model";
 
 // Expand each manifest into the runtime registries, after validating completeness.

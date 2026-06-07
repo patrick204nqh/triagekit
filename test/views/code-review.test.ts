@@ -5,7 +5,7 @@ import { registerKinds } from "../../src/runtime/core/register-kinds";
 import { changeRequestKind } from "../../src/runtime/kinds/change-request";
 import { issueKind } from "../../src/runtime/kinds/issue";
 registerKinds([changeRequestKind, issueKind]);   // registers change-request + issue kind renderers + axes
-import { getFilterAxis } from "../../src/runtime/layout/facet-registry";
+import { getFilterAxis } from "../../src/runtime/layout/axis-registry";
 
 it("registers review label + assignee axes", () => {
   expect(getFilterAxis("label")).toBeDefined();

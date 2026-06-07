@@ -1,7 +1,7 @@
 import { type ScoredItem, type KindRenderer, esc } from "../../layout/triage-table";
 import { type CodeScanningDetails, CODE_SCANNING } from "../../dataset/kinds/code-scanning";
 import { registerView } from "../registry";
-import { type FilterAxis, registerSortKey } from "../../layout/facet-registry";
+import { type FilterAxis, registerSortKey } from "../../layout/axis-registry";
 import { registerChart } from "../../layout/charts/registry";
 import "../../ingest/github/code-scanning-source";   // side-effect: register source
 

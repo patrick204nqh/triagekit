@@ -5,7 +5,7 @@ import "../../src/runtime/views/code-security/view";   // registers the severity
 import { registerKinds } from "../../src/runtime/core/register-kinds";
 import { dependencyVulnKind } from "../../src/runtime/kinds/dependency-vuln";
 registerKinds([dependencyVulnKind]);   // registers vuln renderer + severity/fix axes
-import { getFilterAxis, getSortKey } from "../../src/runtime/layout/facet-registry";
+import { getFilterAxis, getSortKey } from "../../src/runtime/layout/axis-registry";
 
 it("registers vuln severity + fix-available axes and a severity sort", () => {
   expect(getFilterAxis("severity")).toBeDefined();

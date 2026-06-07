@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
 import { emptyListState, applyFilters, type ListState } from "../../src/runtime/layout/filter-state";
-import "../../src/runtime/layout/facet-registry";   // ensure built-ins are registered
+import "../../src/runtime/layout/axis-registry";   // ensure built-ins are registered
 import type { ScoredItem } from "../../src/runtime/layout/triage-table";
 
 function row(over: Partial<ScoredItem> & { details?: unknown }): ScoredItem {
@@ -30,10 +30,6 @@ describe("applyFilters (registry-driven)", () => {
   });
   it("filters by author axis", () => {
     expect(applyFilters(rows, withAxes({ author: ["bot"] })).map(r => r.id)).toEqual(["b"]);
-  });
-  it("filters by provider axis", () => {
-    const multi = [row({ id: "a", source: "github" }), row({ id: "b", source: "gitlab" })];
-    expect(applyFilters(multi, withAxes({ provider: ["gitlab"] })).map(r => r.id)).toEqual(["b"]);
   });
   it("filters by labels axis", () => {
     const rs = [

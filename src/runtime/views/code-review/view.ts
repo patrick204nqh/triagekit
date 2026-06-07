@@ -4,7 +4,7 @@ import type { ReviewItem, ReviewDetails } from "../../dataset/kinds/review";
 import { CHANGE_REQUEST, ISSUE } from "../../dataset/kinds/review";
 import { makeGithubActions } from "../../ingest/github/actions";
 import { enrichReview } from "../../ingest/github/change-request-source";   // also pins the source's registerSource() side-effect
-import { type FilterAxis } from "../../layout/facet-registry";
+import { type FilterAxis } from "../../layout/axis-registry";
 
 const det = (r: ScoredItem) => r.details as ReviewDetails;
 const reviewColumns = [
