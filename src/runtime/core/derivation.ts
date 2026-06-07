@@ -7,7 +7,7 @@ import type { ScoredItem } from "../layout/triage-table";
 
 export interface DeriveInput {
   items: readonly TriageItem[];
-  activeKinds: Kind[];
+  activeKinds: readonly Kind[];
   botLogins: string[];
   score: ScoreContext;
   facets: FacetState;
