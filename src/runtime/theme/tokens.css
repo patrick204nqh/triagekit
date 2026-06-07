@@ -180,12 +180,12 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 .drawer-inner { padding:14px 0 0; }
 @media (max-width:768px) { .drawer { left:0; right:0; width:auto; } }
 
-/* settings panel */
-.panel { width:min(560px,96vw); display:flex; flex-direction:column; }
+/* settings panel — full-screen surface with a centered content column */
+.sheet.panel { inset:0; width:100%; max-width:none; height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
 .panel-head { display:flex; align-items:center; justify-content:space-between; padding:22px 24px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--carbon); }
 .panel-head h3 { margin:0; font-size:1.125rem; font-weight:600; }
-/* Two-column body: fixed sidebar (left) + flexible content (right). */
-.panel-body { padding:0; display:grid; grid-template-columns:170px 1fr; flex:1; min-height:0; }
+/* Two-column body: fixed sidebar (left) + flexible content (right), capped to a centered column. */
+.panel-body { padding:0; display:grid; grid-template-columns:170px 1fr; flex:1; min-height:0; width:min(1100px,100%); margin:0 auto; }
 
 /* Sidebar — vertical list of category rows */
 .set-sidebar { display:flex; flex-direction:column; gap:3px; padding:18px 12px; border-right:1px solid var(--line); }
@@ -246,7 +246,10 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 .conn-item .cmeta { font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .conn-item .cstat { font:500 11px var(--sans); color:var(--muted); flex:none; }
 .conn-item.ok .cstat { color:var(--accent); }
-.panel-foot { padding:18px 24px; border-top:1px solid var(--line); position:sticky; bottom:0; background:var(--carbon); display:flex; gap:10px; justify-content:flex-end; }
+.panel-foot { position:sticky; bottom:0; display:flex; align-items:center; justify-content:space-between; width:min(1100px,100%); margin:0 auto; padding:14px 24px; border-top:1px solid var(--line); background:var(--carbon); }
+.unsaved-summary { display:flex; align-items:center; gap:8px; color:var(--muted); font:500 13px var(--sans); }
+.unsaved-summary .dot { width:8px; height:8px; border-radius:50%; background:var(--p1); flex:none; }
+.foot-actions { display:flex; gap:10px; }
 
 .tier-thresholds { display:flex; gap:12px; flex-wrap:wrap; }
 .tier-thresholds label { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--fg); }

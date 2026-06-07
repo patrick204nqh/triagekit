@@ -104,7 +104,10 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
           </div>
         </div>
       </div>
-      <div class="panel-foot"><button class="btn-ghost" data-cancel>Cancel</button><button class="btn-primary" data-save>Save</button></div>
+      <div class="panel-foot">
+        <span class="unsaved-summary"><span class="dot" data-unsaved-any hidden></span><span data-unsaved-count>0 unsaved changes</span></span>
+        <span class="foot-actions"><button class="btn-ghost" data-cancel>Cancel</button><button class="btn-primary" data-save>Save</button></span>
+      </div>
     </aside>`;
   const scrim = host.querySelector<HTMLElement>("[data-scrim]")!;
   const panel = host.querySelector<HTMLElement>("[data-panel]")!;
@@ -441,7 +444,18 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       else dot.removeAttribute("data-unsaved");
     });
   };
-  const updateSaveGate = () => { saveBtn.disabled = !allDraftsValid(); updateUnsavedDots(); };
+  // Unified save-bar count: total pending edits across every draft collection.
+  // Maps contribute their .size; the null-or-value drafts contribute 1 when set.
+  const totalDrafts = () =>
+    draftCred.size + draftScope.size + draftModels.size + (draftTiers !== null ? 1 : 0)
+    + (draftBots !== null ? 1 : 0) + (draftTheme !== null ? 1 : 0) + (draftRefresh !== null ? 1 : 0);
+  const updateSaveBar = () => {
+    const n = totalDrafts();
+    const el = host.querySelector<HTMLElement>("[data-unsaved-count]");
+    if (el) el.textContent = `${n} unsaved change${n === 1 ? "" : "s"}`;
+    host.querySelector<HTMLElement>("[data-unsaved-any]")?.toggleAttribute("hidden", n === 0);
+  };
+  const updateSaveGate = () => { saveBtn.disabled = !allDraftsValid(); updateUnsavedDots(); updateSaveBar(); };
   const botAdd = host.querySelector<HTMLInputElement>("[data-bot-add]");
   botAdd?.addEventListener("keydown", (e) => {
     if (e.key !== "Enter" && e.key !== ",") return;
