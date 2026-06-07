@@ -274,6 +274,36 @@ describe("mountSettings", () => {
     expect(host.querySelector("[data-cat-pane='connections'] [data-cred]")).toBeTruthy();
   });
 
+  it("marks only the edited category with an unsaved dot, cleared on Cancel", () => {
+    const { host, s } = mount();
+    s.open("github");
+    // navigate to Filters and stage a bot add
+    host.querySelector<HTMLElement>("[data-category='filters']")!.click();
+    const botAdd = host.querySelector<HTMLInputElement>("[data-bot-add]")!;
+    botAdd.value = "renovate";
+    botAdd.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+
+    expect(host.querySelector("[data-category='filters'] [data-unsaved]")).toBeTruthy();
+    expect(host.querySelector("[data-category='connections'] [data-unsaved]")).toBeNull();
+    expect(host.querySelector("[data-category='scoring'] [data-unsaved]")).toBeNull();
+    expect(host.querySelector("[data-category='general'] [data-unsaved]")).toBeNull();
+
+    host.querySelector<HTMLElement>("[data-cancel]")!.click();
+    expect(host.querySelector("[data-unsaved]")).toBeNull();
+  });
+
+  it("clears the unsaved dot after Save", () => {
+    const { host, s } = mount();
+    s.open("github");
+    host.querySelector<HTMLElement>("[data-category='filters']")!.click();
+    const botAdd = host.querySelector<HTMLInputElement>("[data-bot-add]")!;
+    botAdd.value = "dependabot";
+    botAdd.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    expect(host.querySelector("[data-category='filters'] [data-unsaved]")).toBeTruthy();
+    host.querySelector<HTMLElement>("[data-save]")!.click();
+    expect(host.querySelector("[data-unsaved]")).toBeNull();
+  });
+
   it("Escape closes the sheet without saving", () => {
     const { host, creds, s } = mount();
     s.open("github");

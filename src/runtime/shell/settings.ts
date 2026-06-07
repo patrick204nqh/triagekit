@@ -15,6 +15,15 @@ import { getRefreshInterval, setRefreshInterval, REFRESH_OPTIONS } from "./refre
 import { dismissible } from "./dismissible";
 import type { ScoredItem } from "../layout/triage-table";
 
+// Single source of truth for the sidebar nav — id paired with its label. The id
+// drives data-category, the categoryIcon() lookup, and the per-category unsaved-dot.
+const CATEGORIES = [
+  ["connections", "Connections"],
+  ["scoring", "Scoring &amp; priority"],
+  ["filters", "Filters"],
+  ["general", "General"],
+] as const;
+
 function esc(s: unknown): string {
   return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
 }
@@ -52,11 +61,8 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       <div class="panel-head"><h3>Settings</h3>
         <button class="icon-btn" data-close aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
       <div class="panel-body">
-        <nav class="set-sidebar">
-          <button class="cat on" data-category="connections">${categoryIcon("connections")}<span>Connections</span></button>
-          <button class="cat" data-category="scoring">${categoryIcon("scoring")}<span>Scoring &amp; priority</span></button>
-          <button class="cat" data-category="filters">${categoryIcon("filters")}<span>Filters</span></button>
-          <button class="cat" data-category="general">${categoryIcon("general")}<span>General</span></button>
+        <nav class="set-sidebar">${CATEGORIES.map(([id, label], i) =>
+          `<button class="cat${i === 0 ? " on" : ""}" data-category="${id}">${categoryIcon(id)}<span>${label}</span><span class="unsaved-dot" aria-hidden="true"></span></button>`).join("")}
         </nav>
         <div class="set-content">
           <div class="cat-pane" data-cat-pane="connections">
@@ -151,7 +157,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     const cur = getBots();
     if (cur.includes(login)) return;
     draftBots = [...cur, login];
-    renderBots();
+    renderBots(); updateSaveGate();
   }
   function renderBots() {
     const wrap = host.querySelector<HTMLElement>("[data-bot-chips]");
@@ -161,7 +167,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       ? bots.map(b => `<span class="ms-chip"><span class="repo">${esc(b)}</span><button class="x" data-rm-bot="${esc(b)}" aria-label="Remove ${esc(b)}">×</button></span>`).join("")
       : `<span class="muted">No bots hidden — add a login to filter it out</span>`;
     wrap.querySelectorAll<HTMLElement>("[data-rm-bot]").forEach(btn =>
-      btn.addEventListener("click", () => { draftBots = getBots().filter(b => b !== btn.dataset.rmBot); renderBots(); }));
+      btn.addEventListener("click", () => { draftBots = getBots().filter(b => b !== btn.dataset.rmBot); renderBots(); updateSaveGate(); }));
   }
   function renderScoring() {
     editor.render();
@@ -353,13 +359,30 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     for (const [k, d] of draftModels) { if (d === "reset") policy.clearScoreModel(k); else policy.setScoreModel(k, d); }
     draftModels.clear();
     if (draftBots) { policy.setBotLogins(draftBots); draftBots = null; }
-    draftCred.clear(); draftScope.clear(); onChange(); setHidden(true);
+    draftCred.clear(); draftScope.clear(); updateSaveGate(); onChange(); setHidden(true);
   }
   host.querySelector("[data-close]")!.addEventListener("click", discard);
   host.querySelector("[data-cancel]")!.addEventListener("click", discard);
   const saveBtn = host.querySelector<HTMLButtonElement>("[data-save]")!;
   saveBtn.addEventListener("click", save);
-  const updateSaveGate = () => { saveBtn.disabled = !allDraftsValid(); };
+  // Per-category unsaved marker: pure derived view of the draft collections. The
+  // [data-unsaved] attribute is toggled on each category's dot span so CSS can pin
+  // it and tests can query it; absent when that category has no pending edits.
+  const updateUnsavedDots = () => {
+    const dirty: Record<string, boolean> = {
+      connections: draftCred.size > 0 || draftScope.size > 0,
+      scoring: draftModels.size > 0 || draftTiers !== null,
+      filters: draftBots !== null,
+      general: false,
+    };
+    host.querySelectorAll<HTMLElement>("[data-category]").forEach(b => {
+      const dot = b.querySelector<HTMLElement>(".unsaved-dot");
+      if (!dot) return;
+      if (dirty[b.dataset.category!]) dot.setAttribute("data-unsaved", "");
+      else dot.removeAttribute("data-unsaved");
+    });
+  };
+  const updateSaveGate = () => { saveBtn.disabled = !allDraftsValid(); updateUnsavedDots(); };
   const botAdd = host.querySelector<HTMLInputElement>("[data-bot-add]");
   botAdd?.addEventListener("keydown", (e) => {
     if (e.key !== "Enter" && e.key !== ",") return;
@@ -389,10 +412,8 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   // visibility toggles), so every render function still finds its controls by
   // [data-…] regardless of which category is active. The scoring pane renders
   // lazily on first reveal — preserving the old Advanced-tab behavior.
-  let activeCategory = "connections";
   let scoringRendered = false;
   function showCategory(id: string) {
-    activeCategory = id;
     host.querySelectorAll<HTMLElement>("[data-category]").forEach(b =>
       b.classList.toggle("on", b.dataset.category === id));
     host.querySelectorAll<HTMLElement>("[data-cat-pane]").forEach(p =>
