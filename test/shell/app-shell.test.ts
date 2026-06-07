@@ -6,6 +6,7 @@ import type { ScoredItem } from "../../src/runtime/layout/triage-table";
 import { githubSource } from "../../src/runtime/ingest/github/dependency-vuln-source";
 import { registerProvider } from "../../src/runtime/core/provider-registry";
 import { github } from "../../src/runtime/providers/github";
+import { readUrlState } from "../../src/runtime/shell/url-state";
 import type { TriageConfigT } from "../../src/config/schema";
 
 const flush = () => new Promise<void>(r => setTimeout(r, 0));
@@ -26,7 +27,7 @@ function scaffold() {
 }
 
 describe("mountShell artifact navigation", () => {
-  beforeEach(() => { sessionStorage.clear(); localStorage.clear(); scaffold(); });
+  beforeEach(() => { sessionStorage.clear(); localStorage.clear(); history.replaceState(null, "", "/"); scaffold(); });
 
   it("renders the brand and an artifact rail with the live artifact active", () => {
     bootstrap(config);
@@ -146,6 +147,49 @@ describe("mountShell artifact navigation", () => {
     // Returning to an artifact that has it again → selection restored (state never reset).
     const backToA = toolbarPropsFromShell({ ...base, rows: [row("acme/api"), row("acme/web")], activeRepo: "acme/api" });
     expect(backToA.activeRepo).toBe("acme/api");
+  });
+
+  it("writes state changes to the URL query string", async () => {
+    history.replaceState(null, "", "/");
+    bootstrap(config);
+    await flush();
+    const rail = document.getElementById("domainRail")!;
+    const buttons = rail.querySelectorAll("button");
+    (buttons[0] as HTMLElement).click();   // pick the first artifact
+    await flush();
+    const state = readUrlState(location.search);
+    expect(state.artifact).toBeTruthy();   // artifact id was written
+    expect(state.view).toBe("list");        // rail click resets view to list
+  });
+
+  it("applies a valid URL state on load", async () => {
+    // artifact id === kind; "issue" is a real artifact (kind `issue`). Its source id
+    // is "github-review" (provider github, kinds [change-request, issue]) — NOT "github"
+    // (that id feeds dependency-vuln only), so the provider must be the real source id.
+    history.replaceState(null, "", "/?artifact=issue&provider=github-review&view=list&sort=recent");
+    bootstrap(config);
+    await flush();
+    const state = readUrlState(location.search);
+    expect(state.artifact).toBe("issue");
+    expect(state.provider).toBe("github-review");
+    expect(state.sort).toBe("recent");
+    // The applied artifact leads the rail as the active button.
+    const active = document.querySelector("#domainRail button.active");
+    expect(active).not.toBeNull();
+    expect(active?.textContent).toBe("Issues");
+  });
+
+  it("falls back to defaults for a URL referencing a non-existent artifact/provider (no crash)", async () => {
+    history.replaceState(null, "", "/?artifact=does-not-exist&provider=nope&sort=bogus");
+    expect(() => bootstrap(config)).not.toThrow();
+    await flush();
+    const state = readUrlState(location.search);
+    // The bogus sort was dropped on load; default "priority" remains in effect, and
+    // the (unchanged) URL still reflects the raw query (load doesn't rewrite it).
+    expect(state.sort).toBe("bogus");
+    // The active rail button is the default live leader, not the bogus artifact.
+    const active = document.querySelector("#domainRail button.active");
+    expect(active?.textContent).toBe("Dependencies");
   });
 
   it("switching to an upcoming artifact renders its roadmap placeholder", () => {

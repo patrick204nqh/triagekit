@@ -8,6 +8,7 @@ import { explainScoreModel, validateModel, type ScoreExplanation } from "../scor
 import { renderTableSkeleton, esc, type ScoredItem } from "../layout/triage-table";
 import { renderInsights } from "../layout/insights";
 import { applicableTabs, getTab } from "../layout/tab-registry";
+import { getSortKey, getFilterAxis } from "../layout/axis-registry";
 import { emptyListState, type ListState } from "../layout/filter-state";
 import { renderToolbar, type ToolbarProps } from "../layout/toolbar";
 import { CredStore } from "./cred-store";
@@ -17,6 +18,7 @@ import { healthOf, scopeSummary } from "./health";
 import { mountSettings } from "./settings";
 import { providerIcon } from "./provider-icons";
 import { getThemeChoice, cycleTheme } from "./theme";
+import { writeUrlState, readUrlState } from "./url-state";
 import { getRefreshInterval, relativeSince } from "./refresh";
 import { scopeKey } from "../core/scope-key";
 import { getProvider } from "../core/provider-registry";
@@ -101,6 +103,51 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   let lastFetchedAt: number | null = null;
   let cancelRefresh: (() => void) | undefined;
 
+  // --- Apply URL state on load (artifact → provider → repo → view → sort/axes) ---
+  // Runs before the first buildRail/buildNav/render and before any syncUrl(), so a
+  // bookmarked / shared / reloaded URL is honored, not clobbered. Each field is
+  // validated independently; invalid/absent values silently keep today's defaults.
+  {
+    const u = readUrlState();
+
+    // artifact: only if it's a known artifact id (artifact id === kind)
+    if (u.artifact) {
+      const a = artifacts.find(x => x.id === u.artifact);
+      if (a) active = a;
+    }
+
+    // provider: only if it's a source id within the (resolved) artifact's sources
+    if (u.provider) {
+      const ok = sourcesFor(active).some(s => s.id === u.provider);
+      if (ok) activeProvider = u.provider;
+    }
+
+    // repo: applied optimistically (cannot validate pre-fetch; self-corrects via the
+    // repo control + the "All" fallback when the repo isn't among the loaded rows)
+    if (u.repo) activeRepo = u.repo;
+
+    // view: list / insights (when available) / a registered extra tab applicable to
+    // the artifact. applicableTabs needs rows to report a tab applicable, so pre-fetch
+    // an extra-tab id may fall back to "list" — acceptable degradation; it self-heals
+    // once data loads and the user re-selects the tab.
+    if (u.view) {
+      const isExtra = applicableTabs(active, []).some(t => t.id === u.view);
+      if (u.view === "list" || (u.view === "insights" && hasInsights) || isExtra) view = u.view;
+    }
+
+    // sort: only if the sort key exists
+    if (u.sort && getSortKey(u.sort)) facetState = { ...facetState, sort: u.sort };
+
+    // axes: only axis ids that exist (values not deep-validated — unknown values match nothing)
+    if (u.axes) {
+      const axes: Record<string, string[]> = { ...facetState.axes };
+      for (const [id, vals] of Object.entries(u.axes)) {
+        if (getFilterAxis(id) && vals.length) axes[id] = vals;
+      }
+      facetState = { ...facetState, axes };
+    }
+  }
+
   // The credentialed, scoped sources for the active artifact's active provider.
   const usableSources = () => liveSourcesFor(active).filter(s =>
     s.id === activeProvider && creds.get(providerOf(s)) && Object.keys(scopes.get(providerOf(s))).length);
@@ -112,8 +159,22 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     try { return explainScoreModel(m, i); } catch { return null; }
   };
 
+  // Assemble the current page state and mirror it to the URL query string.
+  // Called from every state-mutation handler (replaceState — no history spam).
+  const syncUrl = () => {
+    const { sort, axes } = facetState;
+    writeUrlState({
+      provider: activeProvider || undefined,
+      repo: activeRepo || undefined,
+      artifact: active?.id,
+      view,
+      sort,
+      axes,
+    });
+  };
+
   // Facet change: update state, re-derive from the store (no refetch).
-  const onFacetChange = (next: ListState) => { facetState = next; core.rerender(); };
+  const onFacetChange = (next: ListState) => { facetState = next; syncUrl(); core.rerender(); };
 
   // Dispatcher view: owns view-mode selection (mirrors the original post-fetch
   // branching). insights/tab render directly; list mode delegates to the DOM view.
@@ -231,6 +292,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
         b.addEventListener("click", () => {
           active = a; view = "list"; activeProvider = (liveSourcesFor(a)[0] ?? sourcesFor(a)[0])?.id ?? "";
           lastRows = []; facetState = emptyListState(); lastFetchedAt = null;
+          syncUrl();
           buildRail(); buildNav(); refreshBar(); render();
         });
         section.appendChild(b);
@@ -253,15 +315,17 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     renderToolbar(nav, {
       ...base,
       onFacetChange,
-      onViewChange: (id) => { view = id; buildNav(); render(); },
+      onViewChange: (id) => { view = id; syncUrl(); buildNav(); render(); },
       onProviderSelect: (id) => {
         activeProvider = id;
         activeRepo = "";
         lastRows = []; facetState = emptyListState(); lastFetchedAt = null;
+        syncUrl();
         buildNav(); refreshBar(); render();
       },
       onRepoSelect: (id) => {
         activeRepo = id;
+        syncUrl();
         core.rerender();      // client-side re-derive, no refetch
         buildNav();           // re-render tabs so the active one updates
       },
