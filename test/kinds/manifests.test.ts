@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
 import { issueKind } from "../../src/runtime/kinds/issue";
 import { pullRequestKind } from "../../src/runtime/kinds/pull-request";
