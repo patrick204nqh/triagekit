@@ -7,7 +7,7 @@ import { type ReviewDetails, CHANGE_REQUEST } from "../dataset/kinds/review";
 //   vulnLink (+80)  a `fixes` relation to an alert dominates the queue
 //   security (+40)  / priority (+25) / severity-* (+20) labels add weight
 //   age (≤30)       older open items rise (staleness), capped at 30
-//   reviewSignal(+10) a PR already assigned / under review nudges up
+//   reviewSignal(+10) a change request already assigned / under review nudges up
 //   botDamp (-35)   bot-authored items are damped unless vuln-linked
 const SECURITY_LABELS = ["security", "vulnerability", "cve"];
 const PRIORITY_LABELS = ["priority", "urgent", "p0", "p1"];
