@@ -19,6 +19,7 @@ import { providerIcon } from "./provider-icons";
 import { getThemeChoice, cycleTheme } from "./theme";
 import { getRefreshInterval, relativeSince } from "./refresh";
 import { scopeKey } from "../core/scope-key";
+import { getProvider } from "../core/provider-registry";
 import type { DatasetStore } from "../core/store";
 import type { TimerPort, ViewPort } from "../core/ports";
 import type { CoreDeps, Core } from "../core/core";
@@ -74,6 +75,11 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   const liveSourcesFor = (a: Artifact) => sourcesFor(a).filter(s => s.status === "ready");
   const artifacts = listArtifacts().filter(a => sourcesFor(a).length > 0);
   const primarySource = (a: Artifact): Source => liveSourcesFor(a)[0] ?? sourcesFor(a)[0];
+  const navLabel = (a: Artifact): string => {
+    const src = primarySource(a);
+    const m = src ? getProvider(providerOf(src)) : undefined;
+    return m?.labels?.[a.kinds[0]] ?? a.label;
+  };
 
   let active: Artifact = artifacts.find(a => liveSourcesFor(a).length) ?? artifacts[0];
   let view: string = "list";
@@ -207,7 +213,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       for (const a of items) {
         const live = liveSourcesFor(a).length > 0;
         const b = document.createElement("button");
-        b.innerHTML = live ? esc(a.label) : `${esc(a.label)}<span class="rail-soon">soon</span>`;
+        b.innerHTML = live ? esc(navLabel(a)) : `${esc(navLabel(a))}<span class="rail-soon">soon</span>`;
         b.className = [a.id === active.id ? "active" : "", live ? "" : "upcoming"].filter(Boolean).join(" ");
         b.addEventListener("click", () => {
           active = a; view = "list"; activeProvider = (liveSourcesFor(a)[0] ?? sourcesFor(a)[0])?.id ?? "";
@@ -247,7 +253,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     const live = liveSourcesFor(active);
     if (!live.length) {   // upcoming artifact placeholder
       const provs = sourcesFor(active).map(s => `<li>${providerIcon(providerOf(s), 14)} ${esc(providerOf(s))}</li>`).join("");
-      root.innerHTML = `<div class="upcoming"><h2>${esc(active.label)} <span class="badge">upcoming</span></h2>
+      root.innerHTML = `<div class="upcoming"><h2>${esc(navLabel(active))} <span class="badge">upcoming</span></h2>
         <p class="muted">On the roadmap. Will triage from:</p><ul class="prov-roadmap">${provs}</ul></div>`;
       lastFetchedAt = null; updateSync();
       return;
