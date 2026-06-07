@@ -42,6 +42,7 @@ export const fixAvailableAxis: FilterAxis = {
 };
 registerSortKey({
   id: "severity", label: "Severity",
+  appliesTo: (ctx) => ctx.artifact.kinds.includes(DEPENDENCY_VULN),   // scope to the dependencies tab; otherwise it leaks onto every list
   compare: (a, b) => {
     const sa = a.kind === DEPENDENCY_VULN ? (SEV_RANK[dv(a).severity] ?? 0) : 0;
     const sb = b.kind === DEPENDENCY_VULN ? (SEV_RANK[dv(b).severity] ?? 0) : 0;

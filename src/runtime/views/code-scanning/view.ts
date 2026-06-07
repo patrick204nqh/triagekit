@@ -55,6 +55,7 @@ export const stateAxis: FilterAxis = {
 
 registerSortKey({
   id: "cs-severity", label: "Severity",
+  appliesTo: (ctx) => ctx.artifact.kinds.includes(CODE_SCANNING),   // scope to the code-scanning tab; otherwise it leaks onto every list
   compare: (a, b) => {
     const sa = a.kind === CODE_SCANNING ? (SEV_RANK[cs(a).securitySeverity] ?? 0) : 0;
     const sb = b.kind === CODE_SCANNING ? (SEV_RANK[cs(b).securitySeverity] ?? 0) : 0;
