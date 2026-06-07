@@ -16,9 +16,11 @@ import { codeScanningKind } from "./kinds/code-scanning";
 import { pullRequestKind } from "./kinds/pull-request";
 import { issueKind } from "./kinds/issue";
 import { mountShell } from "./shell/app-shell";
+import { installAvatarFallback } from "./layout/avatar-fallback";
 
 // The one wiring point: register kinds from manifests, build adapters + store, mount the shell as a driving adapter.
 export function bootstrap(config: TriageConfigT, scoreOverride?: Scorer): Core {
+  installAvatarFallback();
   registerKinds([dependencyVulnKind, codeScanningKind, pullRequestKind, issueKind]);
   const store = createStore();
   const timer = createTimer();

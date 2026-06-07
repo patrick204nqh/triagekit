@@ -14,9 +14,12 @@ export function slaTagHtml(sla: Sla): string {
 
 export function actorChipHtml(a: Actor, role?: string): string {
   const init = esc(a.login.slice(0, 2).toUpperCase());
-  const cls = a.kind === "bot" ? "av bot" : "av";
+  const botCls = a.kind === "bot" ? " bot" : "";
   const r = role ? ` <span class="muted">${esc(role)}</span>` : "";
-  return `<span class="actor" title="${esc(a.login)}"><span class="${cls}">${init}</span>${r}</span>`;
+  const av = a.avatarUrl
+    ? `<img class="av av-img${botCls}" src="${esc(a.avatarUrl)}" alt="${esc(a.login)}" data-initials="${init}" loading="lazy">`
+    : `<span class="av${botCls}">${init}</span>`;
+  return `<span class="actor" title="${esc(a.login)}">${av}${r}</span>`;
 }
 
 export function labelChipHtml(l: Label): string {

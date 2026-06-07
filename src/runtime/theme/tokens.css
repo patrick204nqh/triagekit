@@ -373,6 +373,7 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
   display: inline-flex; align-items: center; justify-content: center;
   font-family: var(--mono); font-size: 10px; background: var(--slate); color: var(--fg); }
 .av.bot { background: color-mix(in srgb, var(--accent) 30%, var(--carbon)); }
+.av-img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; padding: 0; }
 
 .lbl { font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 999px;
   color: var(--lbl, var(--muted)); border: 1px solid color-mix(in srgb, var(--lbl, var(--muted)) 45%, transparent);
