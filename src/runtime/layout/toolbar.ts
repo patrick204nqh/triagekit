@@ -3,8 +3,8 @@ import type { Artifact } from "../dataset/artifact";
 import { esc } from "./triage-table";
 import { type ListState } from "./filter-state";
 import { listFilterAxes, listSortKeys, type AxisCtx, type FilterAxis } from "./axis-registry";
-import { dismissible } from "../shell/dismissible";
 import { renderProviderSwitch, type SwitchProvider } from "./provider-switch";
+import { wirePopovers } from "./toolbar-popover";
 
 export interface ToolbarViewMode { id: string; label: string; }
 // The toolbar's provider rows ARE the provider-switch's inputs — one shape, one source of truth.
@@ -81,25 +81,5 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
   host.querySelectorAll<HTMLElement>("[data-sort]").forEach(b =>
     b.addEventListener("click", () => emit(s => { s.sort = b.dataset.sort!; })));
 
-  // Popovers via the shared dismissible helper (Esc / outside-click close).
-  // Single active handle/pop hoisted outside the loop so switching filter↔sort
-  // properly releases whichever popover is currently open (fixes double-Esc bug).
-  let activeHandle: ReturnType<typeof dismissible> | null = null;
-  let activePop: HTMLElement | null = null;
-
-  for (const which of ["filter", "sort"] as const) {
-    const btn = host.querySelector<HTMLElement>(`[data-tb-${which}]`)!;
-    const pop = host.querySelector<HTMLElement>(`[data-pop="${which}"]`)!;
-    btn.addEventListener("click", () => {
-      const opening = pop.hidden;
-      if (activePop) activePop.hidden = true;
-      if (activeHandle) { activeHandle.release(); activeHandle = null; activePop = null; }
-      if (opening) {
-        pop.hidden = false;
-        activeHandle = dismissible(pop, { onDismiss: () => { pop.hidden = true; activeHandle = null; activePop = null; } });
-        activeHandle.activate();
-        activePop = pop;
-      }
-    });
-  }
+  wirePopovers(host);
 }

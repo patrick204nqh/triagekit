@@ -18,10 +18,8 @@ export interface KindRenderer {
 const renderers = new Map<Kind, KindRenderer>();
 export function registerKindRenderer(r: KindRenderer) { renderers.set(r.kind, r); }
 
-export function esc(s: unknown): string {
-  return String(s ?? "").replace(/[&<>"]/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
-}
+import { esc } from "./util";
+export { esc } from "./util";
 export function warningsHtml(errors: TriageError[]): string {
   if (!errors.length) return "";
   const items = errors.map(e => `<li>${esc(e.target)}: ${esc(e.message)}</li>`).join("");
