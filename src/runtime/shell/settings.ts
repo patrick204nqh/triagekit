@@ -113,9 +113,15 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   const rseg = host.querySelector<HTMLElement>("[data-refresh-seg]")!;
   const filter = host.querySelector<HTMLInputElement>("[data-conn-filter]")!;
 
-  // Credential/scope edits are staged and committed on Save; theme + clear apply now.
+  // Credential/scope edits are staged and committed on Save; clear applies now.
   const draftCred = new Map<string, string>();
   const draftScope = new Map<string, Scope>();
+  // Theme + auto-refresh are staged like the rest: a click live-previews the value
+  // immediately, but Discard restores the baseline captured on open() and Save commits it.
+  let savedTheme = getThemeChoice();      // baseline captured on open()
+  let draftTheme: ThemeChoice | null = null;
+  let savedRefresh = getRefreshInterval(); // baseline captured on open()
+  let draftRefresh: number | null = null;
   let draftTiers: TierThresholds | null = null;
   // Score-model edits per kind: a ScoreModel to persist, or "reset" to clear back to default.
   const draftModels = new Map<string, ScoreModel | "reset">();
@@ -141,14 +147,22 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       `<button data-theme="${v}" class="${v === choice ? "on" : ""}">${label}</button>`;
     seg.innerHTML = opt("auto", "Auto") + opt("light", "Light") + opt("dark", "Dark");
     seg.querySelectorAll<HTMLElement>("[data-theme]").forEach(b =>
-      b.addEventListener("click", () => { setThemeChoice(b.dataset.theme as ThemeChoice); renderTheme(); onThemeChange?.(); }));
+      b.addEventListener("click", () => {
+        draftTheme = b.dataset.theme as ThemeChoice;
+        setThemeChoice(draftTheme);     // live preview
+        renderTheme(); onThemeChange?.(); updateSaveGate();
+      }));
   }
 
   function renderRefresh() {
     const cur = getRefreshInterval();
     rseg.innerHTML = REFRESH_OPTIONS.map(o => `<button data-refresh="${o.value}" class="${o.value === cur ? "on" : ""}">${esc(o.label)}</button>`).join("");
     rseg.querySelectorAll<HTMLElement>("[data-refresh]").forEach(b =>
-      b.addEventListener("click", () => { setRefreshInterval(Number(b.dataset.refresh)); renderRefresh(); onRefreshChange?.(); }));
+      b.addEventListener("click", () => {
+        draftRefresh = Number(b.dataset.refresh);
+        setRefreshInterval(draftRefresh);   // live preview
+        renderRefresh(); onRefreshChange?.(); updateSaveGate();
+      }));
   }
 
   function addBot(raw: string) {
@@ -378,7 +392,13 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     panel.setAttribute("aria-hidden", String(hidden));
     if (hidden) dismiss.release(); else dismiss.activate();
   }
-  function discard() { draftCred.clear(); draftScope.clear(); draftTiers = null; draftModels.clear(); draftBots = null; updateSaveGate(); setHidden(true); }
+  function discard() {
+    if (draftTheme !== null) { setThemeChoice(savedTheme); onThemeChange?.(); }
+    if (draftRefresh !== null) { setRefreshInterval(savedRefresh); onRefreshChange?.(); }
+    draftTheme = null; draftRefresh = null;
+    draftCred.clear(); draftScope.clear(); draftTiers = null; draftModels.clear(); draftBots = null;
+    updateSaveGate(); setHidden(true);
+  }
   function save() {
     for (const [prov, v] of draftCred) creds.set(prov, v);
     for (const [prov, sc] of draftScope) scopes.set(prov, sc);
@@ -386,6 +406,9 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     for (const [k, d] of draftModels) { if (d === "reset") policy.clearScoreModel(k); else policy.setScoreModel(k, d); }
     draftModels.clear();
     if (draftBots) { policy.setBotLogins(draftBots); draftBots = null; }
+    // Theme/refresh are already applied via live preview; just commit the baseline.
+    if (draftTheme !== null) { savedTheme = draftTheme; draftTheme = null; }
+    if (draftRefresh !== null) { savedRefresh = draftRefresh; draftRefresh = null; }
     draftCred.clear(); draftScope.clear(); updateSaveGate(); onChange(); setHidden(true);
   }
   host.querySelector("[data-close]")!.addEventListener("click", discard);
@@ -400,7 +423,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       connections: draftCred.size > 0 || draftScope.size > 0,
       scoring: draftModels.size > 0 || draftTiers !== null,
       filters: draftBots !== null,
-      general: false,
+      general: draftTheme !== null || draftRefresh !== null,
     };
     host.querySelectorAll<HTMLElement>("[data-category]").forEach(b => {
       const dot = b.querySelector<HTMLElement>(".unsaved-dot");
@@ -453,7 +476,10 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   return {
     open(provider?: string) {
       expanded = provider ?? (providerReps[0] ? providerOf(providerReps[0]) : null);
-      draftCred.clear(); draftScope.clear(); draftTiers = null; draftModels.clear(); draftBots = null; updateSaveGate(); filter.value = "";
+      draftCred.clear(); draftScope.clear(); draftTiers = null; draftModels.clear(); draftBots = null;
+      savedTheme = getThemeChoice(); draftTheme = null;
+      savedRefresh = getRefreshInterval(); draftRefresh = null;
+      updateSaveGate(); filter.value = "";
       scoringRendered = false;
       showCategory("connections");
       // Theme/refresh/bots live in other panes but their elements exist in the
