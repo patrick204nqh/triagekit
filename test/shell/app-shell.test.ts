@@ -80,6 +80,18 @@ describe("mountShell artifact navigation", () => {
     }
   });
 
+  it("resolves the change-request rail label through the provider registry", async () => {
+    // bootstrap() registers the github provider (registerProvider(github)), so the
+    // change-request rail label resolves via provider-registry — GitHub's manifest
+    // declares "Pull requests"/"Issues" — rather than only the neutral KIND_LABEL fallback.
+    bootstrap(config);
+    await flush();
+    const rail = document.getElementById("domainRail")!;
+    const labels = [...rail.querySelectorAll("button")].map(b => b.textContent);
+    expect(labels).toContain("Pull requests");
+    expect(labels).toContain("Issues");
+  });
+
   it("switching to an upcoming artifact renders its roadmap placeholder", () => {
     bootstrap(config);
     const rail = [...document.querySelectorAll<HTMLElement>("#domainRail button")];
