@@ -4,7 +4,6 @@ import type { ReviewItem, ReviewDetails } from "../../dataset/kinds/review";
 import { PULL_REQUEST, ISSUE } from "../../dataset/kinds/review";
 import { makeGithubActions } from "../../ingest/github/actions";
 import { enrichReview } from "../../ingest/github/review-source";   // also pins the source's registerSource() side-effect
-
 import { type FilterAxis } from "../../layout/facet-registry";
 
 const det = (r: ScoredItem) => r.details as ReviewDetails;

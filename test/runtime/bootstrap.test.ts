@@ -11,7 +11,7 @@ describe("bootstrap composition root", () => {
     document.body.innerHTML = `<header id="appbar"></header><nav id="domainRail"></nav><nav id="viewswitch"></nav><main id="root"></main><div id="settings-host"></div>`;
     const core = bootstrap(config);
     expect(core).toBeDefined();
-    expect(typeof (core as any).refreshNow).toBe("function");
-    expect(typeof (core as any).rerender).toBe("function");
+    expect(typeof core.refreshNow).toBe("function");
+    expect(typeof core.rerender).toBe("function");
   });
 });

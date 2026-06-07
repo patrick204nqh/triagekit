@@ -84,7 +84,10 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       lastFetchedAt = Date.now(); updateSync();
       if (view === "insights") { renderInsights(root, vm.scored, active.kinds); return; }
       if (view !== "list") { const t = getTab(view); if (t) { t.render(root, vm.scored); return; } }
-      const token = creds.get(providerOf(usableSources()[0])) ?? "";
+      // createDomView is called per-render intentionally: artifact: active and token
+      // both reflect the current artifact/credential at render time and go stale if
+      // captured at construction (active is reassigned when the user switches artifacts).
+      const token = creds.get(providerOf(usableSources()[0]))!;  // usableSources filter guarantees a credential
       env.createDomView(root, { artifact: active, onFacetChange, facets: () => facetState, token, scoreExplain }).render(vm);
     },
   };
