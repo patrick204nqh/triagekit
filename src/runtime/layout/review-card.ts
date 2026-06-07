@@ -1,13 +1,14 @@
 import { esc } from "./triage-table";
 import {
   type ReviewItem, type ActionId, type MergeMethod, type ReviewActions,
-  actionsFor, mergeable, reasonNotMergeable, CHANGE_REQUEST,
+  CHANGE_REQUEST,
 } from "../dataset/kinds/review";
 import {
   type Sla, tierBadgeHtml, slaTagHtml, actorChipHtml, labelChipHtml,
   checkIndicatorHtml, relationStripHtml,
 } from "./atoms";
-import { renderMarkdown } from "./markdown";
+import { reviewBodyHtml } from "./review-card-body";
+import { actionBarHtml } from "./review-card-actions";
 
 export interface ReviewCardOpts {
   sla?: Sla;
@@ -22,20 +23,12 @@ export interface CardState {
   method: MergeMethod;
 }
 
-const ACTION_LABEL: Record<Exclude<ActionId, "open">, string> = {
-  merge: "Merge", comment: "Comment", label: "Label", assign: "Assign", close: "Close",
-};
-
 const STATE_LABEL: Record<string, string> = { open: "Open", merged: "Merged", closed: "Closed", draft: "Draft" };
 function stateBadgeHtml(item: ReviewItem): string {
   const s = item.details.state;
   const prov = item.source;
   return `<span class="rc-state rc-state-${s}">${STATE_LABEL[s] ?? s}</span>`
     + `<span class="rc-prov">${esc(prov)} · #${item.details.number}</span>`;
-}
-
-function selfHref(item: ReviewItem): string {
-  return item.details.permalinks.find(p => p.kind === "pr" || p.kind === "issue")?.href ?? item.url;
 }
 
 // A PR whose checks are unfetched (lazy) shows a neutral "open to load" affordance;
@@ -45,44 +38,6 @@ function checksHtml(item: ReviewItem): string {
     return `<span class="check ci-open">checks: open to load</span>`;
   }
   return checkIndicatorHtml(item.details.checks);
-}
-
-function actionBarHtml(item: ReviewItem, st: CardState): string {
-  if (st.busy) {
-    return `<button class="act primary" disabled><span class="spin"></span> Working…</button>`;
-  }
-  if (st.armed === "merge") {
-    const opt = (m: MergeMethod) => `<option value="${m}"${m === st.method ? " selected" : ""}>${m}</option>`;
-    return `<span class="muted">Merge as</span>
-      <select data-method>${opt("squash")}${opt("merge")}${opt("rebase")}</select>
-      <button class="act danger" data-confirm>Confirm merge</button>
-      <button class="act" data-cancel>Cancel</button>`;
-  }
-  if (st.armed === "close") {
-    return `<button class="act danger" data-confirm>Confirm close</button>
-      <button class="act" data-cancel>Cancel</button>`;
-  }
-  if (st.armed === "comment" || st.armed === "label" || st.armed === "assign") {
-    const ph = st.armed === "comment" ? "Write a comment…" : st.armed === "label" ? "label-name" : "github-login";
-    const field = st.armed === "comment"
-      ? `<textarea class="rc-field" data-input placeholder="${ph}"></textarea>`
-      : `<input class="rc-field" data-input placeholder="${ph}">`;
-    return `${field}<button class="act primary" data-confirm>${ACTION_LABEL[st.armed]}</button>
-      <button class="act" data-cancel>Cancel</button>`;
-  }
-  const buttons = actionsFor(item.kind).map(id => {
-    if (id === "open") {
-      return `<a class="act" data-action="open" href="${esc(selfHref(item))}" target="_blank" rel="noreferrer">Open ↗</a>`;
-    }
-    if (id === "merge") {
-      const ok = mergeable(item.details);
-      const attr = ok ? "" : ` disabled title="${esc(reasonNotMergeable(item.details))}"`;
-      return `<button class="act primary" data-action="merge"${attr}>Merge</button>`;
-    }
-    return `<button class="act" data-action="${id}">${ACTION_LABEL[id]}</button>`;
-  }).join("");
-  const err = st.error ? `<div class="rc-error">✗ ${esc(st.error)}</div>` : "";
-  return `${buttons}${err}`;
 }
 
 export function reviewCardHtml(
@@ -124,7 +79,7 @@ export function reviewCardHtml(
     `${d.labels.map(labelChipHtml).join("")}</div>`;
 
   return `<div class="review-card" data-kind="${esc(item.kind)}" data-state="${d.state}">` +
-    `${head}${byline}<div class="rc-body">${renderMarkdown(d.body)}</div>${meta}` +
+    `${head}${byline}${reviewBodyHtml(item)}${meta}` +
     `<div class="rc-actions">${actionBarHtml(item, st)}</div></div>`;
 }
 
