@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { readdirSync } from "node:fs";
-import { listDomains, getDomain, domainOf, classOf } from "../../src/runtime/dataset/taxonomy";
+import { listDomains, getDomain, domainOf, classOf, type DomainId } from "../../src/runtime/dataset/taxonomy";
 
 describe("taxonomy", () => {
   it("declares a class on every domain", () => {
@@ -23,6 +23,7 @@ describe("taxonomy", () => {
     const ids = new Set(listDomains().map(d => d.id));
     const dirs = readdirSync("src/runtime/views", { withFileTypes: true })
       .filter(e => e.isDirectory()).map(e => e.name);
-    for (const dir of dirs) expect(ids.has(dir as never)).toBe(true);
+    expect(dirs.length).toBeGreaterThan(0);   // guard against a wrong path passing vacuously
+    for (const dir of dirs) expect(ids.has(dir as DomainId)).toBe(true);
   });
 });
