@@ -2,9 +2,10 @@ import type { Kind } from "./item";
 import { listDomains, type Class } from "./taxonomy";
 
 // What you triage. This is the top-level navigation axis: KIND is a tab, and a
-// PROVIDER is a facet within a tab (github + gitlab both feed "Pull requests"),
-// never a tab of its own. Each artifact is derived from the taxonomy (one per
-// kind), so the rail tracks taxonomy changes automatically.
+// PROVIDER is a facet within a tab (github + gitlab both feed the neutral
+// change-request artifact, displayed as "Change requests"), never a tab of its
+// own. Each artifact is derived from the taxonomy (one per kind), so the rail
+// tracks taxonomy changes automatically.
 //
 // Artifacts cluster into two classes the rail groups under a heading:
 //   - finding: machine-detected risk, scored by severity × exploitability × fix
@@ -22,7 +23,7 @@ const KIND_LABEL: Partial<Record<Kind, string>> = {
   "dependency-vuln": "Dependencies", "code-scanning": "Code scanning", "secret-scanning": "Secrets",
   "cloud-misconfig": "Cloud misconfig", "edge-misconfig": "Edge misconfig", "waf-finding": "WAF",
   "runtime-threat": "Threats",
-  "change-request": "Pull requests",  // dominant-provider noun; per-provider override is ProviderManifest.labels (fallback when a provider declares no label)
+  "change-request": "Change requests",  // neutral display noun for the change-request artifact; GitHub "Pull requests" / GitLab "Merge requests" are per-provider nouns declared in ProviderManifest.labels (not shown in the neutral sidebar)
   issue: "Issues",
   email: "Inbox", task: "Tasks",
 };

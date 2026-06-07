@@ -11,6 +11,8 @@ export const github: ProviderManifest = {
   id: "github",
   domain: "code-security",
   kinds: ["dependency-vuln", "change-request", "issue"],
+  // Per-provider display nouns, declared for the future; NOT currently surfaced —
+  // the sidebar shows neutral kind nouns (KIND_LABEL), e.g. "Change requests".
   labels: { "change-request": "Pull requests", issue: "Issues" },
   makeAdapter: (_deps) => githubSource,
 };
