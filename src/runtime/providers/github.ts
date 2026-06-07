@@ -11,6 +11,6 @@ export const github: ProviderManifest = {
   id: "github",
   domain: "code-security",
   kinds: ["dependency-vuln", "change-request", "issue"],
-  labels: { "change-request": "Pull request", issue: "Issue" },
+  labels: { "change-request": "Pull requests", issue: "Issues" },
   makeAdapter: (_deps) => githubSource,
 };
