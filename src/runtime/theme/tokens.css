@@ -81,9 +81,8 @@ input::placeholder { color:var(--muted); } select { appearance:none; cursor:poin
 .prov-icon { flex:none; vertical-align:middle; }
 .prov-mono text { font-family:var(--mono); font-weight:600; }
 
-/* Provider facet — filter the queue by source (lives at the right of the tab row) */
+/* Provider roadmap list — upcoming-provider empty state in app-shell */
 .viewswitch { align-items:center; }
-.facet { display:flex; align-items:center; gap:6px; margin-left:auto; margin-bottom:8px; }
 .prov-roadmap { list-style:none; padding:0; display:flex; flex-direction:column; gap:9px; }
 .prov-roadmap li { display:flex; align-items:center; gap:9px; font-family:var(--mono); font-size:13px; color:var(--fg); }
 
@@ -434,5 +433,18 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 .tb-pop[hidden] { display: none; }   /* author display:flex above beats the UA [hidden] rule — re-assert it */
 .pop-sort { text-align: left; background: none; border: 0; color: var(--fg); padding: 4px 6px; border-radius: 6px; cursor: pointer; }
 .pop-sort.on, .pop-sort:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+
+/* Row 2: Filter + Sort controls, right-aligned directly above the table */
+.fbar { display: flex; justify-content: flex-end; gap: 8px; padding: 8px 0; }
+
+/* Provider scope selector — top-right of row 1 (.tb-right) */
+.prov-seg { display: inline-flex; align-items: center; gap: 2px; background: var(--slate); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
+.prov-opt { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 6px; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 13px; }
+.prov-opt.on { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--fg); }
+.prov-opt.up { opacity: 0.45; cursor: default; }
+.prov-opt:not(.up):hover { color: var(--fg); }
+.prov-soon { font: 500 10px var(--mono); text-transform: uppercase; letter-spacing: .04em; color: var(--muted); background: var(--slate); border: 1px solid var(--line); border-radius: 999px; padding: 1px 5px; }
+/* Single-provider static brand chip */
+.prov-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--muted); padding: 3px 9px; background: var(--slate); border: 1px solid var(--line); border-radius: 8px; }
 
 .check.ci-open { color:var(--muted); }
