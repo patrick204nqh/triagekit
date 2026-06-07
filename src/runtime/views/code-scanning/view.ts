@@ -3,7 +3,7 @@ import { type CodeScanningDetails, CODE_SCANNING } from "../../dataset/kinds/cod
 import { registerView } from "../registry";
 import { type FilterAxis, registerSortKey } from "../../layout/facet-registry";
 import { registerChart } from "../../layout/charts/registry";
-// TODO(2.4): import "../../ingest/github/code-scanning-source";   // side-effect: register source
+import "../../ingest/github/code-scanning-source";   // side-effect: register source
 
 const cs = (r: ScoredItem) => r.details as CodeScanningDetails;
 const SEV_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
