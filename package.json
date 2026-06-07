@@ -13,6 +13,7 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "@types/dompurify": "^3.0.5",
     "@types/node": "^25.9.1",
     "jsdom": "^29.1.1",
     "typescript": "^6.0.3",
@@ -22,6 +23,8 @@
   },
   "dependencies": {
     "commander": "^15.0.0",
+    "dompurify": "^3.4.8",
+    "marked": "^15.0.12",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"
   }
