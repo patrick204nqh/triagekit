@@ -1,5 +1,5 @@
 import type { Kind, TriageItem } from "../dataset/item";
-import type { DomainId } from "../dataset/domain";
+import type { DomainId } from "../dataset/taxonomy";
 
 export type Scope = Record<string, unknown>;             // per-source, provider-defined bag
 export interface TriageError { target: string; message: string; }

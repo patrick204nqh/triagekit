@@ -1,6 +1,6 @@
 // src/runtime/core/manifest.ts
 import type { Kind } from "../dataset/item";
-import type { DomainId } from "../dataset/domain";
+import type { DomainId } from "../dataset/taxonomy";
 import type { Scorer } from "../scoring/registry";
 import type { FieldDef } from "../scoring/field-catalog";
 import type { ScoreModel } from "../scoring/score-model";

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { readdirSync } from "node:fs";
 import { listDomains, getDomain, domainOf, classOf } from "../../src/runtime/dataset/taxonomy";
 
 describe("taxonomy", () => {
@@ -17,5 +18,11 @@ describe("taxonomy", () => {
   it("getDomain throws on unknown id", () => {
     // @ts-expect-error unknown id
     expect(() => getDomain("nope")).toThrow();
+  });
+  it("every views/ dir name is a DomainId", () => {
+    const ids = new Set(listDomains().map(d => d.id));
+    const dirs = readdirSync("src/runtime/views", { withFileTypes: true })
+      .filter(e => e.isDirectory()).map(e => e.name);
+    for (const dir of dirs) expect(ids.has(dir as never)).toBe(true);
   });
 });

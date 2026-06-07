@@ -1,5 +1,5 @@
 import { type Source, registerSource } from "./source";
-import type { DomainId } from "../dataset/domain";
+import type { DomainId } from "../dataset/taxonomy";
 import type { Kind } from "../dataset/item";
 
 const stub = (id: string, domain: DomainId, kinds: Kind[]): Source => ({

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { domainOf, listDomains } from "../../src/runtime/dataset/domain";
+import { domainOf, listDomains } from "../../src/runtime/dataset/taxonomy";
 
 describe("domains", () => {
   it("maps a kind to its domain", () => {
