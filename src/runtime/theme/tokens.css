@@ -13,6 +13,7 @@
   --spring:cubic-bezier(.22,1,.36,1);
   --sans:'Space Grotesk',ui-sans-serif,system-ui,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,'SF Mono',monospace;
+  --rail-w: 200px;   /* width of the left domain-rail sidebar */
 }
 [data-theme="light"] {
   --canvas:#FAFAF9; --carbon:#FFFFFF; --slate:#F1F1EF;
@@ -28,7 +29,19 @@ body {
   min-height:100dvh; background:var(--canvas); color:var(--fg);
   font:400 14px/1.5 var(--sans); -webkit-font-smoothing:antialiased;
   letter-spacing:-0.005em;
+  display:grid;
+  grid-template-columns:var(--rail-w) 1fr;
+  grid-template-rows:auto auto 1fr;
+  grid-template-areas:
+    "appbar appbar"
+    "rail   view"
+    "rail   main";
 }
+#appbar     { grid-area:appbar; }
+.domains    { grid-area:rail; }
+.viewswitch { grid-area:view; }
+main        { grid-area:main; }
+
 /* Fixed grain overlay — breaks flat-dark sterility. Inline fractal-noise SVG
    (CSP: img-src data: allowed). Tiny, non-interactive, adapts via blend mode. */
 body::after {
@@ -67,9 +80,12 @@ input, select { background:var(--slate); color:var(--fg); border:1px solid var(-
 input:focus, select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 45%,transparent); }
 input::placeholder { color:var(--muted); } select { appearance:none; cursor:pointer; }
 
-/* ── Domain rail (#domainRail — purpose-level grouping) ─────────────── */
-.domains { display:flex; gap:6px; padding:14px 32px 0; flex-wrap:wrap; }
-.domains button { background:none; border:1px solid transparent; color:var(--muted); padding:7px 13px; border-radius:8px; font:600 13px var(--sans); transition:color .15s, background .15s, border-color .15s; }
+/* ── Domain rail (#domainRail — left sidebar; vertical Findings/Work groups) ── */
+.domains { display:flex; flex-direction:column; gap:2px; padding:16px 12px;
+           border-right:1px solid var(--line); }
+.domains button { width:100%; text-align:left; background:none; border:1px solid transparent;
+                  color:var(--muted); padding:8px 10px; border-radius:8px;
+                  font:600 13px var(--sans); transition:color .15s, background .15s, border-color .15s; }
 .domains button:hover { color:var(--fg); }
 .domains button.active { color:var(--fg); background:var(--carbon); border-color:var(--line); }
 
@@ -314,9 +330,10 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 .last-sync { font:500 12px var(--mono); color:var(--muted); white-space:nowrap; }
 
 /* ── Grouped rail (Findings / Work) ────────────────────────────────── */
-.rail-group { display:inline-flex; align-items:center; gap:6px; }
-.rail-group + .rail-group { margin-left:16px; padding-left:18px; border-left:1px solid var(--line); }
-.rail-group-label { font:600 10.5px var(--mono); letter-spacing:.09em; text-transform:uppercase; color:var(--muted); margin-right:3px; user-select:none; }
+.rail-group { display:flex; flex-direction:column; gap:2px; }
+.rail-group + .rail-group { margin-top:14px; padding-top:14px; border-top:1px solid var(--line); }
+.rail-group-label { font:600 10.5px/1 var(--mono); letter-spacing:.09em; text-transform:uppercase;
+                    color:var(--muted); padding:4px 10px 2px; user-select:none; }
 
 /* ── Integrations catalog ──────────────────────────────────────────── */
 .conn-filter { margin-bottom:4px; }
@@ -338,10 +355,16 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 .set-link { color:var(--accent); white-space:nowrap; }
 
 @media (max-width:768px) {
+  body { display:block; }                              /* single-column stack, source order */
+  .domains { flex-direction:row; flex-wrap:wrap; gap:6px;
+             padding:14px 16px 0; border-right:0; }     /* today's horizontal bar */
+  .domains button { width:auto; }
+  .rail-group { flex-direction:row; align-items:center; }
+  .rail-group + .rail-group { margin:0 0 0 10px; padding:0 0 0 12px;
+                              border-top:0; border-left:1px solid var(--line); }
   #appbar, .domains, .viewswitch, main { padding-left:16px; padding-right:16px; }
   .insights { grid-template-columns:1fr; }
   .barrow { grid-template-columns:110px 1fr 28px; gap:10px; }
-  .rail-group + .rail-group { margin-left:10px; padding-left:12px; }
   /* Settings panel goes full-width and collapses to a single column. */
   .panel { left:0; right:0; width:auto; }
   .panel-body { grid-template-columns:1fr; }
