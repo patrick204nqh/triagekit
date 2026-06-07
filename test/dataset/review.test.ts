@@ -10,8 +10,8 @@ const base: ReviewDetails = {
 };
 
 describe("actionsFor", () => {
-  it("gives PRs a merge action and issues an assign/close action", () => {
-    expect(actionsFor("pull-request")).toEqual(["merge", "comment", "label", "open"]);
+  it("gives change requests a merge action and issues an assign/close action", () => {
+    expect(actionsFor("change-request")).toEqual(["merge", "comment", "label", "open"]);
     expect(actionsFor("issue")).toEqual(["comment", "assign", "close", "label", "open"]);
   });
 });

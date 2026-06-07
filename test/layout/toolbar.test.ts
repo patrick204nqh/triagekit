@@ -5,14 +5,14 @@ import type { ScoredItem } from "../../src/runtime/layout/triage-table";
 import { emptyFacetState } from "../../src/runtime/layout/facet-bar";
 
 const rows: ScoredItem[] = [{
-  id: "1", source: "github", kind: "pull-request", title: "t", location: "acme/api",
+  id: "1", source: "github", kind: "change-request", title: "t", location: "acme/api",
   signal: 0, createdAt: "2026-06-01T00:00:00Z", url: "", score: 10, tier: "P2",
   details: { author: { login: "x", avatarUrl: "", kind: "human" }, labels: [] } as any,
 } as ScoredItem];
 
 function props(over: Partial<ToolbarProps> = {}): ToolbarProps {
   return {
-    artifact: { id: "pull-requests", label: "Pull requests", group: "work", kinds: ["pull-request"] },
+    artifact: { id: "change-request", label: "Pull requests", group: "work", kinds: ["change-request"] },
     rows, facets: emptyFacetState(),
     viewModes: [{ id: "list", label: "List" }, { id: "insights", label: "Insights" }],
     activeView: "list",

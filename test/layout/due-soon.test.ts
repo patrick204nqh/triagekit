@@ -7,7 +7,7 @@ import type { ScoredItem } from "../../src/runtime/layout/triage-table";
 
 function row(over: Partial<ScoredItem> & { details?: unknown }): ScoredItem {
   return {
-    id: "x", source: "github", kind: "pull-request", title: "t", location: "acme/web",
+    id: "x", source: "github", kind: "change-request", title: "t", location: "acme/web",
     signal: 0, createdAt: "2026-01-01T00:00:00Z", url: "", details: {}, score: 50, tier: "P2", ...over,
   } as ScoredItem;
 }

@@ -1,7 +1,7 @@
 import { type ScoredItem, type KindRenderer, esc } from "../../layout/triage-table";
 import { type DependencyVulnDetails, DEPENDENCY_VULN } from "../../dataset/kinds/dependency-vuln";
 import { registerView } from "../registry";
-import "../../ingest/github/adapter";          // side-effect: register source
+import "../../ingest/github/dependency-vuln-source";          // side-effect: register source
 
 const det = (r: ScoredItem) => r.details as DependencyVulnDetails;
 export const dependencyVulnRenderer: KindRenderer = {
@@ -18,7 +18,7 @@ export const dependencyVulnRenderer: KindRenderer = {
     <dt>Fix</dt><dd>${d.fixAvailable ? (d.fixVersion ? "available: " + esc(d.fixVersion) : "available") : "none yet"}</dd>
     <dt>Advisory</dt><dd>${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noreferrer">${esc(r.url)}</a>` : "—"}</dd></dl></div>`; },
 };
-registerView({ id: "security-alerts", kind: DEPENDENCY_VULN });
+registerView({ id: "code-security", kind: DEPENDENCY_VULN });
 
 import { registerChart } from "../../layout/charts/registry";
 import { type FilterAxis, registerSortKey } from "../../layout/facet-registry";

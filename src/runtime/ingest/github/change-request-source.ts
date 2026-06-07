@@ -1,7 +1,7 @@
 import type { TriageItem } from "../../dataset/item";
 import type { Actor, Label, CheckStatus } from "../../dataset/shared";
 import {
-  type ReviewDetails, type ReviewState, PULL_REQUEST, ISSUE,
+  type ReviewDetails, type ReviewState, CHANGE_REQUEST, ISSUE,
 } from "../../dataset/kinds/review";
 import { type Source, type TriageError, type DiscoveryOption, registerSource } from "../source";
 import { ghPaginate, GH_HEADERS } from "./paginate";
@@ -25,7 +25,7 @@ function toLabel(l: any): Label {
 
 function toReviewItem(full: string, raw: any): TriageItem<ReviewDetails> {
   const isPr = !!raw.pull_request;
-  const kind = isPr ? PULL_REQUEST : ISSUE;
+  const kind = isPr ? CHANGE_REQUEST : ISSUE;
   const number = raw.number;
   const state: ReviewState = isPr && raw.draft ? "draft" : "open";
   const labels = (raw.labels ?? []).map(toLabel);
@@ -74,7 +74,7 @@ function rollupChecks(runs: any[]): CheckStatus["state"] {
 // Lazy enrich (on card expand). PR only: fetch head sha → check-runs, plus mergeable +
 // requested reviewers. Issues have no CI, so it is a no-op. Reuses GH_HEADERS.
 export async function enrichReview(item: TriageItem<ReviewDetails>, token: string): Promise<Partial<ReviewDetails>> {
-  if (item.kind !== PULL_REQUEST) return {};
+  if (item.kind !== CHANGE_REQUEST) return {};
   try {
     const [owner, name] = item.location.split("/");
     const n = item.details.number;
@@ -100,8 +100,8 @@ export async function enrichReview(item: TriageItem<ReviewDetails>, token: strin
 }
 
 export const githubReviewSource: Source = {
-  id: "github-review", provider: "github", domain: "work-items",
-  kinds: [PULL_REQUEST, ISSUE],
+  id: "github-review", provider: "github", domain: "code-review",
+  kinds: [CHANGE_REQUEST, ISSUE],
   connectSrc: ["https://api.github.com"], status: "ready",
   setup: {
     hint: "Use a fine-grained personal access token with read access to pull requests and issues on the repositories you triage (write access to merge/comment/label).",

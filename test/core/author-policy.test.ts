@@ -19,7 +19,7 @@ describe("classifyAuthor", () => {
 
 describe("withBotPolicy", () => {
   const base: TriageItem = {
-    id: "x", source: "github", kind: "pull-request", title: "t", location: "acme/web",
+    id: "x", source: "github", kind: "change-request", title: "t", location: "acme/web",
     signal: 0, createdAt: "2026-01-01T00:00:00Z", url: "",
     details: { author: actor("internal-deploy", "human") },
   };

@@ -1,5 +1,5 @@
 import type { TriageItem } from "../dataset/item";
-import { type ReviewDetails, PULL_REQUEST } from "../dataset/kinds/review";
+import { type ReviewDetails, CHANGE_REQUEST } from "../dataset/kinds/review";
 
 // Heuristic review priority, from list-available data only (CI is loaded lazily on
 // expand and never feeds the score). Transparent, tunable constants:
@@ -7,7 +7,7 @@ import { type ReviewDetails, PULL_REQUEST } from "../dataset/kinds/review";
 //   vulnLink (+80)  a `fixes` relation to an alert dominates the queue
 //   security (+40)  / priority (+25) / severity-* (+20) labels add weight
 //   age (≤30)       older open items rise (staleness), capped at 30
-//   reviewSignal(+10) a PR already assigned / under review nudges up
+//   reviewSignal(+10) a change request already assigned / under review nudges up
 //   botDamp (-35)   bot-authored items are damped unless vuln-linked
 const SECURITY_LABELS = ["security", "vulnerability", "cve"];
 const PRIORITY_LABELS = ["priority", "urgent", "p0", "p1"];
@@ -35,7 +35,7 @@ export function reviewScore(item: TriageItem<ReviewDetails>): number {
   score += labelWeight(d);
   score += ageWeight(item.createdAt);
   if (vulnLinked) score += 80;
-  if (item.kind === PULL_REQUEST && (d.assignees.length || d.reviewers.length)) score += 10;
+  if (item.kind === CHANGE_REQUEST && (d.assignees.length || d.reviewers.length)) score += 10;
   if (d.author.kind === "bot" && !vulnLinked) score -= 35;
   return Math.round(score);
 }

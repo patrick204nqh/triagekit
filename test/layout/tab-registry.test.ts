@@ -6,7 +6,7 @@ import {
 import type { Artifact } from "../../src/runtime/dataset/artifact";
 import type { ScoredItem } from "../../src/runtime/layout/triage-table";
 
-const art: Artifact = { id: "review", label: "Review", group: "work", kinds: ["pull-request", "issue"] };
+const art: Artifact = { id: "review", label: "Review", group: "work", kinds: ["change-request", "issue"] };
 const tab = (id: string, applies: boolean, order = 0): TabModule => ({
   id, label: id, order, appliesTo: () => applies, render: (root) => { root.textContent = id; },
 });

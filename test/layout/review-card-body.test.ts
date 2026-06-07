@@ -5,7 +5,7 @@ import { reviewCardHtml } from "../../src/runtime/layout/review-card";
 import type { ReviewItem } from "../../src/runtime/dataset/kinds/review";
 
 const item: ReviewItem = {
-  id: "github:acme/api:7", source: "github", kind: "pull-request",
+  id: "github:acme/api:7", source: "github", kind: "change-request",
   title: "Fix token refresh", location: "acme/api", signal: 0,
   createdAt: "2026-06-01T00:00:00Z", url: "https://github.com/acme/api/pull/7", tier: "P1",
   details: {

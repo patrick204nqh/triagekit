@@ -6,7 +6,7 @@ import { toolbarPropsFromShell } from "../../src/runtime/shell/app-shell";
 describe("toolbarPropsFromShell", () => {
   it("lists List + Insights when insights is enabled", () => {
     const p = toolbarPropsFromShell({
-      artifact: { id: "issues", label: "Issues", group: "work", kinds: ["issue"] },
+      artifact: { id: "issue", label: "Issues", group: "work", kinds: ["issue"] },
       rows: [], facets: { axes: {}, sort: "priority" },
       hasInsights: true, activeView: "list",
       sources: [{ id: "github-review", provider: "github", status: "ready" } as any],

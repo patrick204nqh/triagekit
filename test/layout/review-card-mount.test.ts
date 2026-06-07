@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { mountReviewCard } from "../../src/runtime/layout/review-card";
 import type { ReviewActions, ReviewItem } from "../../src/runtime/dataset/kinds/review";
 
-function pr(over: Partial<ReviewItem["details"]> = {}, kind: ReviewItem["kind"] = "pull-request"): ReviewItem {
+function pr(over: Partial<ReviewItem["details"]> = {}, kind: ReviewItem["kind"] = "change-request"): ReviewItem {
   return {
     id: "github:acme-corp/web-app:482", source: "github", kind,
     title: "Bump axios", location: "acme-corp/web-app", signal: 70,

@@ -15,14 +15,14 @@ const row = (id: string, score: number): ScoredItem => ({
 
 describe("DOM view adapter", () => {
   beforeEach(() => {
-    registerKinds([{ kind: "issue", domain: "work-items", fields: [{ name: "signal", type: "number" }], builtInScorer: (i) => i.signal, renderer: { kind: "issue" } }]);
+    registerKinds([{ kind: "issue", domain: "tracking", fields: [{ name: "signal", type: "number" }], builtInScorer: (i) => i.signal, renderer: { kind: "issue" } }]);
     document.body.innerHTML = `<div id="root"></div>`;
   });
 
   it("renders shown rows from a ViewModel into the host", () => {
     const host = document.getElementById("root")!;
     const view = createDomView(host, {
-      artifact: { id: "issues", label: "Issues", group: "work", kinds: ["issue"] } as any,
+      artifact: { id: "issue", label: "Issues", group: "work", kinds: ["issue"] } as any,
       onFacetChange: () => {},
       token: "t",
       scoreExplain: () => null,

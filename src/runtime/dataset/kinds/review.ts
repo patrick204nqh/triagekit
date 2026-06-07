@@ -2,9 +2,9 @@ import type { TriageItem } from "../item";
 import type { Tier } from "../../scoring/tier";
 import type { Actor, Label, CheckStatus, Permalink, Relation } from "../shared";
 
-export const PULL_REQUEST = "pull-request" as const;
+export const CHANGE_REQUEST = "change-request" as const;
 export const ISSUE = "issue" as const;
-export type ReviewKind = typeof PULL_REQUEST | typeof ISSUE;
+export type ReviewKind = typeof CHANGE_REQUEST | typeof ISSUE;
 export type ReviewState = "open" | "closed" | "merged" | "draft";
 
 export interface ReviewDetails {
@@ -38,9 +38,9 @@ export interface ReviewActions {
 // "open" is rendered as a plain <a> link and is never dispatched through ReviewActions (no open() method by design).
 export type ActionId = "merge" | "comment" | "label" | "assign" | "close" | "open";
 
-// PRs intentionally omit "close" and "assign" from quick actions; those exist on ReviewActions but aren't surfaced for PRs by design.
+// Change requests intentionally omit "close" and "assign" from quick actions; those exist on ReviewActions but aren't surfaced for change requests by design.
 export function actionsFor(kind: ReviewKind): ActionId[] {
-  return kind === PULL_REQUEST
+  return kind === CHANGE_REQUEST
     ? ["merge", "comment", "label", "open"]
     : ["comment", "assign", "close", "label", "open"];
 }

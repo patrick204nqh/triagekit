@@ -11,7 +11,7 @@ import { buildCspMeta, SOURCE_CONNECT_SRC, SOURCE_IMG_SRC } from "../vite/csp-pl
 // so the artifact is safe to share/commit publicly.
 const GENERIC_CONFIG: TriageConfigT = {
   source: "github",
-  views: ["security-alerts"],
+  views: ["code-security"],
   branding: { title: "triage·kit" },
 };
 

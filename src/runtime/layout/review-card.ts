@@ -1,7 +1,7 @@
 import { esc } from "./triage-table";
 import {
   type ReviewItem, type ActionId, type MergeMethod, type ReviewActions,
-  actionsFor, mergeable, reasonNotMergeable, PULL_REQUEST,
+  actionsFor, mergeable, reasonNotMergeable, CHANGE_REQUEST,
 } from "../dataset/kinds/review";
 import {
   type Sla, tierBadgeHtml, slaTagHtml, actorChipHtml, labelChipHtml,
@@ -41,7 +41,7 @@ function selfHref(item: ReviewItem): string {
 // A PR whose checks are unfetched (lazy) shows a neutral "open to load" affordance;
 // an issue (which never has CI) shows nothing. A fetched CheckStatus renders normally.
 function checksHtml(item: ReviewItem): string {
-  if (item.kind === PULL_REQUEST && item.details.checks === null) {
+  if (item.kind === CHANGE_REQUEST && item.details.checks === null) {
     return `<span class="check ci-open">checks: open to load</span>`;
   }
   return checkIndicatorHtml(item.details.checks);

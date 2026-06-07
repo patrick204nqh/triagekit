@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { bootstrap } from "../../src/runtime/bootstrap";
 import type { TriageConfigT } from "../../src/config/schema";
 
-const config: TriageConfigT = { source: "github", views: ["security-alerts", "insights"], scope: {}, branding: { title: "Acme Triage" } };
+const config: TriageConfigT = { source: "github", views: ["code-security", "insights"], scope: {}, branding: { title: "Acme Triage" } };
 
 describe("bootstrap composition root", () => {
   it("wires kinds + store + view and returns a core with refreshNow/rerender", () => {

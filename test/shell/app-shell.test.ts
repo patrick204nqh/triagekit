@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { bootstrap } from "../../src/runtime/bootstrap";
-import { githubSource } from "../../src/runtime/ingest/github/adapter";
+import { githubSource } from "../../src/runtime/ingest/github/dependency-vuln-source";
 import type { TriageConfigT } from "../../src/config/schema";
 
 const flush = () => new Promise<void>(r => setTimeout(r, 0));
 
 const config: TriageConfigT = {
   source: "github",
-  views: ["security-alerts", "insights"],
+  views: ["code-security", "insights"],
   scope: {},
   branding: { title: "Acme Triage" },
 };
@@ -30,7 +30,7 @@ describe("mountShell artifact navigation", () => {
     expect(document.querySelector("#appbar .brand .wordmark")?.textContent).toBe("Acme Triage");
     const rail = [...document.querySelectorAll<HTMLElement>("#domainRail button")];
     expect(rail.map(b => b.textContent?.replace(/\s*upcoming$/, "").trim()))
-      .toEqual(expect.arrayContaining(["Dependencies", "Misconfigurations", "Tasks"]));
+      .toEqual(expect.arrayContaining(["Dependencies", "Cloud misconfig", "Tasks"]));
     const vuln = rail.find(b => b.textContent?.startsWith("Dependencies"))!;
     expect(vuln.className).toContain("active");          // live artifact leads
     expect(document.querySelector("#root")?.textContent).toMatch(/connect a token/i);  // empty scope/cred
@@ -83,10 +83,10 @@ describe("mountShell artifact navigation", () => {
   it("switching to an upcoming artifact renders its roadmap placeholder", () => {
     bootstrap(config);
     const rail = [...document.querySelectorAll<HTMLElement>("#domainRail button")];
-    rail.find(b => b.textContent?.startsWith("Misconfigurations"))!.click();
+    rail.find(b => b.textContent?.startsWith("Cloud misconfig"))!.click();
     expect(document.querySelector("#root .upcoming")).toBeTruthy();
     expect(document.querySelector("#root .badge")?.textContent).toBe("upcoming");
-    expect(document.querySelectorAll("#root .prov-roadmap li").length).toBeGreaterThan(0);  // aws/gcp/cloudflare
+    expect(document.querySelectorAll("#root .prov-roadmap li").length).toBeGreaterThan(0);  // aws/gcp
   });
 
   it("applies configured tier thresholds when scoring", async () => {

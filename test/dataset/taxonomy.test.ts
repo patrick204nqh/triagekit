@@ -1,0 +1,29 @@
+import { describe, it, expect } from "vitest";
+import { readdirSync } from "node:fs";
+import { listDomains, getDomain, domainOf, classOf, type DomainId } from "../../src/runtime/dataset/taxonomy";
+
+describe("taxonomy", () => {
+  it("declares a class on every domain", () => {
+    for (const d of listDomains()) expect(d.class === "finding" || d.class === "work").toBe(true);
+  });
+  it("derives class from kind", () => {
+    expect(classOf("dependency-vuln")).toBe("finding");
+    expect(classOf("waf-finding")).toBe("finding");
+    expect(classOf("change-request")).toBe("work");
+  });
+  it("keeps cloud-posture and edge-security as separate domains", () => {
+    expect(domainOf("cloud-misconfig").id).toBe("cloud-posture");
+    expect(domainOf("waf-finding").id).toBe("edge-security");
+  });
+  it("getDomain throws on unknown id", () => {
+    // @ts-expect-error unknown id
+    expect(() => getDomain("nope")).toThrow();
+  });
+  it("every views/ dir name is a DomainId", () => {
+    const ids = new Set(listDomains().map(d => d.id));
+    const dirs = readdirSync("src/runtime/views", { withFileTypes: true })
+      .filter(e => e.isDirectory()).map(e => e.name);
+    expect(dirs.length).toBeGreaterThan(0);   // guard against a wrong path passing vacuously
+    for (const dir of dirs) expect(ids.has(dir as DomainId)).toBe(true);
+  });
+});

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 // Importing the views registers their sort keys as module side-effects.
-import "../../src/runtime/views/code-scanning/view";
-import "../../src/runtime/views/security-alerts/view";
+import "../../src/runtime/views/code-security/code-scanning";
+import "../../src/runtime/views/code-security/view";
 import { getSortKey } from "../../src/runtime/layout/facet-registry";
 import type { AxisCtx } from "../../src/runtime/layout/facet-registry";
 
@@ -9,7 +9,7 @@ import type { AxisCtx } from "../../src/runtime/layout/facet-registry";
 // leak onto every tab — and since two of them share the label "Severity", an
 // unscoped pair renders a confusing duplicate in the sort popover.
 const ctx = (kinds: string[]): AxisCtx =>
-  ({ artifact: { id: "x", label: "X", group: "findings", kinds } } as unknown as AxisCtx);
+  ({ artifact: { id: "x", label: "X", group: "finding", kinds } } as unknown as AxisCtx);
 
 describe("severity sort keys are scoped to their kind", () => {
   it("cs-severity applies only to the code-scanning tab", () => {

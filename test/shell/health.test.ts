@@ -27,7 +27,7 @@ describe("health", () => {
   it("treats sources that share a provider as one connection", () => {
     const creds = new CredStore();
     const alerts = mk({});
-    const reviews = mk({ id: "github-review", provider: "github", kinds: ["pull-request"] });
+    const reviews = mk({ id: "github-review", provider: "github", kinds: ["change-request"] });
     expect(healthOf(reviews, creds)).toBe("needs-token");
     creds.set("github", "ghp_x");                    // set once, under the provider key
     expect(healthOf(alerts, creds)).toBe("connected");

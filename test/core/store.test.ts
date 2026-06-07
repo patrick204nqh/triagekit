@@ -38,11 +38,11 @@ describe("dataset store", () => {
 
   it("stats counts by provider and by kind", () => {
     const s = createStore();
-    s.upsert([item("github:1", "issue"), item("github:2", "pull-request")], { provider: "github", scopeKey: "r1", fetchedAt: 1 });
+    s.upsert([item("github:1", "issue"), item("github:2", "change-request")], { provider: "github", scopeKey: "r1", fetchedAt: 1 });
     s.upsert([item("gitlab:9", "issue")], { provider: "gitlab", scopeKey: "g1", fetchedAt: 1 });
     expect(s.stats()).toEqual({
       byProvider: { github: 2, gitlab: 1 },
-      byKind: { issue: 2, "pull-request": 1 },
+      byKind: { issue: 2, "change-request": 1 },
     });
   });
 

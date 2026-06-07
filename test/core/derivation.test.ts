@@ -21,13 +21,13 @@ const score: ScoreContext = {
 describe("derive", () => {
   it("filters to active kinds, scores, and sorts descending", () => {
     const out = derive({
-      items: [item("a", 10), item("b", 90), item("c", 50, "pull-request")],
+      items: [item("a", 10), item("b", 90), item("c", 50, "change-request")],
       activeKinds: ["issue"],
       botLogins: [],
       score,
       facets: emptyFacetState(),
     });
-    expect(out.scored.map(r => r.id)).toEqual(["b", "a"]); // pull-request filtered out, sorted desc
+    expect(out.scored.map(r => r.id)).toEqual(["b", "a"]); // change-request filtered out, sorted desc
     expect(out.scored.map(r => r.score)).toEqual([90, 10]);
     expect(out.scored[0].tier).toBe("P0");
   });

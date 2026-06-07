@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest";
-import { githubSource } from "../../../src/runtime/ingest/github/adapter";
+import { githubSource } from "../../../src/runtime/ingest/github/dependency-vuln-source";
 import type { DependencyVulnDetails } from "../../../src/runtime/dataset/kinds/dependency-vuln";
 
 describe("githubSource.fetch", () => {
