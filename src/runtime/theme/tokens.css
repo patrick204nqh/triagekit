@@ -73,13 +73,10 @@ input::placeholder { color:var(--muted); } select { appearance:none; cursor:poin
 .domains button:hover { color:var(--fg); }
 .domains button.active { color:var(--fg); background:var(--carbon); border-color:var(--line); }
 
-/* ── View switch (#viewswitch nav — plain buttons styled as tabs) ──── */
-.viewswitch { display:flex; gap:24px; padding:10px 32px 0; border-bottom:1px solid var(--line); min-height:44px; flex-wrap:wrap; }
-.viewswitch > button { position:relative; background:none; border:none; color:var(--muted); padding:8px 2px 14px; font:500 14px var(--sans); display:flex; align-items:center; gap:8px; transition:color .15s; }
-.viewswitch > button:hover { color:var(--fg); }
-.viewswitch > button.active { color:var(--fg); }
-.viewswitch > button.active::after { content:""; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--accent); border-radius:2px; }
-.viewswitch > button:focus-visible { outline:none; color:var(--fg); }
+/* ── View switch (#viewswitch nav — wraps the unified .toolbar) ──── */
+/* Horizontal padding aligns the toolbar with the appbar/rail; the toolbar
+   itself supplies its layout, vertical padding, and border-bottom. */
+.viewswitch { padding:0 32px; }
 .chip { font:500 11px var(--mono); color:var(--muted); background:var(--slate); border:1px solid var(--line); border-radius:999px; padding:2px 8px; letter-spacing:.02em; }
 .prov-icon { flex:none; vertical-align:middle; }
 .prov-mono text { font-family:var(--mono); font-weight:600; }
@@ -433,4 +430,21 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 .pop-axis + .pop-axis { margin-top:8px; border-top:1px solid var(--line); padding-top:8px; }
 .pop-axis-label { font-size:11px; color:var(--muted); margin-bottom:4px; }
 .pop-opt { display:flex; align-items:center; gap:6px; padding:3px 2px; font-size:13px; color:var(--fg); cursor:pointer; }
+
+/* Unified toolbar — view modes + Filter/Sort popovers, mounted in #viewswitch */
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.tb-left { display: flex; align-items: center; gap: 6px; }
+.tb-view { padding: 4px 10px; border-radius: 6px; background: none; border: 0; color: var(--muted); cursor: pointer; }
+.tb-view.active { color: var(--fg); background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.tb-count { color: var(--muted); font-variant-numeric: tabular-nums; margin-left: 6px; }
+.tb-right { display: flex; gap: 8px; }
+.tb-ctl { position: relative; }
+.tb-btn { padding: 4px 12px; border: 1px solid var(--line-strong); border-radius: 6px; background: none; color: var(--fg); cursor: pointer; }
+.tb-btn:hover { border-color: var(--accent); }
+.tb-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 220px;
+  background: var(--carbon); border: 1px solid var(--line-strong); border-radius: 10px;
+  box-shadow: var(--drawer-shadow); padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.pop-sort { text-align: left; background: none; border: 0; color: var(--fg); padding: 4px 6px; border-radius: 6px; cursor: pointer; }
+.pop-sort.on, .pop-sort:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+
 .check.ci-open { color:var(--muted); }
