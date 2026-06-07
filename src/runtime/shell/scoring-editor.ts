@@ -35,6 +35,26 @@ export function mountScoringEditor(host: HTMLElement, opts: ScoringEditorOpts) {
       host.innerHTML = `<p class="muted">No configurable scoring models are available.</p>`;
       return;
     }
+    // Default state: no saved model and no real draft. Show an explainer + Customize fork.
+    if (opts.getDraft(activeKind) === null) {
+      const kindOpts = kinds.map(k => `<option value="${esc(k)}" ${k === activeKind ? "selected" : ""}>${esc(k)}</option>`).join("");
+      host.innerHTML = `<div class="scoring-editor" data-scoring-state="default">
+        <div class="se-head">
+          <select data-kind aria-label="Kind">${kindOpts}</select>
+          <span class="se-badge" data-scoring-badge>Default</span>
+        </div>
+        <p class="se-explainer muted">This kind uses TriageKit's built-in scoring and default cutoffs. Customize to edit the formula, signal weights, and tier bands for this kind.</p>
+        <button class="btn-ghost" data-customize>Customize scoring</button>
+      </div>`;
+      host.querySelector<HTMLButtonElement>("[data-customize]")?.addEventListener("click", () => {
+        opts.setDraft(activeKind!, defaultModelFor(activeKind!)!);
+        opts.onChange?.();
+        render();
+      });
+      wireHead();
+      return;
+    }
+
     const model = modelOf(activeKind);
     const names = Object.keys(model.signals);
     const weights = formulaToWeights(model.formula, names);
@@ -42,9 +62,10 @@ export function mountScoringEditor(host: HTMLElement, opts: ScoringEditorOpts) {
     if (mode === "simple" && !simpleAvailable) mode = "advanced";
 
     const kindOpts = kinds.map(k => `<option value="${esc(k)}" ${k === activeKind ? "selected" : ""}>${esc(k)}</option>`).join("");
-    host.innerHTML = `<div class="scoring-editor">
+    host.innerHTML = `<div class="scoring-editor" data-scoring-state="custom">
       <div class="se-head">
         <select data-kind aria-label="Kind">${kindOpts}</select>
+        <span class="se-badge" data-scoring-badge>Custom</span>
         <div class="seg se-mode">
           <button data-mode="simple" class="${mode === "simple" ? "on" : ""}" ${simpleAvailable ? "" : "disabled"}>Simple</button>
           <button data-mode="advanced" class="${mode === "advanced" ? "on" : ""}">Advanced</button>

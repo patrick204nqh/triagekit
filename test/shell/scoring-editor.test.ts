@@ -41,15 +41,48 @@ describe("mountScoringEditor", () => {
     registerDefaultModel(KIND, def);
   });
 
+  it("renders the Default state (explainer + Customize) when no draft is saved", () => {
+    const { host, drafts } = harness();
+    const container = host.querySelector("[data-scoring-state]")!;
+    expect(container.getAttribute("data-scoring-state")).toBe("default");
+    // No editing controls in Default state.
+    expect(host.querySelector("[data-weight]")).toBeNull();
+    expect(host.querySelector("[data-body]")).toBeNull();
+    // Customize affordance + badge + explainer copy present.
+    expect(host.querySelector("[data-customize]")).not.toBeNull();
+    expect(host.querySelector("[data-scoring-badge]")!.textContent).toContain("Default");
+    expect(host.textContent!.toLowerCase()).toContain("built-in scoring");
+    expect(host.textContent!.toLowerCase()).toContain("default cutoffs");
+    // Kind switching is still wired in Default state.
+    expect(host.querySelector("[data-kind]")).not.toBeNull();
+    expect(drafts.get(KIND)).toBeUndefined();
+  });
+
+  it("clicking Customize forks a custom model seeded from the default", () => {
+    const { host, drafts } = harness();
+    expect(drafts.get(KIND)).toBeUndefined();
+    host.querySelector<HTMLButtonElement>("[data-customize]")!.click();
+    // Draft now holds a model seeded from the default.
+    expect(drafts.get(KIND)).not.toBeUndefined();
+    expect(drafts.get(KIND)).toEqual(def);
+    // Re-renders into Custom state with editing controls.
+    expect(host.querySelector("[data-scoring-state]")!.getAttribute("data-scoring-state")).toBe("custom");
+    expect(host.querySelector("[data-scoring-badge]")!.textContent).toContain("Custom");
+    expect(host.querySelectorAll("[data-weight]").length).toBe(2);
+    expect(host.querySelector("[data-body]")).not.toBeNull();
+  });
+
   it("lists kinds with a published default and seeds from the default model", () => {
     const { host } = harness();
     const sel = host.querySelector<HTMLSelectElement>("[data-kind]")!;
     expect([...sel.options].map(o => o.value)).toEqual([KIND]);
+    host.querySelector<HTMLButtonElement>("[data-customize]")!.click();
     expect(host.querySelectorAll("[data-weight]").length).toBe(2);   // simple mode: a slider per signal
   });
 
   it("simple-mode slider updates the draft formula via weightsToFormula", () => {
     const { host, drafts } = harness();
+    host.querySelector<HTMLButtonElement>("[data-customize]")!.click();
     const slider = host.querySelector<HTMLInputElement>('[data-weight="severity"]')!;
     slider.value = "0.8"; slider.dispatchEvent(new Event("input"));
     expect(drafts.get(KIND)!.formula).toBe("severity * 0.8 + cvss * 0.4");
@@ -63,6 +96,7 @@ describe("mountScoringEditor", () => {
 
   it("advanced-mode formula edit updates the draft and surfaces validation errors", () => {
     const { host, drafts } = harness();
+    host.querySelector<HTMLButtonElement>("[data-customize]")!.click();
     host.querySelector<HTMLButtonElement>('[data-mode="advanced"]')!.click();
     const ta = host.querySelector<HTMLTextAreaElement>("[data-formula]")!;
     ta.value = "severity * 0.6 + mystery * 0.4"; ta.dispatchEvent(new Event("change"));
