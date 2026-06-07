@@ -5,7 +5,7 @@ import "../../scoring/dependency-vuln";        // side-effect: register scorer
 import "../../ingest/github/adapter";          // side-effect: register source
 
 const det = (r: ScoredItem) => r.details as DependencyVulnDetails;
-const renderer: KindRenderer = {
+export const dependencyVulnRenderer: KindRenderer = {
   kind: DEPENDENCY_VULN,
   columns: [
     { header: "Package", cell: (r) => esc(det(r).package) },
@@ -19,29 +19,31 @@ const renderer: KindRenderer = {
     <dt>Fix</dt><dd>${d.fixAvailable ? (d.fixVersion ? "available: " + esc(d.fixVersion) : "available") : "none yet"}</dd>
     <dt>Advisory</dt><dd>${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noreferrer">${esc(r.url)}</a>` : "—"}</dd></dl></div>`; },
 };
-registerKindRenderer(renderer);
+registerKindRenderer(dependencyVulnRenderer);
 registerView({ id: "security-alerts", kind: DEPENDENCY_VULN });
 
 import { registerChart } from "../../layout/charts/registry";
-import { registerFilterAxis, registerSortKey } from "../../layout/facet-registry";
+import { type FilterAxis, registerFilterAxis, registerSortKey } from "../../layout/facet-registry";
 
 const dv = (r: import("../../layout/triage-table").ScoredItem) => r.details as DependencyVulnDetails;
 
 const SEV_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, moderate: 2, low: 1 };
 
-registerFilterAxis({
+export const severityAxis: FilterAxis = {
   id: "severity", label: "Severity", widget: "chips", quick: false,
   appliesTo: (rows) => rows.some(r => r.kind === DEPENDENCY_VULN),
   optionsFrom: (rows) => [...new Set(rows.filter(r => r.kind === DEPENDENCY_VULN).map(r => dv(r).severity))]
     .sort((a, b) => (SEV_RANK[b] ?? 0) - (SEV_RANK[a] ?? 0)).map(s => ({ value: s, label: s })),
   test: (i, sel) => i.kind === DEPENDENCY_VULN && sel.includes(dv(i).severity),
-});
-registerFilterAxis({
+};
+export const fixAvailableAxis: FilterAxis = {
   id: "fix-available", label: "Fix", widget: "chips", quick: false,
   appliesTo: (rows) => rows.some(r => r.kind === DEPENDENCY_VULN),
   optionsFrom: () => [{ value: "yes", label: "Fix available" }, { value: "no", label: "No fix" }],
   test: (i, sel) => i.kind === DEPENDENCY_VULN && sel.includes(dv(i).fixAvailable ? "yes" : "no"),
-});
+};
+registerFilterAxis(severityAxis);
+registerFilterAxis(fixAvailableAxis);
 registerSortKey({
   id: "severity", label: "Severity",
   compare: (a, b) => {
