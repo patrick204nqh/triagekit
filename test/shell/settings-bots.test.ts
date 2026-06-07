@@ -13,7 +13,7 @@ function setup() {
     policy, onChange: () => {},
   });
   api.open();
-  host.querySelector<HTMLButtonElement>('[data-tab="advanced"]')!.click();
+  host.querySelector<HTMLButtonElement>('[data-category="filters"]')!.click();
   return { host, policy };
 }
 

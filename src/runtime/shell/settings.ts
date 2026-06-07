@@ -9,7 +9,7 @@ import { validateModel, type ScoreModel } from "../scoring/score-model";
 import { fieldsFor } from "../scoring/field-catalog";
 import type { Kind } from "../dataset/item";
 import { scopeSummary } from "./health";
-import { providerIcon } from "./provider-icons";
+import { providerIcon, categoryIcon } from "./provider-icons";
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from "./theme";
 import { getRefreshInterval, setRefreshInterval, REFRESH_OPTIONS } from "./refresh";
 import { dismissible } from "./dismissible";
@@ -50,41 +50,52 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   host.innerHTML = `<div class="scrim" data-scrim></div>
     <aside class="sheet panel" data-panel aria-hidden="true">
       <div class="panel-head"><h3>Settings</h3>
-        <div class="set-tabs"><button data-tab="quick" class="on">Quick</button><button data-tab="advanced">Advanced</button></div>
         <button class="icon-btn" data-close aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
       <div class="panel-body">
-        <div data-pane="quick">
-          <section class="set-section"><label class="set-label">Appearance</label>
-            <div class="seg" data-theme-seg></div></section>
-          <section class="set-section"><label class="set-label">Auto-refresh</label>
-            <div class="seg" data-refresh-seg></div>
-            <span class="set-helper">Re-fetch on a timer. Snapshot only — there is no backend history to trend.</span></section>
-          <section class="set-section"><label class="set-label">Connections</label>
-            <input class="conn-filter" data-conn-filter type="text" placeholder="Filter integrations…" aria-label="Filter integrations"/>
-            <div class="conn-list" data-conns></div>
-            <span class="set-helper">One credential per provider — kept in this tab only (session), never persisted or embedded.</span></section>
-          <section class="set-section"><label class="set-label">Data</label>
-            <div class="data-actions">
-              <button class="btn-ghost" data-clear="creds">Clear credentials</button>
-              <button class="btn-ghost" data-clear="scope">Clear saved scope</button></div>
-            <span class="set-helper">Credentials live in this tab's session; scope is saved in this browser.</span></section>
-        </div>
-        <div data-pane="advanced" hidden>
-          <section class="set-section"><label class="set-label">Priority thresholds</label>
-            <p class="set-helper">Minimum score for each tier. Items below P2 are P3.</p>
-            <div class="tier-thresholds">
-              <label>P0 ≥ <input type="number" min="0" step="1" data-tier-input="p0"></label>
-              <label>P1 ≥ <input type="number" min="0" step="1" data-tier-input="p1"></label>
-              <label>P2 ≥ <input type="number" min="0" step="1" data-tier-input="p2"></label>
-            </div>
-            <span class="set-helper">Saved in this browser; re-tiers on Save.</span></section>
-          <section class="set-section"><label class="set-label">Scoring</label>
-            <p class="set-helper">Per-kind score model. Simple = weight sliders; Advanced = formula + signals. Saved in this browser.</p>
-            <div data-scoring-editor></div></section>
-          <section class="set-section"><label class="set-label">Bot accounts</label>
-            <p class="set-helper">Logins to treat as bots, in addition to provider-flagged bots. Affects the Author filter. Saved in this browser.</p>
-            <div class="bot-chips" data-bot-chips></div>
-            <input class="bot-add" data-bot-add type="text" placeholder="Add a login — Enter or comma" aria-label="Add bot login"></section>
+        <nav class="set-sidebar">
+          <button class="cat on" data-category="connections">${categoryIcon("connections")}<span>Connections</span></button>
+          <button class="cat" data-category="scoring">${categoryIcon("scoring")}<span>Scoring &amp; priority</span></button>
+          <button class="cat" data-category="filters">${categoryIcon("filters")}<span>Filters</span></button>
+          <button class="cat" data-category="general">${categoryIcon("general")}<span>General</span></button>
+        </nav>
+        <div class="set-content">
+          <div class="cat-pane" data-cat-pane="connections">
+            <section class="set-section"><label class="set-label">Connections</label>
+              <input class="conn-filter" data-conn-filter type="text" placeholder="Filter integrations…" aria-label="Filter integrations"/>
+              <div class="conn-list" data-conns></div>
+              <span class="set-helper">One credential per provider — kept in this tab only (session), never persisted or embedded.</span></section>
+          </div>
+          <div class="cat-pane" data-cat-pane="scoring" hidden>
+            <section class="set-section"><label class="set-label">Priority thresholds</label>
+              <p class="set-helper">Minimum score for each tier. Items below P2 are P3.</p>
+              <div class="tier-thresholds">
+                <label>P0 ≥ <input type="number" min="0" step="1" data-tier-input="p0"></label>
+                <label>P1 ≥ <input type="number" min="0" step="1" data-tier-input="p1"></label>
+                <label>P2 ≥ <input type="number" min="0" step="1" data-tier-input="p2"></label>
+              </div>
+              <span class="set-helper">Saved in this browser; re-tiers on Save.</span></section>
+            <section class="set-section"><label class="set-label">Scoring</label>
+              <p class="set-helper">Per-kind score model. Simple = weight sliders; Advanced = formula + signals. Saved in this browser.</p>
+              <div data-scoring-editor></div></section>
+          </div>
+          <div class="cat-pane" data-cat-pane="filters" hidden>
+            <section class="set-section"><label class="set-label">Bot accounts</label>
+              <p class="set-helper">Logins to treat as bots, in addition to provider-flagged bots. Affects the Author filter. Saved in this browser.</p>
+              <div class="bot-chips" data-bot-chips></div>
+              <input class="bot-add" data-bot-add type="text" placeholder="Add a login — Enter or comma" aria-label="Add bot login"></section>
+          </div>
+          <div class="cat-pane" data-cat-pane="general" hidden>
+            <section class="set-section"><label class="set-label">Appearance</label>
+              <div class="seg" data-theme-seg></div></section>
+            <section class="set-section"><label class="set-label">Auto-refresh</label>
+              <div class="seg" data-refresh-seg></div>
+              <span class="set-helper">Re-fetch on a timer. Snapshot only — there is no backend history to trend.</span></section>
+            <section class="set-section"><label class="set-label">Data</label>
+              <div class="data-actions">
+                <button class="btn-ghost" data-clear="creds">Clear credentials</button>
+                <button class="btn-ghost" data-clear="scope">Clear saved scope</button></div>
+              <span class="set-helper">Credentials live in this tab's session; scope is saved in this browser.</span></section>
+          </div>
         </div>
       </div>
       <div class="panel-foot"><button class="btn-ghost" data-cancel>Cancel</button><button class="btn-primary" data-save>Save</button></div>
@@ -148,13 +159,12 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     const bots = getBots();
     wrap.innerHTML = bots.length
       ? bots.map(b => `<span class="ms-chip"><span class="repo">${esc(b)}</span><button class="x" data-rm-bot="${esc(b)}" aria-label="Remove ${esc(b)}">×</button></span>`).join("")
-      : `<span class="muted">No bot logins yet.</span>`;
+      : `<span class="muted">No bots hidden — add a login to filter it out</span>`;
     wrap.querySelectorAll<HTMLElement>("[data-rm-bot]").forEach(btn =>
       btn.addEventListener("click", () => { draftBots = getBots().filter(b => b !== btn.dataset.rmBot); renderBots(); }));
   }
-  function renderAdvanced() {
+  function renderScoring() {
     editor.render();
-    renderBots();
     const t = getTierDraft();
     (["p0", "p1", "p2"] as const).forEach(k => {
       const inp = host.querySelector<HTMLInputElement>(`[data-tier-input="${k}"]`);
@@ -375,24 +385,32 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   host.querySelectorAll<HTMLElement>("[data-clear]").forEach(b =>
     b.addEventListener("click", () => clearData(b.dataset.clear as "creds" | "scope")));
 
-  host.querySelectorAll<HTMLElement>("[data-tab]").forEach(b =>
-    b.addEventListener("click", () => {
-      host.querySelectorAll<HTMLElement>("[data-tab]").forEach(x => x.classList.toggle("on", x === b));
-      const tab = b.dataset.tab!;
-      host.querySelector<HTMLElement>(`[data-pane="quick"]`)!.hidden = tab !== "quick";
-      host.querySelector<HTMLElement>(`[data-pane="advanced"]`)!.hidden = tab !== "advanced";
-      if (tab === "advanced") renderAdvanced();
-    }));
+  // Sidebar category switching. All four panes live in the DOM at once (only
+  // visibility toggles), so every render function still finds its controls by
+  // [data-…] regardless of which category is active. The scoring pane renders
+  // lazily on first reveal — preserving the old Advanced-tab behavior.
+  let activeCategory = "connections";
+  let scoringRendered = false;
+  function showCategory(id: string) {
+    activeCategory = id;
+    host.querySelectorAll<HTMLElement>("[data-category]").forEach(b =>
+      b.classList.toggle("on", b.dataset.category === id));
+    host.querySelectorAll<HTMLElement>("[data-cat-pane]").forEach(p =>
+      p.hidden = p.dataset.catPane !== id);
+    if (id === "scoring" && !scoringRendered) { renderScoring(); scoringRendered = true; }
+  }
+  host.querySelectorAll<HTMLElement>("[data-category]").forEach(b =>
+    b.addEventListener("click", () => showCategory(b.dataset.category!)));
 
   return {
     open(provider?: string) {
       expanded = provider ?? (providerReps[0] ? providerOf(providerReps[0]) : null);
       draftCred.clear(); draftScope.clear(); draftTiers = null; draftModels.clear(); draftBots = null; updateSaveGate(); filter.value = "";
-      // reset to Quick tab
-      host.querySelectorAll<HTMLElement>("[data-tab]").forEach(b => b.classList.toggle("on", b.dataset.tab === "quick"));
-      host.querySelector<HTMLElement>(`[data-pane="quick"]`)!.hidden = false;
-      host.querySelector<HTMLElement>(`[data-pane="advanced"]`)!.hidden = true;
-      renderTheme(); renderRefresh(); renderConns(); setHidden(false);
+      scoringRendered = false;
+      showCategory("connections");
+      // Theme/refresh/bots live in other panes but their elements exist in the
+      // DOM regardless of visibility, so render them up front like before.
+      renderTheme(); renderRefresh(); renderBots(); renderConns(); setHidden(false);
     },
   };
 }

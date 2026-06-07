@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { providerIcon } from "../../src/runtime/shell/provider-icons";
+import { providerIcon, categoryIcon } from "../../src/runtime/shell/provider-icons";
 
 describe("providerIcon", () => {
   it("returns a brand path for known providers", () => {
@@ -20,5 +20,14 @@ describe("providerIcon", () => {
   });
   it("honors a custom size", () => {
     expect(providerIcon("gitlab", 22)).toContain('width="22"');
+  });
+});
+
+describe("categoryIcon", () => {
+  it("returns a stroke glyph with the cat-icon class", () => {
+    const svg = categoryIcon("scoring");
+    expect(svg).toContain("<svg");
+    expect(svg).toContain('stroke-width="1.6"');
+    expect(svg).toContain('class="cat-icon"');
   });
 });

@@ -35,3 +35,24 @@ export function providerIcon(id: string, size = 16): string {
   const letter = (id[0] ?? "?").toUpperCase();
   return `<svg class="prov-icon prov-mono" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="none" stroke="currentColor" stroke-width="1.6"/><text x="12" y="16.5" text-anchor="middle" font-size="12" fill="currentColor">${esc(letter)}</text></svg>`;
 }
+
+// Stroke glyphs for the Settings sidebar categories. Inline, currentColor,
+// 24×24, stroke-width 1.6, no fill — matching the panel's line-icon language.
+// Unknown ids fall back to a generic dot so the row still renders.
+const CAT_PATHS: Record<string, string> = {
+  // plug — two prongs into a socket body with a trailing cord
+  connections: `<path d="M9 2v5M15 2v5"/><path d="M7 7h10v3a5 5 0 0 1-5 5 5 5 0 0 1-5-5V7z"/><path d="M12 15v7"/>`,
+  // sliders — three horizontal tracks each with a knob
+  scoring: `<path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="17" r="2"/>`,
+  // funnel
+  filters: `<path d="M3 4h18l-7 8v6l-4 2v-8L3 4z"/>`,
+  // gear
+  general: `<circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/>`,
+};
+
+// A line glyph for a Settings sidebar category. Falls back to a generic dot
+// for unknown ids so the category row still renders.
+export function categoryIcon(id: string, size = 24): string {
+  const inner = CAT_PATHS[id] ?? `<circle cx="12" cy="12" r="3"/>`;
+  return `<svg class="cat-icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+}
