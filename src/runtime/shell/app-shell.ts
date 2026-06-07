@@ -207,8 +207,8 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       for (const a of items) {
         const live = liveSourcesFor(a).length > 0;
         const b = document.createElement("button");
-        b.innerHTML = live ? esc(a.label) : `${esc(a.label)} <span class="chip">upcoming</span>`;
-        if (a.id === active.id) b.className = "active";
+        b.innerHTML = live ? esc(a.label) : `${esc(a.label)}<span class="rail-soon">soon</span>`;
+        b.className = [a.id === active.id ? "active" : "", live ? "" : "upcoming"].filter(Boolean).join(" ");
         b.addEventListener("click", () => {
           active = a; view = "list"; activeProvider = (liveSourcesFor(a)[0] ?? sourcesFor(a)[0])?.id ?? "";
           lastRows = []; facetState = emptyListState(); lastFetchedAt = null;

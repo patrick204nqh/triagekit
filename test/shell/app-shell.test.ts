@@ -29,7 +29,7 @@ describe("mountShell artifact navigation", () => {
     expect(document.querySelector("#appbar .brand .brand-mark")).toBeTruthy();
     expect(document.querySelector("#appbar .brand .wordmark")?.textContent).toBe("Acme Triage");
     const rail = [...document.querySelectorAll<HTMLElement>("#domainRail button")];
-    expect(rail.map(b => b.textContent?.replace(/\s*upcoming$/, "").trim()))
+    expect(rail.map(b => b.textContent?.replace(/\s*soon$/, "").trim()))
       .toEqual(expect.arrayContaining(["Dependencies", "Cloud misconfig", "Tasks"]));
     const vuln = rail.find(b => b.textContent?.startsWith("Dependencies"))!;
     expect(vuln.className).toContain("active");          // live artifact leads
