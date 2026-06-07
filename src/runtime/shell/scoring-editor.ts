@@ -169,6 +169,26 @@ export function mountScoringEditor(host: HTMLElement, opts: ScoringEditorOpts) {
           { name: "P3", min: 0 },
         ],
       })));
+
+    // Inline mirror of the validator's "strictly decrease" rule: flag offending inputs.
+    // Ordered cutoffs P0 > P1 > P2 > P3(=0); an input offends if it is <= its lower neighbour.
+    const editable = ["P0", "P1", "P2"];
+    const chain = ["P0", "P1", "P2", "P3"];
+    const mins = [...editable.map(minOf), 0];   // P3 floor = 0
+    const offending = new Set<string>();
+    for (let i = 0; i < chain.length - 1; i++) {
+      if (mins[i] <= mins[i + 1]) { offending.add(chain[i]); offending.add(chain[i + 1]); }
+    }
+    // Tag each editable input; the offending one(s) carry aria-invalid="true".
+    editable.forEach(name => {
+      const el = tiersHost.querySelector<HTMLInputElement>(`[data-tier-min="${name}"]`)!;
+      el.setAttribute("aria-invalid", offending.has(name) ? "true" : "false");
+    });
+    if (offending.size) {
+      const thresholds = tiersHost.querySelector<HTMLElement>(".tier-thresholds")!;
+      thresholds.insertAdjacentHTML("afterend",
+        `<span class="set-error" data-tier-invalid>Cutoffs must strictly decrease.</span>`);
+    }
   }
 
   function renderPreview(model: ScoreModel): void {

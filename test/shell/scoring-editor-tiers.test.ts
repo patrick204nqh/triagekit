@@ -57,4 +57,27 @@ describe("scoring editor — tier bands", () => {
     p0.value = "40"; p0.dispatchEvent(new Event("change"));   // 40 < P1's 50
     expect(host.querySelector("[data-errors]")!.textContent).toContain("decrease");
   });
+  it("flags non-decreasing cutoffs inline AND keeps the model-error path", () => {
+    const { host } = harness();
+    host.querySelector<HTMLButtonElement>("[data-customize]")!.click();
+    const p1 = host.querySelector<HTMLInputElement>('[data-tier-min="P1"]')!;
+    p1.value = "90"; p1.dispatchEvent(new Event("change"));   // P1 90 >= P0 80 — non-decreasing
+
+    // inline mirror: a marker appears near the inputs and offending inputs are flagged
+    expect(host.querySelector("[data-tier-invalid]")).not.toBeNull();
+    const flagged = host.querySelectorAll('[data-tier-min][aria-invalid="true"]');
+    expect(flagged.length).toBeGreaterThan(0);
+
+    // existing validator path still surfaces the error (we mirrored, not replaced)
+    expect(host.querySelector("[data-errors]")!.textContent).toContain("decrease");
+  });
+  it("no inline marker and no aria-invalid when cutoffs strictly decrease", () => {
+    const { host } = harness();
+    host.querySelector<HTMLButtonElement>("[data-customize]")!.click();
+    const p0 = host.querySelector<HTMLInputElement>('[data-tier-min="P0"]')!;
+    p0.value = "85"; p0.dispatchEvent(new Event("change"));   // 85 > 50 > 25 > 0 — valid
+
+    expect(host.querySelector("[data-tier-invalid]")).toBeNull();
+    expect(host.querySelectorAll('[data-tier-min][aria-invalid="true"]').length).toBe(0);
+  });
 });
