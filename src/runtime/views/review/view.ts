@@ -1,7 +1,7 @@
 import { type ScoredItem, type KindRenderer, type DetailCtx, esc } from "../../layout/triage-table";
 import { mountReviewCard } from "../../layout/review-card";
 import type { ReviewItem, ReviewDetails } from "../../dataset/kinds/review";
-import { PULL_REQUEST, ISSUE } from "../../dataset/kinds/review";
+import { CHANGE_REQUEST, ISSUE } from "../../dataset/kinds/review";
 import { makeGithubActions } from "../../ingest/github/actions";
 import { enrichReview } from "../../ingest/github/review-source";   // also pins the source's registerSource() side-effect
 import { type FilterAxis } from "../../layout/facet-registry";
@@ -23,11 +23,11 @@ function detail(host: HTMLElement, r: ScoredItem, ctx: DetailCtx): void {
   });
 }
 
-// PR and issues share columns + detail; they differ only by kind tag.
-export const pullRequestRenderer: KindRenderer = { kind: PULL_REQUEST, columns: reviewColumns, detail };
+// Change requests and issues share columns + detail; they differ only by kind tag.
+export const changeRequestRenderer: KindRenderer = { kind: CHANGE_REQUEST, columns: reviewColumns, detail };
 export const issueRenderer: KindRenderer = { kind: ISSUE, columns: reviewColumns, detail };
 
-const isReview = (k: string) => k === PULL_REQUEST || k === ISSUE;
+const isReview = (k: string) => k === CHANGE_REQUEST || k === ISSUE;
 export const labelAxis: FilterAxis = {
   id: "label", label: "Label", widget: "chips", quick: false,
   appliesTo: (rows) => rows.some(r => isReview(r.kind) && det(r).labels.length > 0),

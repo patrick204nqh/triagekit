@@ -15,7 +15,7 @@ const row = (id: string, score: number): ScoredItem => ({
 
 describe("DOM view adapter", () => {
   beforeEach(() => {
-    registerKinds([{ kind: "issue", domain: "work-items", fields: [{ name: "signal", type: "number" }], builtInScorer: (i) => i.signal, renderer: { kind: "issue" } }]);
+    registerKinds([{ kind: "issue", domain: "tracking", fields: [{ name: "signal", type: "number" }], builtInScorer: (i) => i.signal, renderer: { kind: "issue" } }]);
     document.body.innerHTML = `<div id="root"></div>`;
   });
 

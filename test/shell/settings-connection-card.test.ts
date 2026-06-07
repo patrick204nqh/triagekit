@@ -6,7 +6,7 @@ import { ScopeStore } from "../../src/runtime/shell/scope-store";
 import { PolicyStore } from "../../src/runtime/shell/policy-store";
 import type { Source } from "../../src/runtime/ingest/source";
 
-const src = { id: "github-review", provider: "github", domain: "work-items", kinds: ["issue"],
+const src = { id: "github-review", provider: "github", domain: "tracking", kinds: ["issue"],
   connectSrc: [], status: "ready", scopeSchema: [], setup: { hint: "h" } } as unknown as Source;
 
 function host() { const h = document.createElement("div"); document.body.appendChild(h); return h; }

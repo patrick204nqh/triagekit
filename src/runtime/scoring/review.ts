@@ -1,5 +1,5 @@
 import type { TriageItem } from "../dataset/item";
-import { type ReviewDetails, PULL_REQUEST } from "../dataset/kinds/review";
+import { type ReviewDetails, CHANGE_REQUEST } from "../dataset/kinds/review";
 
 // Heuristic review priority, from list-available data only (CI is loaded lazily on
 // expand and never feeds the score). Transparent, tunable constants:
@@ -35,7 +35,7 @@ export function reviewScore(item: TriageItem<ReviewDetails>): number {
   score += labelWeight(d);
   score += ageWeight(item.createdAt);
   if (vulnLinked) score += 80;
-  if (item.kind === PULL_REQUEST && (d.assignees.length || d.reviewers.length)) score += 10;
+  if (item.kind === CHANGE_REQUEST && (d.assignees.length || d.reviewers.length)) score += 10;
   if (d.author.kind === "bot" && !vulnLinked) score -= 35;
   return Math.round(score);
 }

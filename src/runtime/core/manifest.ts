@@ -25,5 +25,6 @@ export interface ProviderManifest {
   id: string;
   domain: DomainId;
   kinds: Kind[];
+  labels?: Partial<Record<Kind, string>>;   // provider's display noun per kind
   makeAdapter(deps: unknown): Source;
 }

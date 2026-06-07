@@ -9,8 +9,8 @@ const stub = (id: string, domain: DomainId, kinds: Kind[]): Source => ({
 // Roadmap placeholders — advertised under their domain, never fetched.
 [
   stub("gitlab",     "code-security", ["dependency-vuln"]),
-  stub("aws",        "cloud-posture", ["infra-misconfig"]),
-  stub("gcp",        "cloud-posture", ["infra-misconfig"]),
+  stub("aws",        "cloud-posture", ["cloud-misconfig"]),
+  stub("gcp",        "cloud-posture", ["cloud-misconfig"]),
   stub("cloudflare", "edge-security", ["edge-misconfig", "waf-finding"]),
-  stub("jira",       "work-items",    ["work-item"]),
+  stub("jira",       "tasks",         ["task"]),
 ].forEach(registerSource);

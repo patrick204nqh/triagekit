@@ -28,7 +28,7 @@ describe("githubReviewSource.fetch", () => {
     expect(errors).toEqual([]);
     expect(items).toHaveLength(2);
 
-    const prItem = items.find(i => i.kind === "pull-request")! as TriageItem<ReviewDetails>;
+    const prItem = items.find(i => i.kind === "change-request")! as TriageItem<ReviewDetails>;
     expect(prItem.id).toBe("github:acme/web:7");
     expect(prItem.location).toBe("acme/web");
     expect(prItem.details.author.kind).toBe("bot");
@@ -65,7 +65,7 @@ describe("enrichReview", () => {
       throw new Error("unexpected " + url);
     });
     vi.stubGlobal("fetch", fetchMock);
-    const item = { id: "github:acme/web:7", source: "github", kind: "pull-request", title: "", location: "acme/web",
+    const item = { id: "github:acme/web:7", source: "github", kind: "change-request", title: "", location: "acme/web",
       signal: 0, createdAt: "", url: "", details: { number: 7 } } as unknown as TriageItem<ReviewDetails>;
     const patch = await enrichReview(item, "t");
     expect(patch.checks).toEqual({ state: "pass", conflicts: true });
@@ -78,7 +78,7 @@ describe("enrichReview", () => {
       if (url.includes("/commits/abc/check-runs")) return new Response(JSON.stringify({ check_runs: [{ status: "completed", conclusion: "failure" }] }), { status: 200 });
       throw new Error("unexpected " + url);
     }));
-    const item = { kind: "pull-request", location: "acme/web", details: { number: 7 } } as unknown as TriageItem<ReviewDetails>;
+    const item = { kind: "change-request", location: "acme/web", details: { number: 7 } } as unknown as TriageItem<ReviewDetails>;
     const patch = await enrichReview(item, "t");
     expect(patch.checks).toEqual({ state: "fail", conflicts: false });
   });
@@ -89,7 +89,7 @@ describe("enrichReview", () => {
       if (url.includes("/commits/abc/check-runs")) return new Response(JSON.stringify({ check_runs: [{ status: "in_progress", conclusion: null }] }), { status: 200 });
       throw new Error("unexpected " + url);
     }));
-    const item = { kind: "pull-request", location: "acme/web", details: { number: 7 } } as unknown as TriageItem<ReviewDetails>;
+    const item = { kind: "change-request", location: "acme/web", details: { number: 7 } } as unknown as TriageItem<ReviewDetails>;
     const patch = await enrichReview(item, "t");
     expect(patch.checks).toEqual({ state: "pending", conflicts: false });
   });
@@ -104,7 +104,7 @@ describe("enrichReview", () => {
 
   it("returns an empty patch when the network throws", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("network down"); }));
-    const item = { kind: "pull-request", location: "acme/web", details: { number: 7 } } as unknown as TriageItem<ReviewDetails>;
+    const item = { kind: "change-request", location: "acme/web", details: { number: 7 } } as unknown as TriageItem<ReviewDetails>;
     expect(await enrichReview(item, "t")).toEqual({});
   });
 });

@@ -5,7 +5,7 @@ import type { ReviewItem } from "../../src/runtime/dataset/kinds/review";
 
 function pr(over: Partial<ReviewItem["details"]> = {}): ReviewItem {
   return {
-    id: "github:acme-corp/web-app:482", source: "github", kind: "pull-request",
+    id: "github:acme-corp/web-app:482", source: "github", kind: "change-request",
     title: "Bump axios from 1.6.2 to 1.7.4", location: "acme-corp/web-app",
     signal: 70, createdAt: "2026-06-01T00:00:00Z",
     url: "https://github.com/acme-corp/web-app/pull/482", tier: "P1",

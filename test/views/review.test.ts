@@ -2,9 +2,9 @@
 import { describe, it, expect } from "vitest";
 import { renderTriageList, type ScoredItem } from "../../src/runtime/layout/triage-table";
 import { registerKinds } from "../../src/runtime/core/register-kinds";
-import { pullRequestKind } from "../../src/runtime/kinds/pull-request";
+import { changeRequestKind } from "../../src/runtime/kinds/change-request";
 import { issueKind } from "../../src/runtime/kinds/issue";
-registerKinds([pullRequestKind, issueKind]);   // registers PR + issue kind renderers + axes
+registerKinds([changeRequestKind, issueKind]);   // registers change-request + issue kind renderers + axes
 import { getFilterAxis } from "../../src/runtime/layout/facet-registry";
 
 it("registers review label + assignee axes", () => {
@@ -14,7 +14,7 @@ it("registers review label + assignee axes", () => {
 
 function pr(over: Partial<ScoredItem> = {}): ScoredItem {
   return {
-    id: "github:acme/web:1", source: "github", kind: "pull-request", title: "Fix it",
+    id: "github:acme/web:1", source: "github", kind: "change-request", title: "Fix it",
     location: "acme/web", signal: 50, createdAt: "2026-01-01T00:00:00Z", url: "https://x",
     details: { number: 42, state: "open", body: "b", author: { login: "alice", avatarUrl: "", kind: "human" },
       assignees: [], reviewers: [], comments: 0, labels: [], checks: null, permalinks: [], relations: [] },

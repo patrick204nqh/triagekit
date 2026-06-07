@@ -5,7 +5,7 @@ import type { TriageItem } from "../../src/runtime/dataset/item";
 import type { ReviewDetails } from "../../src/runtime/dataset/kinds/review";
 
 const now = new Date().toISOString();
-function item(over: Partial<ReviewDetails> = {}, kind: "pull-request" | "issue" = "pull-request", createdAt = now): TriageItem<ReviewDetails> {
+function item(over: Partial<ReviewDetails> = {}, kind: "change-request" | "issue" = "change-request", createdAt = now): TriageItem<ReviewDetails> {
   return {
     id: "github:acme/web:1", source: "github", kind, title: "t", location: "acme/web",
     signal: 0, createdAt, url: "",

@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { makeGithubActions } from "../../../src/runtime/ingest/github/actions";
 import type { ReviewItem } from "../../../src/runtime/dataset/kinds/review";
 
-function item(kind: ReviewItem["kind"] = "pull-request"): ReviewItem {
+function item(kind: ReviewItem["kind"] = "change-request"): ReviewItem {
   return {
     id: "github:acme-corp/web-app:482", source: "github", kind,
     title: "Bump axios", location: "acme-corp/web-app", signal: 1,

@@ -18,11 +18,11 @@ const ARTIFACTS: Artifact[] = [
   { id: "dependencies",      label: "Dependencies",      group: "findings", kinds: ["dependency-vuln"] },
   { id: "code-scanning",     label: "Code scanning",     group: "findings", kinds: ["code-scanning"] },
   { id: "secrets",           label: "Secrets",           group: "findings", kinds: ["secret-scanning"] },
-  { id: "misconfigurations", label: "Misconfigurations", group: "findings", kinds: ["infra-misconfig", "edge-misconfig", "waf-finding"] },
+  { id: "misconfigurations", label: "Misconfigurations", group: "findings", kinds: ["cloud-misconfig", "edge-misconfig", "waf-finding"] },
   { id: "threats",           label: "Threats",           group: "findings", kinds: ["runtime-threat"] },
-  { id: "pull-requests",     label: "Pull requests",     group: "work",     kinds: ["pull-request"] },
+  { id: "pull-requests",     label: "Pull requests",     group: "work",     kinds: ["change-request"] },
   { id: "issues",            label: "Issues",            group: "work",     kinds: ["issue"] },
-  { id: "tasks",             label: "Tasks",             group: "work",     kinds: ["work-item"] },
+  { id: "tasks",             label: "Tasks",             group: "work",     kinds: ["task"] },
 ];
 
 const byKind = new Map<Kind, Artifact>(ARTIFACTS.flatMap(a => a.kinds.map(k => [k, a] as const)));

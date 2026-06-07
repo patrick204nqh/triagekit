@@ -6,7 +6,7 @@ import type { ScoredItem } from "../../src/runtime/layout/triage-table";
 
 function row(over: Partial<ScoredItem> & { details?: unknown }): ScoredItem {
   return {
-    id: "x", source: "github", kind: "pull-request", title: "t", location: "acme/web",
+    id: "x", source: "github", kind: "change-request", title: "t", location: "acme/web",
     signal: 0, createdAt: "2026-01-01T00:00:00Z", url: "", details: {}, score: 50, tier: "P2", ...over,
   } as ScoredItem;
 }
@@ -14,7 +14,7 @@ const withAxes = (axes: FacetState["axes"], sort = "priority"): FacetState => ({
 
 describe("applyFacets (registry-driven)", () => {
   const rows: ScoredItem[] = [
-    row({ id: "a", location: "acme/web", kind: "pull-request", tier: "P0", score: 140, createdAt: "2026-01-01T00:00:00Z", details: { author: { kind: "human" } } }),
+    row({ id: "a", location: "acme/web", kind: "change-request", tier: "P0", score: 140, createdAt: "2026-01-01T00:00:00Z", details: { author: { kind: "human" } } }),
     row({ id: "b", location: "acme/api", kind: "issue",        tier: "P2", score: 70,  createdAt: "2026-03-01T00:00:00Z", details: { author: { kind: "bot" } } }),
     row({ id: "c", location: "acme/web", kind: "issue",        tier: "P3", score: 20,  createdAt: "2026-02-01T00:00:00Z", details: { author: { kind: "human" } } }),
   ];

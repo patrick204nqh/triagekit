@@ -153,7 +153,7 @@ describe("mountSettings", () => {
       discover: async () => [{ value: "acme/web", label: "web", group: "acme" }],
       fetch: async () => ({ items: [], errors: [] }),
     };
-    const reviews: Source = { ...alerts, id: "github-review", provider: "github", kinds: ["pull-request"] };
+    const reviews: Source = { ...alerts, id: "github-review", provider: "github", kinds: ["change-request"] };
     const host = document.createElement("div"); document.body.appendChild(host);
     const creds = new CredStore(); const scopes = new ScopeStore();
     const s = mountSettings(host, { sources: [alerts, reviews], creds, scopes, policy: new PolicyStore(), onChange: () => {} });

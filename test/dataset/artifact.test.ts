@@ -15,18 +15,18 @@ describe("artifacts", () => {
     expect(byId.tasks).toBe("work");
   });
 
-  it("exposes a Tasks artifact (renamed from tickets) under work", () => {
+  it("exposes a Tasks artifact under work", () => {
     const a = listArtifacts().find(x => x.id === "tasks");
     expect(a).toBeDefined();
     expect(a!.label).toBe("Tasks");
     expect(a!.group).toBe("work");
-    expect(a!.kinds).toEqual(["work-item"]);
+    expect(a!.kinds).toEqual(["task"]);
     expect(listArtifacts().some(x => x.id === "tickets")).toBe(false);
   });
 
   it("maps a kind back to its artifact", () => {
     expect(artifactOf("dependency-vuln").id).toBe("dependencies");
-    expect(artifactOf("work-item").group).toBe("work");
+    expect(artifactOf("task").group).toBe("work");
   });
 
   it("registers a Threats artifact under findings for runtime-threat", () => {
@@ -51,8 +51,8 @@ describe("artifacts are one-kind-per-tab", () => {
     expect(artifactOf("code-scanning").id).toBe("code-scanning");
   });
 
-  it("pull-request and issue are separate tabs", () => {
-    expect(artifactOf("pull-request").id).toBe("pull-requests");
+  it("change-request and issue are separate tabs", () => {
+    expect(artifactOf("change-request").id).toBe("pull-requests");
     expect(artifactOf("issue").id).toBe("issues");
   });
 });

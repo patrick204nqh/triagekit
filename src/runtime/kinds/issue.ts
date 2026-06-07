@@ -20,7 +20,7 @@ export const reviewFields: FieldDef[] = [
 
 export const issueKind: KindManifest = {
   kind: "issue",
-  domain: "work-items",
+  domain: "tracking",
   fields: reviewFields,
   builtInScorer: reviewScore as Scorer,
   renderer: issueRenderer,

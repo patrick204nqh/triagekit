@@ -3,7 +3,7 @@ import { registerChart, chartsFor } from "../../../src/runtime/layout/charts/reg
 
 registerChart({ id: "g", title: "G", kinds: "*", render: () => {} });
 registerChart({ id: "dv", title: "DV", kinds: ["dependency-vuln"], render: () => {} });
-registerChart({ id: "infra", title: "I", kinds: ["infra-misconfig"], render: () => {} });
+registerChart({ id: "infra", title: "I", kinds: ["cloud-misconfig"], render: () => {} });
 
 describe("chartsFor", () => {
   it("returns generic + charts matching the kinds", () => {

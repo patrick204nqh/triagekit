@@ -1,14 +1,15 @@
 export type Kind =
-  | "dependency-vuln"   // code-security (ported now)
-  | "code-scanning"     // code-security (roadmap)
+  | "dependency-vuln"   // code-security
+  | "code-scanning"     // code-security
   | "secret-scanning"   // code-security (roadmap)
-  | "infra-misconfig"   // cloud-posture (roadmap)
+  | "cloud-misconfig"   // cloud-posture (roadmap)
   | "edge-misconfig"    // edge-security (roadmap)
   | "waf-finding"       // edge-security (roadmap)
-  | "runtime-threat"    // threat-detection (active adversary behavior; roadmap)
-  | "pull-request"      // work (review surface)
-  | "issue"             // work (review surface)
-  | "work-item";        // work-items (roadmap)
+  | "runtime-threat"    // threat-detection (roadmap)
+  | "change-request"    // work / code-review
+  | "issue"             // work / tracking
+  | "email"             // work / inbox (roadmap)
+  | "task";             // work / tasks (roadmap)
 
 export interface TriageItem<D = unknown> {
   id: string;          // `${source}:${native id}`

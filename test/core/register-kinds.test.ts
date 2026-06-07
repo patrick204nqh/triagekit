@@ -8,7 +8,7 @@ import type { TriageItem } from "../../src/runtime/dataset/item";
 
 const m: KindManifest = {
   kind: "issue",
-  domain: "work-items",
+  domain: "tracking",
   fields: [{ name: "labels", type: "enum" }],
   builtInScorer: (i: TriageItem) => i.signal + 1,
   renderer: { kind: "issue" },

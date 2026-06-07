@@ -45,10 +45,10 @@ function labelsOf(i: ScoredItem): string[] {
 }
 
 const KIND_LABEL: Record<string, string> = {
-  "pull-request": "Pull requests", "issue": "Issues",
+  "change-request": "Pull requests", "issue": "Issues",
   "dependency-vuln": "Dependency", "code-scanning": "Code scanning",
-  "secret-scanning": "Secrets", "infra-misconfig": "Infra",
-  "edge-misconfig": "Edge", "waf-finding": "WAF", "work-item": "Tasks",
+  "secret-scanning": "Secrets", "cloud-misconfig": "Cloud",
+  "edge-misconfig": "Edge", "waf-finding": "WAF", "task": "Tasks",
 };
 const kindLabel = (k: string): string => KIND_LABEL[k] ?? k;
 const TIERS: Tier[] = ["P0", "P1", "P2", "P3"];
