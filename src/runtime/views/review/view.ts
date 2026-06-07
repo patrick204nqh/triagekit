@@ -6,6 +6,8 @@ import { makeGithubActions } from "../../ingest/github/actions";
 import { enrichReview } from "../../ingest/github/review-source";   // also pins the source's registerSource() side-effect
 import "../../scoring/review";          // side-effect: register PR + issue scorers
 
+import { type FilterAxis, registerFilterAxis } from "../../layout/facet-registry";
+
 const det = (r: ScoredItem) => r.details as ReviewDetails;
 const reviewColumns = [
   { header: "#", cell: (r: ScoredItem) => `#${det(r).number}` },
@@ -23,25 +25,27 @@ function detail(host: HTMLElement, r: ScoredItem, ctx: DetailCtx): void {
   });
 }
 
-for (const kind of [PULL_REQUEST, ISSUE] as const) {
-  const renderer: KindRenderer = { kind, columns: reviewColumns, detail };
-  registerKindRenderer(renderer);
-}
+// PR and issues share columns + detail; they differ only by kind tag.
+export const pullRequestRenderer: KindRenderer = { kind: PULL_REQUEST, columns: reviewColumns, detail };
+export const issueRenderer: KindRenderer = { kind: ISSUE, columns: reviewColumns, detail };
 
-import { registerFilterAxis } from "../../layout/facet-registry";
+registerKindRenderer(pullRequestRenderer);
+registerKindRenderer(issueRenderer);
 
 const isReview = (k: string) => k === PULL_REQUEST || k === ISSUE;
-registerFilterAxis({
+export const labelAxis: FilterAxis = {
   id: "label", label: "Label", widget: "chips", quick: false,
   appliesTo: (rows) => rows.some(r => isReview(r.kind) && det(r).labels.length > 0),
   optionsFrom: (rows) => [...new Set(rows.filter(r => isReview(r.kind)).flatMap(r => det(r).labels.map(l => l.name)))]
     .sort().map(n => ({ value: n, label: n })),
   test: (i, sel) => isReview(i.kind) && det(i).labels.some(l => sel.includes(l.name)),
-});
-registerFilterAxis({
+};
+export const assigneeAxis: FilterAxis = {
   id: "assignee", label: "Assignee", widget: "chips", quick: false,
   appliesTo: (rows) => rows.some(r => isReview(r.kind) && det(r).assignees.length > 0),
   optionsFrom: (rows) => [...new Set(rows.filter(r => isReview(r.kind)).flatMap(r => det(r).assignees.map(a => a.login)))]
     .sort().map(l => ({ value: l, label: l })),
   test: (i, sel) => isReview(i.kind) && det(i).assignees.some(a => sel.includes(a.login)),
-});
+};
+registerFilterAxis(labelAxis);
+registerFilterAxis(assigneeAxis);
