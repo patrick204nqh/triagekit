@@ -25,9 +25,6 @@ describe("applyFacets (registry-driven)", () => {
   it("filters by scope axis", () => {
     expect(applyFacets(rows, withAxes({ scope: ["acme/web"] })).map(r => r.id)).toEqual(["a", "c"]);
   });
-  it("filters by kind axis", () => {
-    expect(applyFacets(rows, withAxes({ kind: ["issue"] })).map(r => r.id)).toEqual(["b", "c"]);
-  });
   it("filters by multi-value tier axis", () => {
     expect(applyFacets(rows, withAxes({ tier: ["P0", "P2"] })).map(r => r.id)).toEqual(["a", "b"]);
   });
@@ -49,7 +46,8 @@ describe("applyFacets (registry-driven)", () => {
     expect(applyFacets(rows, withAxes({ scope: [] })).map(r => r.id)).toEqual(["a", "b", "c"]);
   });
   it("combines axes (AND)", () => {
-    expect(applyFacets(rows, withAxes({ scope: ["acme/web"], kind: ["issue"] })).map(r => r.id)).toEqual(["c"]);
+    // scope=acme/web -> [a, c]; tier=P3 -> [c]; intersection -> [c]
+    expect(applyFacets(rows, withAxes({ scope: ["acme/web"], tier: ["P3"] })).map(r => r.id)).toEqual(["c"]);
   });
   it("recent sort", () => {
     expect(applyFacets(rows, withAxes({}, "recent")).map(r => r.id)).toEqual(["b", "c", "a"]);

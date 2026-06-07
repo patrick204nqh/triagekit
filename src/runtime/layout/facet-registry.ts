@@ -68,12 +68,6 @@ registerFilterAxis({
   test: (i, sel) => sel.includes(i.location),
 });
 registerFilterAxis({
-  id: "kind", label: "Type", widget: "chips", quick: true,
-  appliesTo: (_rows, ctx) => ctx.artifact.kinds.length >= 2,
-  optionsFrom: (_rows, ctx) => ctx.artifact.kinds.map(k => ({ value: k, label: kindLabel(k) })),
-  test: (i, sel) => sel.includes(i.kind),
-});
-registerFilterAxis({
   id: "tier", label: "Priority", widget: "chips", quick: true,
   appliesTo: (rows) => rows.length > 0,
   optionsFrom: () => TIERS.map(t => ({ value: t, label: t })),
