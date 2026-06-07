@@ -83,11 +83,17 @@ input::placeholder { color:var(--muted); } select { appearance:none; cursor:poin
 /* ── Domain rail (#domainRail — left sidebar; vertical Findings/Work groups) ── */
 .domains { display:flex; flex-direction:column; gap:2px; padding:16px 12px;
            border-right:1px solid var(--line); }
-.domains button { width:100%; text-align:left; background:none; border:1px solid transparent;
+.domains button { width:100%; display:flex; align-items:center; gap:8px; white-space:nowrap;
+                  text-align:left; background:none; border:1px solid transparent;
                   color:var(--muted); padding:8px 10px; border-radius:8px;
                   font:600 13px var(--sans); transition:color .15s, background .15s, border-color .15s; }
 .domains button:hover { color:var(--fg); }
 .domains button.active { color:var(--fg); background:var(--carbon); border-color:var(--line); }
+.domains button.upcoming { opacity:.6; }   /* roadmap artifact — not live yet */
+/* small right-aligned "soon" tag on roadmap artifacts (mirrors the toolbar provider badge) */
+.rail-soon { margin-left:auto; flex:none; font:600 9.5px/1 var(--mono); letter-spacing:.06em;
+             text-transform:uppercase; color:var(--muted); border:1px solid var(--line);
+             border-radius:999px; padding:3px 7px; }
 
 /* ── View switch (#viewswitch nav — wraps the unified .toolbar) ──── */
 /* Horizontal padding aligns the toolbar with the appbar/rail; the toolbar
