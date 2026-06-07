@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { classifyAuthor, withBotPolicy } from "../../src/runtime/shell/author-policy";
+import { classifyAuthor, withBotPolicy } from "../../src/runtime/core/author-policy";
 import type { Actor } from "../../src/runtime/dataset/shared";
 import type { TriageItem } from "../../src/runtime/dataset/item";
 

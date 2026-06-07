@@ -14,7 +14,7 @@ import { renderFacetBar, applyFacets, emptyFacetState, type FacetState } from ".
 import { CredStore } from "./cred-store";
 import { ScopeStore } from "./scope-store";
 import { PolicyStore } from "./policy-store";
-import { withBotPolicy } from "./author-policy";
+import { withBotPolicy } from "../core/author-policy";
 import { healthOf, scopeSummary } from "./health";
 import { mountSettings } from "./settings";
 import { providerIcon } from "./provider-icons";
