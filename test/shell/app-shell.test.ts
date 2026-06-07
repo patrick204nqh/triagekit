@@ -30,8 +30,8 @@ describe("mountShell artifact navigation", () => {
     expect(document.querySelector("#appbar .brand .wordmark")?.textContent).toBe("Acme Triage");
     const rail = [...document.querySelectorAll<HTMLElement>("#domainRail button")];
     expect(rail.map(b => b.textContent?.replace(/\s*upcoming$/, "").trim()))
-      .toEqual(expect.arrayContaining(["Vulnerabilities", "Misconfigurations", "Tasks"]));
-    const vuln = rail.find(b => b.textContent?.startsWith("Vulnerabilities"))!;
+      .toEqual(expect.arrayContaining(["Dependencies", "Misconfigurations", "Tasks"]));
+    const vuln = rail.find(b => b.textContent?.startsWith("Dependencies"))!;
     expect(vuln.className).toContain("active");          // live artifact leads
     expect(document.querySelector("#root")?.textContent).toMatch(/connect a token/i);  // empty scope/cred
   });
@@ -45,16 +45,14 @@ describe("mountShell artifact navigation", () => {
     expect(document.querySelector("#appbar .icon-btn[aria-label='Toggle theme']")?.getAttribute("title")).toMatch(/^Theme:/);
   });
 
-  it("shows List + Insights tabs and a provider facet for the live artifact", () => {
+  it("shows List + Insights tabs in the toolbar for the live artifact", () => {
     bootstrap(config);
-    const tabs = [...document.querySelectorAll<HTMLElement>("#viewswitch button:not(.prov-chip)")];
+    // Toolbar mounts in #viewswitch; view modes are .tb-view buttons.
+    const tabs = [...document.querySelectorAll<HTMLElement>("#viewswitch .tb-view")];
     expect(tabs.map(t => t.textContent)).toEqual(expect.arrayContaining(["List", "Insights"]));
-    const facet = document.querySelector("#viewswitch .facet .prov-chip");
-    expect(facet?.textContent).toContain("github");
-    expect(facet?.className).toContain("on");            // live provider selected by default
   });
 
-  it("renders the list inside a shell-owned FacetBar + body, and a facet change does not refetch", async () => {
+  it("renders the list in a render-only body with the toolbar driving facets, and a facet change does not refetch", async () => {
     // A ready source with a satisfied cred + scope reaches the rendered-rows path.
     sessionStorage.setItem("triagekit.cred.github", "tok");
     localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: [] }));
@@ -64,16 +62,17 @@ describe("mountShell artifact navigation", () => {
       bootstrap(config);
       await flush();
 
-      // (a) the list view renders the bar above a render-only body.
-      expect(document.querySelector("#root .facet-bar")).toBeTruthy();
+      // (a) the toolbar (Filter/Sort) lives in the nav; #root is a render-only body.
+      expect(document.querySelector("#viewswitch .toolbar")).toBeTruthy();
       const body = document.querySelector<HTMLElement>("#root .surface-body");
       expect(body).toBeTruthy();
+      expect(document.querySelector("#root .facet-bar")).toBeNull();   // retired from the surface
       expect(document.querySelector("#root .surface-body table.alerts, #root .surface-body .empty")).toBeTruthy();
       expect(fetchSpy).toHaveBeenCalledTimes(1);
 
-      // (b) a facet change re-renders the body without refetching.
-      const sortSel = document.querySelector<HTMLSelectElement>("#root .facet-sort")!;
-      sortSel.value = "recent"; sortSel.dispatchEvent(new Event("change"));
+      // (b) a facet change (sort) via the toolbar re-renders the body without refetching.
+      const sortBtn = document.querySelector<HTMLElement>("#viewswitch [data-sort='recent']")!;
+      sortBtn.click();
       expect(document.querySelector("#root .surface-body")).toBeTruthy();
       expect(fetchSpy).toHaveBeenCalledTimes(1);   // no refetch
     } finally {

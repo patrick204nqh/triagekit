@@ -5,7 +5,7 @@ import { dirname, resolve } from "node:path";
 import { loadConfig } from "../config/load.js";
 import type { TriageConfigT } from "../config/schema.js";
 import { configPlugin } from "../vite/config-plugin.js";
-import { buildCspMeta, SOURCE_CONNECT_SRC } from "../vite/csp-plugin.js";
+import { buildCspMeta, SOURCE_CONNECT_SRC, SOURCE_IMG_SRC } from "../vite/csp-plugin.js";
 
 // Generic build: no scope baked in. The user supplies scope + token at runtime,
 // so the artifact is safe to share/commit publicly.
@@ -38,7 +38,8 @@ export async function runBuild(configPath: string, opts: BuildOptions = {}) {
   // Inject a strict, hash-based CSP computed over the final inlined HTML. connect-src
   // origins come from the configured provider (mirrors the adapter's connectSrc).
   const connectSrc = SOURCE_CONNECT_SRC[config.source] ?? [];
-  const withCsp = buildCspMeta(readFileSync(outFile, "utf8"), connectSrc);
+  const imgSrc = SOURCE_IMG_SRC[config.source] ?? [];
+  const withCsp = buildCspMeta(readFileSync(outFile, "utf8"), connectSrc, imgSrc);
   writeFileSync(outFile, withCsp);
 
   if (opts.generic) {

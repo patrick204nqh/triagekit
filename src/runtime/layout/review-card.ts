@@ -7,6 +7,7 @@ import {
   type Sla, tierBadgeHtml, slaTagHtml, actorChipHtml, labelChipHtml,
   checkIndicatorHtml, relationStripHtml,
 } from "./atoms";
+import { renderMarkdown } from "./markdown";
 
 export interface ReviewCardOpts {
   sla?: Sla;
@@ -25,8 +26,12 @@ const ACTION_LABEL: Record<Exclude<ActionId, "open">, string> = {
   merge: "Merge", comment: "Comment", label: "Label", assign: "Assign", close: "Close",
 };
 
-function snippet(body: string): string {
-  return esc(body.replace(/\s+/g, " ").trim().slice(0, 160));
+const STATE_LABEL: Record<string, string> = { open: "Open", merged: "Merged", closed: "Closed", draft: "Draft" };
+function stateBadgeHtml(item: ReviewItem): string {
+  const s = item.details.state;
+  const prov = item.source;
+  return `<span class="rc-state rc-state-${s}">${STATE_LABEL[s] ?? s}</span>`
+    + `<span class="rc-prov">${esc(prov)} · #${item.details.number}</span>`;
 }
 
 function selfHref(item: ReviewItem): string {
@@ -104,21 +109,22 @@ export function reviewCardHtml(
 
   const sla = opts.sla ? slaTagHtml(opts.sla) : "";
   const head =
-    `<div class="rc-head">${tierBadgeHtml(item.tier)}${sla}` +
-    `<span class="rc-title">${esc(item.title)}</span>` +
-    `<span class="rc-num">#${d.number}</span>` +
-    `${relationStripHtml(d.relations, d.permalinks)}</div>`;
+    `<div class="rc-head">${tierBadgeHtml(item.tier)}${sla}${stateBadgeHtml(item)}` +
+    `${relationStripHtml(d.relations, d.permalinks)}</div>` +
+    `<div class="rc-title-row"><span class="rc-title">${esc(item.title)}</span></div>`;
+
+  const byline =
+    `<div class="rc-byline">${actorChipHtml(d.author, "author")}${checksHtml(item)}</div>`;
 
   const meta =
-    `<div class="rc-meta">${actorChipHtml(d.author, "author")}` +
+    `<div class="rc-meta">` +
     `${d.assignees.map(a => actorChipHtml(a, "assignee")).join("")}` +
     `${d.reviewers.map(r => actorChipHtml(r, "review")).join("")}` +
-    `${checksHtml(item)}` +
     `<span class="rc-comments">\u{1F4AC} ${d.comments}</span>` +
     `${d.labels.map(labelChipHtml).join("")}</div>`;
 
   return `<div class="review-card" data-kind="${esc(item.kind)}" data-state="${d.state}">` +
-    `${head}<div class="rc-body">${snippet(d.body)}</div>${meta}` +
+    `${head}${byline}<div class="rc-body">${renderMarkdown(d.body)}</div>${meta}` +
     `<div class="rc-actions">${actionBarHtml(item, st)}</div></div>`;
 }
 

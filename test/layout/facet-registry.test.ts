@@ -22,10 +22,10 @@ describe("facet-registry built-ins", () => {
   ];
   const rctx: AxisCtx = { artifact: reviewArtifact };
 
-  it("registers provider/scope/kind/tier/author axes and priority/recent sorts", () => {
+  it("registers provider/scope/tier/author axes and priority/recent sorts (kind is now a tab, not a filter)", () => {
     expect(getFilterAxis("provider")).toBeDefined();
     expect(getFilterAxis("scope")).toBeDefined();
-    expect(getFilterAxis("kind")).toBeDefined();
+    expect(getFilterAxis("kind")).toBeUndefined();
     expect(getFilterAxis("tier")).toBeDefined();
     expect(getFilterAxis("author")).toBeDefined();
     expect(getSortKey("priority")).toBeDefined();
@@ -38,13 +38,6 @@ describe("facet-registry built-ins", () => {
     expect(scope.optionsFrom(rows, rctx).map(o => o.value)).toEqual(["acme/api", "acme/web"]);
     expect(scope.test(rows[0], ["acme/web"])).toBe(true);
     expect(scope.test(rows[0], ["acme/api"])).toBe(false);
-  });
-
-  it("kind applies only when the artifact bundles >=2 kinds", () => {
-    const kind = getFilterAxis("kind")!;
-    expect(kind.appliesTo(rows, rctx)).toBe(true);
-    expect(kind.appliesTo(rows, { artifact: { id: "t", label: "Tasks", group: "work", kinds: ["work-item"] } })).toBe(false);
-    expect(kind.test(rows[1], ["issue"])).toBe(true);
   });
 
   it("author applies only when all rows carry author.kind", () => {
@@ -83,7 +76,7 @@ describe("facet-registry built-ins", () => {
   });
 
   it("listFilterAxes/listSortKeys include the built-ins", () => {
-    expect(listFilterAxes().map(a => a.id)).toEqual(expect.arrayContaining(["provider", "scope", "kind", "tier", "author"]));
+    expect(listFilterAxes().map(a => a.id)).toEqual(expect.arrayContaining(["provider", "scope", "tier", "author"]));
     expect(listSortKeys().map(s => s.id)).toEqual(expect.arrayContaining(["priority", "recent"]));
   });
 
@@ -100,5 +93,15 @@ describe("facet-registry built-ins", () => {
     expect(labels!.optionsFrom(withLabels, rctx).map(o => o.value)).toEqual(["bug", "security"]);
     expect(labels!.test(withLabels[0], ["security"])).toBe(true);
     expect(labels!.test(withLabels[1], ["security"])).toBe(false);
+  });
+});
+
+describe("filter axes", () => {
+  it("no longer registers a 'kind' axis (kind is a tab now)", () => {
+    expect(getFilterAxis("kind")).toBeUndefined();
+  });
+  it("still registers provider and tier", () => {
+    expect(getFilterAxis("provider")).toBeDefined();
+    expect(getFilterAxis("tier")).toBeDefined();
   });
 });

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
 import { reviewCardHtml } from "../../src/runtime/layout/review-card";
 import type { ReviewItem } from "../../src/runtime/dataset/kinds/review";

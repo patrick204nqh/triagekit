@@ -29,7 +29,8 @@ describe("DOM view adapter", () => {
     });
     const vm: ViewModel = { scored: [row("a", 9)], shown: [row("a", 9)], errors: [], stats: { byProvider: { github: 1 }, byKind: { issue: 1 } } };
     view.render(vm);
-    expect(host.querySelector(".facet-host")).not.toBeNull();
+    expect(host.querySelector(".surface-body")).not.toBeNull();
+    expect(host.querySelector(".facet-host")).toBeNull();   // facet bar retired; toolbar owns facets now
     expect(host.textContent).toContain("a");
   });
 });

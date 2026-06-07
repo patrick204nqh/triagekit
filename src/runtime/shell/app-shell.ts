@@ -9,6 +9,7 @@ import { renderTableSkeleton, esc, type ScoredItem } from "../layout/triage-tabl
 import { renderInsights } from "../layout/insights";
 import { applicableTabs, getTab } from "../layout/tab-registry";
 import { emptyFacetState, type FacetState } from "../layout/facet-bar";
+import { renderToolbar, type ToolbarProps } from "../layout/toolbar";
 import { CredStore } from "./cred-store";
 import { ScopeStore } from "./scope-store";
 import { PolicyStore } from "./policy-store";
@@ -40,6 +41,26 @@ const GEAR = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke
 // "Auto" theme = follow the OS; its icon is a monitor, distinct from sun/moon.
 const AUTO = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>`;
 const REFRESH = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>`;
+
+export interface ToolbarPropsInput {
+  artifact: Artifact; rows: ScoredItem[]; facets: FacetState;
+  hasInsights: boolean; activeView: string;
+  sources: { id: string; provider: string; status: string }[];
+  selected: Set<string>;
+  extraTabs: { id: string; label: string }[];
+}
+
+// Pure assembly of the toolbar's view-mode/provider/facet props from the shell's
+// state, extracted so it's testable without mounting the whole shell.
+export function toolbarPropsFromShell(i: ToolbarPropsInput): Omit<ToolbarProps, "onFacetChange" | "onViewChange" | "onProviderToggle"> {
+  const viewModes = [{ id: "list", label: "List" }];
+  if (i.hasInsights) viewModes.push({ id: "insights", label: "Insights" });
+  for (const t of i.extraTabs) viewModes.push({ id: t.id, label: t.label });
+  const providers = i.sources.map(s => ({
+    id: s.id, label: s.provider, on: i.selected.has(s.id), live: s.status === "ready",
+  }));
+  return { artifact: i.artifact, rows: i.rows, facets: i.facets, viewModes, activeView: i.activeView, providers };
+}
 
 export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   const creds = new CredStore();
@@ -88,7 +109,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       // both reflect the current artifact/credential at render time and go stale if
       // captured at construction (active is reassigned when the user switches artifacts).
       const token = creds.get(providerOf(usableSources()[0]))!;  // usableSources filter guarantees a credential
-      env.createDomView(root, { artifact: active, onFacetChange, facets: () => facetState, token, scoreExplain }).render(vm);
+      env.createDomView(root, { artifact: active, token, scoreExplain }).render(vm);
     },
   };
 
@@ -207,34 +228,24 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
 
   function buildNav() {
     nav.innerHTML = "";
-    if (!liveSourcesFor(active).length) return;   // upcoming artifact: no tabs/facet
-    const tab = (id: string, label: string) => {
-      const b = document.createElement("button");
-      b.textContent = label;
-      if (id === view) b.className = "active";
-      b.addEventListener("click", () => { view = id; buildNav(); render(); });
-      nav.appendChild(b);
-    };
-    tab("list", "List");
-    if (hasInsights) tab("insights", "Insights");
-    for (const t of applicableTabs(active, lastRows)) tab(t.id, t.label);
-
-    // Provider facet — toggle which similar providers feed this artifact's queue
-    // (github + gitlab both pour into Vulnerabilities). Forward-compatible today.
-    const facet = document.createElement("div"); facet.className = "facet";
-    for (const s of sourcesFor(active)) {
-      const live = s.status === "ready";
-      const chip = document.createElement("button");
-      chip.className = "prov-chip" + (live && selected.has(s.id) ? " on" : "") + (live ? "" : " soon");
-      chip.innerHTML = `${providerIcon(providerOf(s), 14)}<span>${esc(providerOf(s))}</span>${live ? "" : `<span class="chip">upcoming</span>`}`;
-      if (live) chip.addEventListener("click", () => {
-        selected.has(s.id) ? selected.delete(s.id) : selected.add(s.id);
-        lastRows = []; facetState = emptyFacetState(); lastFetchedAt = null; buildNav(); refreshBar(); render();
-      });
-      else chip.disabled = true;
-      facet.appendChild(chip);
-    }
-    nav.appendChild(facet);
+    if (!liveSourcesFor(active).length) return;   // upcoming artifact: no toolbar
+    const base = toolbarPropsFromShell({
+      artifact: active, rows: lastRows, facets: facetState,
+      hasInsights, activeView: view,
+      sources: sourcesFor(active).map(s => ({ id: s.id, provider: providerOf(s), status: s.status })),
+      selected,
+      extraTabs: applicableTabs(active, lastRows).map(t => ({ id: t.id, label: t.label })),
+    });
+    renderToolbar(nav, {
+      ...base,
+      onFacetChange,
+      onViewChange: (id) => { view = id; buildNav(); render(); },
+      onProviderToggle: (id) => {
+        selected.has(id) ? selected.delete(id) : selected.add(id);
+        lastRows = []; facetState = emptyFacetState(); lastFetchedAt = null;
+        buildNav(); refreshBar(); render();
+      },
+    });
   }
 
   // silent: an auto-refresh tick re-fetches in place (no skeleton flash).
