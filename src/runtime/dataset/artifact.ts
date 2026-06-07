@@ -1,4 +1,5 @@
 import type { Kind } from "./item";
+import { listDomains, type Class } from "./taxonomy";
 
 // What you triage. This is the top-level navigation axis: KIND is a tab, and a
 // PROVIDER is a facet within a tab (github + gitlab both feed "Pull requests"),
@@ -8,7 +9,6 @@ import type { Kind } from "./item";
 // Artifacts cluster into two classes the rail groups under a heading:
 //   - finding: machine-detected risk, scored by severity × exploitability × fix
 //   - work:    human items, scored by priority × age × blocker
-import { listDomains, domainOf, type Class } from "./taxonomy";
 
 export type ArtifactGroup = Class;             // "finding" | "work"
 export interface Artifact { id: string; label: string; group: ArtifactGroup; kinds: Kind[]; }
@@ -21,7 +21,9 @@ export const GROUP_ORDER: ArtifactGroup[] = ["finding", "work"];
 const KIND_LABEL: Partial<Record<Kind, string>> = {
   "dependency-vuln": "Dependencies", "code-scanning": "Code scanning", "secret-scanning": "Secrets",
   "cloud-misconfig": "Cloud misconfig", "edge-misconfig": "Edge misconfig", "waf-finding": "WAF",
-  "runtime-threat": "Threats", "change-request": "Pull requests", issue: "Issues",
+  "runtime-threat": "Threats",
+  "change-request": "Pull requests",  // dominant-provider noun; per-provider override is ProviderManifest.labels (not yet wired)
+  issue: "Issues",
   email: "Inbox", task: "Tasks",
 };
 

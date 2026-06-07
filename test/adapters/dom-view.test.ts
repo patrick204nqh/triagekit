@@ -22,7 +22,7 @@ describe("DOM view adapter", () => {
   it("renders shown rows from a ViewModel into the host", () => {
     const host = document.getElementById("root")!;
     const view = createDomView(host, {
-      artifact: { id: "issues", label: "Issues", group: "work", kinds: ["issue"] } as any,
+      artifact: { id: "issue", label: "Issues", group: "work", kinds: ["issue"] } as any,
       onFacetChange: () => {},
       token: "t",
       scoreExplain: () => null,

@@ -40,11 +40,8 @@ describe("artifacts", () => {
 });
 
 describe("artifacts are one-kind-per-tab", () => {
-  it("every active artifact maps to exactly one kind", () => {
-    const multi = listArtifacts().filter(a => a.kinds.length !== 1);
-    // Only upcoming-only bundles may keep multiple kinds; the shipped ones must be single.
-    const shippedMulti = multi.filter(a => ["vulnerabilities", "review"].includes(a.id));
-    expect(shippedMulti).toEqual([]);
+  it("every artifact maps to exactly one kind", () => {
+    expect(listArtifacts().filter(a => a.kinds.length !== 1)).toEqual([]);
   });
 
   it("dependency-vuln and code-scanning are separate tabs", () => {
