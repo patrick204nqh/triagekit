@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { bootstrap } from "../../src/runtime/bootstrap";
+import { toolbarPropsFromShell } from "../../src/runtime/shell/app-shell";
+import type { ScoredItem } from "../../src/runtime/layout/triage-table";
 import { githubSource } from "../../src/runtime/ingest/github/dependency-vuln-source";
 import { registerProvider } from "../../src/runtime/core/provider-registry";
 import { github } from "../../src/runtime/providers/github";
@@ -114,6 +116,36 @@ describe("mountShell artifact navigation", () => {
     } finally {
       registerProvider(github);   // restore the real manifest — registry is a module singleton
     }
+  });
+
+  it("keeps a sticky activeRepo 'on' across artifact switches that have it, and coerces to All where it's absent", () => {
+    // The shell's activeRepo STATE is sticky (never reset on artifact switch); only the
+    // DISPLAYED active tab is coerced by toolbarPropsFromShell. Exercise that coercion
+    // deterministically over two row-sets — far more reliable than the DOM path, which
+    // only produces repo tabs given credentialed/scoped sources unavailable in this env.
+    const row = (location: string): ScoredItem => ({
+      id: location + ":1", source: "github", kind: "issue", title: "t",
+      location, signal: 1, createdAt: "2026-01-01T00:00:00Z", url: "", details: {},
+      score: 1, tier: "P3",
+    });
+    const base = {
+      artifact: { id: "issue", label: "Issues", group: "work" as const, kinds: ["issue" as const] },
+      facets: { axes: {}, sort: "priority" }, hasInsights: false, activeView: "list",
+      sources: [{ id: "github", provider: "github", status: "ready" }],
+      activeProvider: "github", extraTabs: [],
+    };
+
+    // Sticky activeRepo "acme/api" is present in artifact A → stays selected.
+    const onA = toolbarPropsFromShell({ ...base, rows: [row("acme/api"), row("acme/web")], activeRepo: "acme/api" });
+    expect(onA.activeRepo).toBe("acme/api");
+
+    // Same sticky state, an artifact B WITHOUT it → display falls back to All ("").
+    const onB = toolbarPropsFromShell({ ...base, rows: [row("acme/cli"), row("acme/docs")], activeRepo: "acme/api" });
+    expect(onB.activeRepo).toBe("");
+
+    // Returning to an artifact that has it again → selection restored (state never reset).
+    const backToA = toolbarPropsFromShell({ ...base, rows: [row("acme/api"), row("acme/web")], activeRepo: "acme/api" });
+    expect(backToA.activeRepo).toBe("acme/api");
   });
 
   it("switching to an upcoming artifact renders its roadmap placeholder", () => {

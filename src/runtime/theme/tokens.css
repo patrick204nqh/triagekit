@@ -463,8 +463,21 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 .pop-sort { text-align: left; background: none; border: 0; color: var(--fg); padding: 4px 6px; border-radius: 6px; cursor: pointer; }
 .pop-sort.on, .pop-sort:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
 
-/* Row 2: Filter + Sort controls, right-aligned directly above the table */
-.fbar { display: flex; justify-content: flex-end; gap: 8px; padding: 8px 0; }
+/* Row 2: repo tabs (left) + Filter/Sort controls (right) directly above the table */
+.fbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; }
+.fbar-controls { display: flex; gap: 8px; }
+
+/* Repo display-scope tabs — left of the Filter/Sort controls (row 2) */
+.repo-tabs { display: inline-flex; align-items: center; gap: 2px; }
+.repo-tab { padding: 4px 10px; border-radius: 6px; background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 13px; }
+.repo-tab.on { color: var(--fg); background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.repo-tab:hover { color: var(--fg); }
+.repo-ctl { position: relative; display: inline-flex; }
+.repo-more { padding: 4px 8px; border-radius: 6px; background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 13px; }
+.repo-more:hover { color: var(--fg); }
+.repo-pop { position: absolute; top: calc(100% + 4px); left: 0; z-index: 20; display: flex; flex-direction: column; gap: 2px; padding: 4px; background: var(--slate); border: 1px solid var(--line); border-radius: 8px; min-width: 160px; }
+.repo-pop[hidden] { display: none; }
+.repo-pop .repo-tab { text-align: left; }
 
 /* Provider scope selector — top-right of row 1 (.tb-right) */
 .prov-seg { display: inline-flex; align-items: center; gap: 2px; background: var(--slate); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }

@@ -28,7 +28,9 @@ export function derive(input: DeriveInput): Derived {
       return { ...it, score, tier } as ScoredItem;
     })
     .sort((a, b) => b.score - a.score);
-  const scoped = input.repo ? scored.filter(r => r.location === input.repo) : scored;
+  const scoped = input.repo && scored.some(r => r.location === input.repo)
+    ? scored.filter(r => r.location === input.repo)
+    : scored;
   const shown = applyFilters(scoped, input.facets);
   return { scored, shown };
 }

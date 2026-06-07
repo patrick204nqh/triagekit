@@ -70,4 +70,13 @@ describe("derive", () => {
     const out = derive({ items, activeKinds: ["issue"], botLogins: [], score, repo: "", facets: emptyListState() });
     expect(out.shown.map(r => r.id)).toEqual(["a", "b"]);
   });
+
+  it("repo scope absent from the set shows all (auto-fallback, not empty)", () => {
+    const items: TriageItem[] = [
+      { id: "a", source: "github", kind: "issue", title: "a", location: "acme/api", signal: 90, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
+      { id: "b", source: "github", kind: "issue", title: "b", location: "acme/web", signal: 80, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
+    ];
+    const out = derive({ items, activeKinds: ["issue"], botLogins: [], score, repo: "acme/NOPE", facets: emptyListState() });
+    expect(out.shown.map(r => r.id)).toEqual(["a", "b"]); // falls back to all, not empty
+  });
 });
