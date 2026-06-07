@@ -1,18 +1,18 @@
 import type { ScoredItem } from "./triage-table";
-import { getFilterAxis, getSortKey } from "./facet-registry";
+import { getFilterAxis, getSortKey } from "./axis-registry";
 
-// Axis-keyed filter state. WHERE (provider) stays a fetch-level facet in app-shell.
-export interface FacetState {
+// Pure filter+sort state for a triage list. WHERE (provider) is handled outside
+// this type — at the fetch level in app-shell — not as an axis here.
+export interface ListState {
   axes: Record<string, string[]>;   // axisId -> selected values (empty/absent = all)
   sort: string;                     // sort-key id
 }
 
-export function emptyFacetState(): FacetState {
+export function emptyListState(): ListState {
   return { axes: {}, sort: "priority" };
 }
 
-// Pure: filter by every axis that has a non-empty selection, then sort.
-export function applyFacets(rows: ScoredItem[], state: FacetState): ScoredItem[] {
+export function applyFilters(rows: ScoredItem[], state: ListState): ScoredItem[] {
   let out = rows;
   for (const [axisId, vals] of Object.entries(state.axes)) {
     if (!vals || !vals.length) continue;

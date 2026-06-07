@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { actionsFor, isBot, mergeable, reasonNotMergeable } from "../../src/runtime/dataset/kinds/review";
-import type { ReviewDetails } from "../../src/runtime/dataset/kinds/review";
+import { actionsFor, isBot, mergeable, reasonNotMergeable } from "../../src/runtime/dataset/shapes/review";
+import type { ReviewDetails } from "../../src/runtime/dataset/shapes/review";
 
 const base: ReviewDetails = {
   number: 1, state: "open", body: "x",

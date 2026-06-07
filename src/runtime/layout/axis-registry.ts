@@ -44,23 +44,9 @@ function labelsOf(i: ScoredItem): string[] {
   return Array.isArray(ls) ? ls.map(l => l.name) : [];
 }
 
-const KIND_LABEL: Record<string, string> = {
-  "change-request": "Pull requests", "issue": "Issues",
-  "dependency-vuln": "Dependency", "code-scanning": "Code scanning",
-  "secret-scanning": "Secrets", "cloud-misconfig": "Cloud",
-  "edge-misconfig": "Edge", "waf-finding": "WAF", "task": "Tasks",
-};
-const kindLabel = (k: string): string => KIND_LABEL[k] ?? k;
 const TIERS: Tier[] = ["P0", "P1", "P2", "P3"];
 
 // ── Built-in axes ──
-registerFilterAxis({
-  id: "provider", label: "Provider", widget: "chips", quick: true,
-  // Universal facet: only meaningful once >=2 providers are loaded together.
-  appliesTo: (rows) => new Set(rows.map(r => r.source)).size >= 2,
-  optionsFrom: (rows) => [...new Set(rows.map(r => r.source))].sort().map(v => ({ value: v, label: v })),
-  test: (i, sel) => sel.includes(i.source),
-});
 registerFilterAxis({
   id: "scope", label: "Repo", widget: "select", quick: true,
   appliesTo: (rows) => rows.length > 0,

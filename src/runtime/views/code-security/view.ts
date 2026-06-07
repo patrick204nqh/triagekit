@@ -21,7 +21,7 @@ export const dependencyVulnRenderer: KindRenderer = {
 registerView({ id: "code-security", kind: DEPENDENCY_VULN });
 
 import { registerChart } from "../../layout/charts/registry";
-import { type FilterAxis, registerSortKey } from "../../layout/facet-registry";
+import { type FilterAxis, registerSortKey } from "../../layout/axis-registry";
 
 const dv = (r: import("../../layout/triage-table").ScoredItem) => r.details as DependencyVulnDetails;
 

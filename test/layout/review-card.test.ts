@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
 import { reviewCardHtml } from "../../src/runtime/layout/review-card";
-import type { ReviewItem } from "../../src/runtime/dataset/kinds/review";
+import type { ReviewItem } from "../../src/runtime/dataset/shapes/review";
 
 function pr(over: Partial<ReviewItem["details"]> = {}): ReviewItem {
   return {

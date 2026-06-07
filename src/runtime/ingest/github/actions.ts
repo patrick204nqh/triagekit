@@ -1,5 +1,5 @@
 import { GH_HEADERS } from "./paginate";
-import type { ReviewActions, ReviewItem, MergeMethod } from "../../dataset/kinds/review";
+import type { ReviewActions, ReviewItem, MergeMethod } from "../../dataset/shapes/review";
 
 function target(item: ReviewItem): { owner: string; name: string; number: number } {
   const [owner, name] = item.location.split("/");

@@ -1,5 +1,5 @@
 import type { TriageItem } from "../dataset/item";
-import { type ReviewDetails, CHANGE_REQUEST } from "../dataset/kinds/review";
+import { type ReviewDetails, CHANGE_REQUEST } from "../dataset/shapes/review";
 
 // Heuristic review priority, from list-available data only (CI is loaded lazily on
 // expand and never feeds the score). Transparent, tunable constants:

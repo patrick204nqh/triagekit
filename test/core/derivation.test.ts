@@ -1,7 +1,7 @@
 // test/core/derivation.test.ts
 import { describe, it, expect } from "vitest";
 import { derive } from "../../src/runtime/core/derivation";
-import { emptyFacetState } from "../../src/runtime/layout/facet-bar";
+import { emptyListState } from "../../src/runtime/layout/filter-state";
 import type { TriageItem } from "../../src/runtime/dataset/item";
 import type { ScoreContext } from "../../src/runtime/scoring/configured";
 
@@ -25,7 +25,7 @@ describe("derive", () => {
       activeKinds: ["issue"],
       botLogins: [],
       score,
-      facets: emptyFacetState(),
+      facets: emptyListState(),
     });
     expect(out.scored.map(r => r.id)).toEqual(["b", "a"]); // change-request filtered out, sorted desc
     expect(out.scored.map(r => r.score)).toEqual([90, 10]);
@@ -38,7 +38,7 @@ describe("derive", () => {
       activeKinds: ["issue"],
       botLogins: [],
       score,
-      facets: emptyFacetState(),
+      facets: emptyListState(),
     });
     expect(out.shown.map(r => r.id)).toEqual(out.scored.map(r => r.id));
   });
@@ -46,7 +46,7 @@ describe("derive", () => {
   it("is pure: does not mutate the input items array", () => {
     const items = [item("a", 10), item("b", 90)];
     const before = items.map(i => i.id);
-    derive({ items, activeKinds: ["issue"], botLogins: [], score, facets: emptyFacetState() });
+    derive({ items, activeKinds: ["issue"], botLogins: [], score, facets: emptyListState() });
     expect(items.map(i => i.id)).toEqual(before);
   });
 });
