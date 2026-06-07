@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
 import { renderTriageList, type ScoredItem } from "../../src/runtime/layout/triage-table";
-import "../../src/runtime/views/security-alerts/view";
+import "../../src/runtime/views/security-alerts/view";   // registers the severity sort key + view + charts
+import { registerKinds } from "../../src/runtime/core/register-kinds";
+import { dependencyVulnKind } from "../../src/runtime/kinds/dependency-vuln";
+registerKinds([dependencyVulnKind]);   // registers vuln renderer + severity/fix axes
 import { getFilterAxis, getSortKey } from "../../src/runtime/layout/facet-registry";
 
 it("registers vuln severity + fix-available axes and a severity sort", () => {

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { mountShell } from "../../src/runtime/shell/app-shell";
+import { bootstrap } from "../../src/runtime/bootstrap";
 import { githubSource } from "../../src/runtime/ingest/github/adapter";
 import type { TriageConfigT } from "../../src/config/schema";
 
@@ -25,7 +25,7 @@ describe("mountShell artifact navigation", () => {
   beforeEach(() => { sessionStorage.clear(); localStorage.clear(); scaffold(); });
 
   it("renders the brand and an artifact rail with the live artifact active", () => {
-    mountShell(config);
+    bootstrap(config);
     expect(document.querySelector("#appbar .brand .brand-mark")).toBeTruthy();
     expect(document.querySelector("#appbar .brand .wordmark")?.textContent).toBe("Acme Triage");
     const rail = [...document.querySelectorAll<HTMLElement>("#domainRail button")];
@@ -37,7 +37,7 @@ describe("mountShell artifact navigation", () => {
   });
 
   it("groups the rail into Findings and Work, with a refresh control and no Load button", () => {
-    mountShell(config);
+    bootstrap(config);
     const groups = [...document.querySelectorAll<HTMLElement>("#domainRail .rail-group-label")].map(g => g.textContent);
     expect(groups).toEqual(["Findings", "Work"]);
     expect(document.querySelector("#appbar .btn-primary")).toBeNull();               // Load retired
@@ -46,7 +46,7 @@ describe("mountShell artifact navigation", () => {
   });
 
   it("shows List + Insights tabs and a provider facet for the live artifact", () => {
-    mountShell(config);
+    bootstrap(config);
     const tabs = [...document.querySelectorAll<HTMLElement>("#viewswitch button:not(.prov-chip)")];
     expect(tabs.map(t => t.textContent)).toEqual(expect.arrayContaining(["List", "Insights"]));
     const facet = document.querySelector("#viewswitch .facet .prov-chip");
@@ -61,7 +61,7 @@ describe("mountShell artifact navigation", () => {
     const fetchSpy = vi.spyOn(githubSource, "fetch")
       .mockResolvedValue({ items: [], errors: [] });
     try {
-      mountShell(config);
+      bootstrap(config);
       await flush();
 
       // (a) the list view renders the bar above a render-only body.
@@ -82,7 +82,7 @@ describe("mountShell artifact navigation", () => {
   });
 
   it("switching to an upcoming artifact renders its roadmap placeholder", () => {
-    mountShell(config);
+    bootstrap(config);
     const rail = [...document.querySelectorAll<HTMLElement>("#domainRail button")];
     rail.find(b => b.textContent?.startsWith("Misconfigurations"))!.click();
     expect(document.querySelector("#root .upcoming")).toBeTruthy();
@@ -108,7 +108,7 @@ describe("mountShell artifact navigation", () => {
     } as any);
 
     try {
-      mountShell(config);
+      bootstrap(config);
       await flush();
 
       const tiers = [...document.querySelectorAll<HTMLElement>("#root .surface-body .tier")].map(t => t.textContent);
@@ -145,7 +145,7 @@ describe("mountShell artifact navigation", () => {
     } as any);
 
     try {
-      mountShell(config);
+      bootstrap(config);
       await flush();
 
       const tiers = [...document.querySelectorAll<HTMLElement>("#root .surface-body .tier")].map(t => t.textContent);

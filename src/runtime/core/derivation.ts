@@ -1,7 +1,7 @@
 // src/runtime/core/derivation.ts
 import type { Kind, TriageItem } from "../dataset/item";
 import { scoreAndTier, type ScoreContext } from "../scoring/configured";
-import { withBotPolicy } from "../shell/author-policy";
+import { withBotPolicy } from "./author-policy";
 import { applyFacets, type FacetState } from "../layout/facet-bar";
 import type { ScoredItem } from "../layout/triage-table";
 

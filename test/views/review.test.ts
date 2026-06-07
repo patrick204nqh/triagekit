@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
 import { renderTriageList, type ScoredItem } from "../../src/runtime/layout/triage-table";
-import "../../src/runtime/views/review/view";   // registers PR + issue kind renderers
+import { registerKinds } from "../../src/runtime/core/register-kinds";
+import { pullRequestKind } from "../../src/runtime/kinds/pull-request";
+import { issueKind } from "../../src/runtime/kinds/issue";
+registerKinds([pullRequestKind, issueKind]);   // registers PR + issue kind renderers + axes
 import { getFilterAxis } from "../../src/runtime/layout/facet-registry";
 
 it("registers review label + assignee axes", () => {

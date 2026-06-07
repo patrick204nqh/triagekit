@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import "../../src/runtime/scoring/dependency-vuln";   // side-effect: registers scorer + catalog + default model
+import { registerKinds } from "../../src/runtime/core/register-kinds";
+import { dependencyVulnKind } from "../../src/runtime/kinds/dependency-vuln";
+registerKinds([dependencyVulnKind]);   // registers scorer + catalog + default model
 import { defaultModelFor } from "../../src/runtime/scoring/default-model";
 import { validateModel } from "../../src/runtime/scoring/score-model";
 import { fieldsFor } from "../../src/runtime/scoring/field-catalog";

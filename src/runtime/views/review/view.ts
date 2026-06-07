@@ -1,12 +1,10 @@
-import { type ScoredItem, type KindRenderer, type DetailCtx, registerKindRenderer, esc } from "../../layout/triage-table";
+import { type ScoredItem, type KindRenderer, type DetailCtx, esc } from "../../layout/triage-table";
 import { mountReviewCard } from "../../layout/review-card";
 import type { ReviewItem, ReviewDetails } from "../../dataset/kinds/review";
 import { PULL_REQUEST, ISSUE } from "../../dataset/kinds/review";
 import { makeGithubActions } from "../../ingest/github/actions";
 import { enrichReview } from "../../ingest/github/review-source";   // also pins the source's registerSource() side-effect
-import "../../scoring/review";          // side-effect: register PR + issue scorers
-
-import { type FilterAxis, registerFilterAxis } from "../../layout/facet-registry";
+import { type FilterAxis } from "../../layout/facet-registry";
 
 const det = (r: ScoredItem) => r.details as ReviewDetails;
 const reviewColumns = [
@@ -29,9 +27,6 @@ function detail(host: HTMLElement, r: ScoredItem, ctx: DetailCtx): void {
 export const pullRequestRenderer: KindRenderer = { kind: PULL_REQUEST, columns: reviewColumns, detail };
 export const issueRenderer: KindRenderer = { kind: ISSUE, columns: reviewColumns, detail };
 
-registerKindRenderer(pullRequestRenderer);
-registerKindRenderer(issueRenderer);
-
 const isReview = (k: string) => k === PULL_REQUEST || k === ISSUE;
 export const labelAxis: FilterAxis = {
   id: "label", label: "Label", widget: "chips", quick: false,
@@ -47,5 +42,3 @@ export const assigneeAxis: FilterAxis = {
     .sort().map(l => ({ value: l, label: l })),
   test: (i, sel) => isReview(i.kind) && det(i).assignees.some(a => sel.includes(a.login)),
 };
-registerFilterAxis(labelAxis);
-registerFilterAxis(assigneeAxis);

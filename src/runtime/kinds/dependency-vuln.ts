@@ -4,8 +4,9 @@ import type { Scorer } from "../scoring/registry";
 import { dependencyVulnScore } from "../scoring/dependency-vuln";
 import { dependencyVulnRenderer, severityAxis, fixAvailableAxis } from "../views/security-alerts/view";
 
-// Fields + defaultModel lifted verbatim from scoring/dependency-vuln.ts (the live
-// registerFieldCatalog / registerDefaultModel calls remain there until Plan 3).
+// Fields + defaultModel live here in the manifest (the single source of truth).
+// scoring/dependency-vuln.ts is now a pure score function; registerKinds wires
+// these into the registries.
 export const dependencyVulnKind: KindManifest = {
   kind: "dependency-vuln",
   domain: "code-security",
