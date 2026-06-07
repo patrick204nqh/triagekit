@@ -22,7 +22,7 @@ const KIND_LABEL: Partial<Record<Kind, string>> = {
   "dependency-vuln": "Dependencies", "code-scanning": "Code scanning", "secret-scanning": "Secrets",
   "cloud-misconfig": "Cloud misconfig", "edge-misconfig": "Edge misconfig", "waf-finding": "WAF",
   "runtime-threat": "Threats",
-  "change-request": "Pull requests",  // dominant-provider noun; per-provider override is ProviderManifest.labels (not yet wired)
+  "change-request": "Pull requests",  // dominant-provider noun; per-provider override is ProviderManifest.labels (fallback when a provider declares no label)
   issue: "Issues",
   email: "Inbox", task: "Tasks",
 };

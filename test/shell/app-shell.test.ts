@@ -2,6 +2,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { bootstrap } from "../../src/runtime/bootstrap";
 import { githubSource } from "../../src/runtime/ingest/github/dependency-vuln-source";
+import { registerProvider } from "../../src/runtime/core/provider-registry";
+import { github } from "../../src/runtime/providers/github";
 import type { TriageConfigT } from "../../src/config/schema";
 
 const flush = () => new Promise<void>(r => setTimeout(r, 0));
@@ -77,6 +79,40 @@ describe("mountShell artifact navigation", () => {
       expect(fetchSpy).toHaveBeenCalledTimes(1);   // no refetch
     } finally {
       fetchSpy.mockRestore();
+    }
+  });
+
+  it("resolves the change-request rail label through the provider registry", async () => {
+    // bootstrap() registers the github provider (registerProvider(github)), so the
+    // change-request rail label resolves via provider-registry — GitHub's manifest
+    // declares "Pull requests"/"Issues" — rather than only the neutral KIND_LABEL fallback.
+    bootstrap(config);
+    await flush();
+    const rail = document.getElementById("domainRail")!;
+    const labels = [...rail.querySelectorAll("button")].map(b => b.textContent);
+    expect(labels).toContain("Pull requests");
+    expect(labels).toContain("Issues");
+  });
+
+  it("renders a provider's distinct change-request label, proving the registry path (not the KIND_LABEL fallback)", async () => {
+    // Distinguish the registry lookup from the neutral KIND_LABEL fallback ("Pull
+    // requests"): override github's manifest (same id) with a DISTINCT change-request
+    // label the fallback could never produce. If the rail shows "Merge requests" and
+    // NOT "Pull requests", navLabel() must have resolved it through provider-registry.
+    bootstrap(config);
+    await flush();
+    try {
+      registerProvider({ ...github, labels: { ...github.labels, "change-request": "Merge requests" } });
+      // buildRail() re-runs on any rail click, re-resolving every label via navLabel().
+      const rail = document.getElementById("domainRail")!;
+      (rail.querySelector("button") as HTMLButtonElement).click();   // re-render the rail with the override in effect
+      await flush();
+
+      const labels = [...rail.querySelectorAll("button")].map(b => b.textContent);
+      expect(labels).toContain("Merge requests");
+      expect(labels).not.toContain("Pull requests");   // fallback never produces this
+    } finally {
+      registerProvider(github);   // restore the real manifest — registry is a module singleton
     }
   });
 

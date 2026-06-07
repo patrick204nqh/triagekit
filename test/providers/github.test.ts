@@ -12,6 +12,7 @@ describe("github provider manifest", () => {
   it("declares provider-neutral kinds with display labels", () => {
     expect(github.kinds).toContain("change-request");
     expect(github.kinds).not.toContain("pull-request");
-    expect(github.labels?.["change-request"]).toBe("Pull request");
+    expect(github.labels?.["change-request"]).toBe("Pull requests");
+    expect(github.labels?.["issue"]).toBe("Issues");
   });
 });

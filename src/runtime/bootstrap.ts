@@ -7,6 +7,7 @@ import type { TriageConfigT } from "../config/schema";
 import type { Scorer } from "./scoring/registry";
 import type { Core } from "./core/core";
 import { registerKinds } from "./core/register-kinds";
+import { registerProvider } from "./core/provider-registry";
 import { createStore } from "./core/store";
 import { createCore } from "./core/core";
 import { createDomView } from "./adapters/dom-view";
@@ -15,12 +16,14 @@ import { dependencyVulnKind } from "./kinds/dependency-vuln";
 import { codeScanningKind } from "./kinds/code-scanning";
 import { changeRequestKind } from "./kinds/change-request";
 import { issueKind } from "./kinds/issue";
+import { github } from "./providers/github";
 import { mountShell } from "./shell/app-shell";
 import { installAvatarFallback } from "./layout/avatar-fallback";
 
 // The one wiring point: register kinds from manifests, build adapters + store, mount the shell as a driving adapter.
 export function bootstrap(config: TriageConfigT, scoreOverride?: Scorer): Core {
   installAvatarFallback();
+  registerProvider(github);
   registerKinds([dependencyVulnKind, codeScanningKind, changeRequestKind, issueKind]);
   const store = createStore();
   const timer = createTimer();
