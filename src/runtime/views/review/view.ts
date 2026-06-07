@@ -9,14 +9,14 @@ import "../../scoring/review";          // side-effect: register PR + issue scor
 import { type FilterAxis, registerFilterAxis } from "../../layout/facet-registry";
 
 const det = (r: ScoredItem) => r.details as ReviewDetails;
-export const reviewColumns = [
+const reviewColumns = [
   { header: "#", cell: (r: ScoredItem) => `#${det(r).number}` },
   { header: "Author", cell: (r: ScoredItem) => esc(det(r).author.login) },
 ];
 
 // Detail = the full, interactive ReviewCard mounted in the shared panel. CI loads
 // on mount (review-card fires onExpand when shown non-collapsed).
-export function detail(host: HTMLElement, r: ScoredItem, ctx: DetailCtx): void {
+function detail(host: HTMLElement, r: ScoredItem, ctx: DetailCtx): void {
   const item = r as unknown as ReviewItem;
   mountReviewCard(host, item, {
     actions: ctx.token ? makeGithubActions(ctx.token) : undefined,
