@@ -103,6 +103,17 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   let lastFetchedAt: number | null = null;
   let cancelRefresh: (() => void) | undefined;
 
+  // Signature of the toolbar's row-derived inputs (distinct repo locations + applicable
+  // extra-tab ids for the active artifact). dispatchView rebuilds the toolbar only when
+  // this changes, so post-fetch data surfaces new repo tabs without rebuilding (and
+  // closing open popovers) on every render. buildNav() refreshes it after each build.
+  // Deliberately omits repo counts: a silent refresh that only reorders the (unchanged)
+  // location set won't rebuild — tolerating cosmetic tab-order lag to keep popovers open.
+  const navRowSig = () =>
+    [...new Set(lastRows.map(r => r.location))].sort().join(",") +
+    "|" + applicableTabs(active, lastRows).map(t => t.id).sort().join(",");
+  let lastNavRowSig = "";
+
   // --- Apply URL state on load (artifact → provider → repo → view → sort/axes) ---
   // Runs before the first buildRail/buildNav/render and before any syncUrl(), so a
   // bookmarked / shared / reloaded URL is honored, not clobbered. Each field is
@@ -182,6 +193,11 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     render(vm) {
       lastRows = vm.scored;
       lastFetchedAt = Date.now(); updateSync();
+      // The toolbar's repo tabs and applicable extra tabs are derived from the rows,
+      // which are empty at the initial buildNav() and only arrive here post-fetch.
+      // Rebuild the toolbar when that row-derived set actually changes — but not on
+      // every paint, so a background refresh doesn't tear down an open filter popover.
+      if (navRowSig() !== lastNavRowSig) buildNav();
       if (view === "insights") { renderInsights(root, vm.scored, active.kinds); return; }
       if (view !== "list") { const t = getTab(view); if (t) { t.render(root, vm.scored); return; } }
       // createDomView is called per-render intentionally: artifact: active and token
@@ -302,6 +318,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   }
 
   function buildNav() {
+    lastNavRowSig = navRowSig();   // track the row-derived inputs this build reflects
     nav.innerHTML = "";
     if (!liveSourcesFor(active).length) return;   // upcoming artifact: no toolbar
     const base = toolbarPropsFromShell({
