@@ -138,6 +138,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       override: env.scoreOverride,
     }),
     facets: () => facetState,
+    repo: () => "", // TODO(RST-7): wire to activeRepo state
   });
 
   // ── Command bar: brand + merged status chip + sync stamp + refresh + theme ──
