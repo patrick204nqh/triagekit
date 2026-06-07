@@ -3,7 +3,7 @@ import {
   type ReviewItem, type ActionId, type MergeMethod,
   actionsFor, mergeable, reasonNotMergeable,
 } from "../dataset/kinds/review";
-import type { CardState } from "./review-card";
+import type { CardState } from "./review-card";   // type-only — erased at compile time, no runtime cycle
 
 const ACTION_LABEL: Record<Exclude<ActionId, "open">, string> = {
   merge: "Merge", comment: "Comment", label: "Label", assign: "Assign", close: "Close",
