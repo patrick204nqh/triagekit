@@ -1,6 +1,8 @@
 import type { ScoredItem } from "./triage-table";
 import { getFilterAxis, getSortKey } from "./facet-registry";
 
+// Pure filter+sort state for a triage list. WHERE (provider) is handled outside
+// this type — at the fetch level in app-shell — not as an axis here.
 export interface ListState {
   axes: Record<string, string[]>;   // axisId -> selected values (empty/absent = all)
   sort: string;                     // sort-key id
