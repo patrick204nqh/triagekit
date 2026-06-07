@@ -12,7 +12,7 @@ const rows: ScoredItem[] = [{
 
 function props(over: Partial<ToolbarProps> = {}): ToolbarProps {
   return {
-    artifact: { id: "pull-requests", label: "Pull requests", group: "work", kinds: ["change-request"] },
+    artifact: { id: "change-request", label: "Pull requests", group: "work", kinds: ["change-request"] },
     rows, facets: emptyFacetState(),
     viewModes: [{ id: "list", label: "List" }, { id: "insights", label: "Insights" }],
     activeView: "list",

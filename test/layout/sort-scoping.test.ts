@@ -9,7 +9,7 @@ import type { AxisCtx } from "../../src/runtime/layout/facet-registry";
 // leak onto every tab — and since two of them share the label "Severity", an
 // unscoped pair renders a confusing duplicate in the sort popover.
 const ctx = (kinds: string[]): AxisCtx =>
-  ({ artifact: { id: "x", label: "X", group: "findings", kinds } } as unknown as AxisCtx);
+  ({ artifact: { id: "x", label: "X", group: "finding", kinds } } as unknown as AxisCtx);
 
 describe("severity sort keys are scoped to their kind", () => {
   it("cs-severity applies only to the code-scanning tab", () => {

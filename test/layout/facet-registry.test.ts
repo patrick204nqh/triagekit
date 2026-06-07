@@ -6,7 +6,7 @@ import type { ScoredItem } from "../../src/runtime/layout/triage-table";
 import type { Artifact } from "../../src/runtime/dataset/artifact";
 
 const reviewArtifact: Artifact = { id: "review", label: "Review", group: "work", kinds: ["change-request", "issue"] };
-const vulnArtifact: Artifact = { id: "vulnerabilities", label: "Vulnerabilities", group: "findings", kinds: ["dependency-vuln", "code-scanning"] };
+const vulnArtifact: Artifact = { id: "vulnerabilities", label: "Vulnerabilities", group: "finding", kinds: ["dependency-vuln", "code-scanning"] };
 
 function row(over: Partial<ScoredItem> & { details?: unknown }): ScoredItem {
   return {
