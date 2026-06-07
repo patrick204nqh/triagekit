@@ -4,10 +4,11 @@ import { esc } from "./triage-table";
 import { type ListState } from "./filter-state";
 import { listFilterAxes, listSortKeys, type AxisCtx, type FilterAxis } from "./axis-registry";
 import { dismissible } from "../shell/dismissible";
-import { renderProviderSwitch } from "./provider-switch";
+import { renderProviderSwitch, type SwitchProvider } from "./provider-switch";
 
 export interface ToolbarViewMode { id: string; label: string; }
-export interface ToolbarProvider { id: string; label: string; on: boolean; live: boolean; }
+// The toolbar's provider rows ARE the provider-switch's inputs — one shape, one source of truth.
+export type ToolbarProvider = SwitchProvider;
 export interface ToolbarProps {
   artifact: Artifact;
   rows: ScoredItem[];

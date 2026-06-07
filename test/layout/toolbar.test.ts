@@ -72,4 +72,15 @@ describe("renderToolbar", () => {
     expect(onFacetChange).toHaveBeenCalledOnce();
     expect(onFacetChange.mock.calls[0][0].axes.tier).toEqual(["P0"]);
   });
+
+  it("mounts the provider-switch in row 1 and the filter/sort row below it", () => {
+    const host = document.createElement("div");
+    renderToolbar(host, props({
+      providers: [{ id: "github", label: "github", on: true, live: true },
+                  { id: "gitlab", label: "gitlab", on: false, live: false }],
+    }));
+    expect(host.querySelector("[data-provider-switch]")).toBeTruthy();
+    expect(host.querySelectorAll("[data-prov]").length).toBe(2);   // switch rendered into the slot
+    expect(host.querySelector(".fbar")).toBeTruthy();              // filter/sort live on their own row
+  });
 });
