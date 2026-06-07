@@ -2,7 +2,7 @@
 import type { KindManifest } from "../core/manifest";
 import type { Scorer } from "../scoring/registry";
 import { codeScanningScore } from "../scoring/code-scanning";
-import { codeScanningRenderer, severityAxis, toolAxis, stateAxis } from "../views/code-scanning/view";
+import { codeScanningRenderer, severityAxis, toolAxis, stateAxis } from "../views/code-security/code-scanning";
 
 // Fields + defaultModel live here in the manifest (the single source of truth).
 // scoring/code-scanning.ts is a pure score function; registerKinds wires

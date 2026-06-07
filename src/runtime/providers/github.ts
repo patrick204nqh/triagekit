@@ -1,6 +1,6 @@
 // src/runtime/providers/github.ts
 import type { ProviderManifest } from "../core/manifest";
-import { githubSource } from "../ingest/github/adapter";
+import { githubSource } from "../ingest/github/dependency-vuln-source";
 
 // Declarative provider metadata. NOTE: GitHub exposes MULTIPLE Sources today
 // (githubSource for dependency-vuln, githubReviewSource for change-request/issue),

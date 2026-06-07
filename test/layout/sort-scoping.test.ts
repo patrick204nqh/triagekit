@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 // Importing the views registers their sort keys as module side-effects.
-import "../../src/runtime/views/code-scanning/view";
-import "../../src/runtime/views/security-alerts/view";
+import "../../src/runtime/views/code-security/code-scanning";
+import "../../src/runtime/views/code-security/view";
 import { getSortKey } from "../../src/runtime/layout/facet-registry";
 import type { AxisCtx } from "../../src/runtime/layout/facet-registry";
 

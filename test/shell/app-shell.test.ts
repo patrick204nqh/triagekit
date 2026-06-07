@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { bootstrap } from "../../src/runtime/bootstrap";
-import { githubSource } from "../../src/runtime/ingest/github/adapter";
+import { githubSource } from "../../src/runtime/ingest/github/dependency-vuln-source";
 import type { TriageConfigT } from "../../src/config/schema";
 
 const flush = () => new Promise<void>(r => setTimeout(r, 0));
 
 const config: TriageConfigT = {
   source: "github",
-  views: ["security-alerts", "insights"],
+  views: ["code-security", "insights"],
   scope: {},
   branding: { title: "Acme Triage" },
 };

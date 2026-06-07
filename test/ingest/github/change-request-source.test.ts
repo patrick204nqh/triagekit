@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest";
-import { githubReviewSource, enrichReview, isBotLogin } from "../../../src/runtime/ingest/github/review-source";
+import { githubReviewSource, enrichReview, isBotLogin } from "../../../src/runtime/ingest/github/change-request-source";
 import type { ReviewDetails } from "../../../src/runtime/dataset/kinds/review";
 import type { TriageItem } from "../../../src/runtime/dataset/item";
 

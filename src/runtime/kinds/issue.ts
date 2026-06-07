@@ -3,7 +3,7 @@ import type { KindManifest } from "../core/manifest";
 import type { FieldDef } from "../scoring/field-catalog";
 import type { Scorer } from "../scoring/registry";
 import { reviewScore } from "../scoring/review";
-import { issueRenderer, labelAxis, assigneeAxis } from "../views/review/view";
+import { issueRenderer, labelAxis, assigneeAxis } from "../views/code-review/view";
 
 // Honest detail-level keys on ReviewDetails (dataset/kinds/review.ts) that the
 // scorer + filter axes actually read:

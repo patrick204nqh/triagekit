@@ -1,6 +1,6 @@
-import "./views/security-alerts/view";   // register view + ready source + charts + sort-key
-import "./views/review/view";            // register review surface + github-review source
-import "./views/code-scanning/view";    // register code-scanning view + source + charts
+import "./views/code-security/view";        // register dependency-vuln view + source + charts + sort-key
+import "./views/code-review/view";          // register review surface + github-review source
+import "./views/code-security/code-scanning"; // register code-scanning view + source + charts
 import "./ingest/upcoming";              // register roadmap sources
 import "./layout/due-soon";              // register the Due soon tab
 import type { TriageConfigT } from "../config/schema";

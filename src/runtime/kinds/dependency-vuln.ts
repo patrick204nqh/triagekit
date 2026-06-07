@@ -2,7 +2,7 @@
 import type { KindManifest } from "../core/manifest";
 import type { Scorer } from "../scoring/registry";
 import { dependencyVulnScore } from "../scoring/dependency-vuln";
-import { dependencyVulnRenderer, severityAxis, fixAvailableAxis } from "../views/security-alerts/view";
+import { dependencyVulnRenderer, severityAxis, fixAvailableAxis } from "../views/code-security/view";
 
 // Fields + defaultModel live here in the manifest (the single source of truth).
 // scoring/dependency-vuln.ts is now a pure score function; registerKinds wires

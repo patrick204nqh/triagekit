@@ -3,7 +3,7 @@ import type { KindManifest } from "../core/manifest";
 import type { FieldDef } from "../scoring/field-catalog";
 import type { Scorer } from "../scoring/registry";
 import { reviewScore } from "../scoring/review";
-import { changeRequestRenderer, labelAxis, assigneeAxis } from "../views/review/view";
+import { changeRequestRenderer, labelAxis, assigneeAxis } from "../views/code-review/view";
 import { reviewFields } from "./issue";
 
 // Change requests share the review fields and add `reviewers` — reviewScore nudges
