@@ -41,12 +41,14 @@ describe("scoring editor — live preview", () => {
 
   it("lists loaded rows re-ranked by the model (highest score first)", () => {
     const { host } = harness([item("low", 2), item("high", 9)]);
+    host.querySelector<HTMLButtonElement>("[data-customize]")!.click();
     const titles = [...host.querySelectorAll("[data-preview] .pv-title")].map(e => e.textContent);
     expect(titles).toEqual(["pkg-high", "pkg-low"]);
     expect(host.querySelector("[data-preview] .tier")).not.toBeNull();
   });
   it("shows an empty-state when no rows are loaded for the kind", () => {
     const { host } = harness([]);
+    host.querySelector<HTMLButtonElement>("[data-customize]")!.click();
     expect(host.querySelector("[data-preview]")!.textContent).toContain("No loaded");
   });
   it("shows a guard message instead of evaluating an invalid draft", () => {
@@ -56,6 +58,7 @@ describe("scoring editor — live preview", () => {
   });
   it("re-ranks during a slider drag without removing the slider", () => {
     const { host } = harness([item("a", 5), item("b", 5)]);
+    host.querySelector<HTMLButtonElement>("[data-customize]")!.click();
     const slider = host.querySelector<HTMLInputElement>('[data-weight="cvss"]')!;
     slider.value = "0.5"; slider.dispatchEvent(new Event("input"));
     expect(host.querySelector('[data-weight="cvss"]')).not.toBeNull();   // slider survived

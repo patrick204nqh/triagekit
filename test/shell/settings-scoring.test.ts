@@ -25,7 +25,7 @@ function setup() {
     policy, onChange: () => {},
   });
   api.open();
-  host.querySelector<HTMLButtonElement>('[data-tab="advanced"]')!.click();
+  host.querySelector<HTMLButtonElement>('[data-category="scoring"]')!.click();
   return { host, policy };
 }
 
@@ -39,11 +39,13 @@ describe("Settings → Scoring", () => {
 
   it("mounts the scoring editor in the Advanced pane", () => {
     const { host } = setup();
+    host.querySelector<HTMLButtonElement>("[data-scoring-editor] [data-customize]")!.click();
     expect(host.querySelector("[data-scoring-editor] [data-kind]")).not.toBeNull();
   });
 
   it("persists an edited model on Save and discards on Cancel", () => {
     const { host, policy } = setup();
+    host.querySelector<HTMLButtonElement>("[data-scoring-editor] [data-customize]")!.click();
     host.querySelector<HTMLButtonElement>('[data-scoring-editor] [data-mode="advanced"]')!.click();
     const ta = host.querySelector<HTMLTextAreaElement>("[data-scoring-editor] [data-formula]")!;
     ta.value = "cvss * 0.5"; ta.dispatchEvent(new Event("change"));
@@ -53,6 +55,7 @@ describe("Settings → Scoring", () => {
 
   it("blocks Save while the edited model is invalid", () => {
     const { host } = setup();
+    host.querySelector<HTMLButtonElement>("[data-scoring-editor] [data-customize]")!.click();
     host.querySelector<HTMLButtonElement>('[data-scoring-editor] [data-mode="advanced"]')!.click();
     const ta = host.querySelector<HTMLTextAreaElement>("[data-scoring-editor] [data-formula]")!;
     ta.value = "cvss * 0.5 + ghost"; ta.dispatchEvent(new Event("change"));

@@ -9,11 +9,20 @@ import { validateModel, type ScoreModel } from "../scoring/score-model";
 import { fieldsFor } from "../scoring/field-catalog";
 import type { Kind } from "../dataset/item";
 import { scopeSummary } from "./health";
-import { providerIcon } from "./provider-icons";
+import { providerIcon, categoryIcon } from "./provider-icons";
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from "./theme";
 import { getRefreshInterval, setRefreshInterval, REFRESH_OPTIONS } from "./refresh";
 import { dismissible } from "./dismissible";
 import type { ScoredItem } from "../layout/triage-table";
+
+// Single source of truth for the sidebar nav — id paired with its label. The id
+// drives data-category, the categoryIcon() lookup, and the per-category unsaved-dot.
+const CATEGORIES = [
+  ["connections", "Connections"],
+  ["scoring", "Scoring &amp; priority"],
+  ["filters", "Filters"],
+  ["general", "General"],
+] as const;
 
 function esc(s: unknown): string {
   return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
@@ -50,41 +59,49 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   host.innerHTML = `<div class="scrim" data-scrim></div>
     <aside class="sheet panel" data-panel aria-hidden="true">
       <div class="panel-head"><h3>Settings</h3>
-        <div class="set-tabs"><button data-tab="quick" class="on">Quick</button><button data-tab="advanced">Advanced</button></div>
         <button class="icon-btn" data-close aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
       <div class="panel-body">
-        <div data-pane="quick">
-          <section class="set-section"><label class="set-label">Appearance</label>
-            <div class="seg" data-theme-seg></div></section>
-          <section class="set-section"><label class="set-label">Auto-refresh</label>
-            <div class="seg" data-refresh-seg></div>
-            <span class="set-helper">Re-fetch on a timer. Snapshot only — there is no backend history to trend.</span></section>
-          <section class="set-section"><label class="set-label">Connections</label>
-            <input class="conn-filter" data-conn-filter type="text" placeholder="Filter integrations…" aria-label="Filter integrations"/>
-            <div class="conn-list" data-conns></div>
-            <span class="set-helper">One credential per provider — kept in this tab only (session), never persisted or embedded.</span></section>
-          <section class="set-section"><label class="set-label">Data</label>
-            <div class="data-actions">
-              <button class="btn-ghost" data-clear="creds">Clear credentials</button>
-              <button class="btn-ghost" data-clear="scope">Clear saved scope</button></div>
-            <span class="set-helper">Credentials live in this tab's session; scope is saved in this browser.</span></section>
-        </div>
-        <div data-pane="advanced" hidden>
-          <section class="set-section"><label class="set-label">Priority thresholds</label>
-            <p class="set-helper">Minimum score for each tier. Items below P2 are P3.</p>
-            <div class="tier-thresholds">
-              <label>P0 ≥ <input type="number" min="0" step="1" data-tier-input="p0"></label>
-              <label>P1 ≥ <input type="number" min="0" step="1" data-tier-input="p1"></label>
-              <label>P2 ≥ <input type="number" min="0" step="1" data-tier-input="p2"></label>
-            </div>
-            <span class="set-helper">Saved in this browser; re-tiers on Save.</span></section>
-          <section class="set-section"><label class="set-label">Scoring</label>
-            <p class="set-helper">Per-kind score model. Simple = weight sliders; Advanced = formula + signals. Saved in this browser.</p>
-            <div data-scoring-editor></div></section>
-          <section class="set-section"><label class="set-label">Bot accounts</label>
-            <p class="set-helper">Logins to treat as bots, in addition to provider-flagged bots. Affects the Author filter. Saved in this browser.</p>
-            <div class="bot-chips" data-bot-chips></div>
-            <input class="bot-add" data-bot-add type="text" placeholder="Add a login — Enter or comma" aria-label="Add bot login"></section>
+        <nav class="set-sidebar">${CATEGORIES.map(([id, label], i) =>
+          `<button class="cat${i === 0 ? " on" : ""}" data-category="${id}">${categoryIcon(id)}<span>${label}</span><span class="unsaved-dot" aria-hidden="true"></span></button>`).join("")}
+        </nav>
+        <div class="set-content">
+          <div class="cat-pane" data-cat-pane="connections">
+            <section class="set-section"><label class="set-label">Connections</label>
+              <input class="conn-filter" data-conn-filter type="text" placeholder="Filter integrations…" aria-label="Filter integrations"/>
+              <div class="conn-list" data-conns></div>
+              <span class="set-helper">One credential per provider — kept in this tab only (session), never persisted or embedded.</span></section>
+          </div>
+          <div class="cat-pane" data-cat-pane="scoring" hidden>
+            <section class="set-section"><label class="set-label">Default priority cutoffs</label>
+              <p class="set-helper">Minimum score for each tier, applied to any kind using built-in scoring (no custom model). Items below P2 are P3.</p>
+              <div class="tier-thresholds">
+                <label>P0 ≥ <input type="number" min="0" step="1" data-tier-input="p0"></label>
+                <label>P1 ≥ <input type="number" min="0" step="1" data-tier-input="p1"></label>
+                <label>P2 ≥ <input type="number" min="0" step="1" data-tier-input="p2"></label>
+              </div>
+              <span class="set-helper">Saved in this browser; re-tiers on Save.</span></section>
+            <section class="set-section"><label class="set-label">Scoring</label>
+              <p class="set-helper">Per-kind score model. Simple = weight sliders; Advanced = formula + signals. Saved in this browser.</p>
+              <div data-scoring-editor></div></section>
+          </div>
+          <div class="cat-pane" data-cat-pane="filters" hidden>
+            <section class="set-section"><label class="set-label">Bot accounts</label>
+              <p class="set-helper">Logins to treat as bots, in addition to provider-flagged bots. Affects the Author filter. Saved in this browser.</p>
+              <div class="bot-chips" data-bot-chips></div>
+              <input class="bot-add" data-bot-add type="text" placeholder="Add a login — Enter or comma" aria-label="Add bot login"></section>
+          </div>
+          <div class="cat-pane" data-cat-pane="general" hidden>
+            <section class="set-section"><label class="set-label">Appearance</label>
+              <div class="seg" data-theme-seg></div></section>
+            <section class="set-section"><label class="set-label">Auto-refresh</label>
+              <div class="seg" data-refresh-seg></div>
+              <span class="set-helper">Re-fetch on a timer. Snapshot only — there is no backend history to trend.</span></section>
+            <section class="set-section"><label class="set-label">Data</label>
+              <div class="data-actions">
+                <button class="btn-ghost" data-clear="creds">Clear credentials</button>
+                <button class="btn-ghost" data-clear="scope">Clear saved scope</button></div>
+              <span class="set-helper">Credentials live in this tab's session; scope is saved in this browser.</span></section>
+          </div>
         </div>
       </div>
       <div class="panel-foot"><button class="btn-ghost" data-cancel>Cancel</button><button class="btn-primary" data-save>Save</button></div>
@@ -140,7 +157,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     const cur = getBots();
     if (cur.includes(login)) return;
     draftBots = [...cur, login];
-    renderBots();
+    renderBots(); updateSaveGate();
   }
   function renderBots() {
     const wrap = host.querySelector<HTMLElement>("[data-bot-chips]");
@@ -148,20 +165,46 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     const bots = getBots();
     wrap.innerHTML = bots.length
       ? bots.map(b => `<span class="ms-chip"><span class="repo">${esc(b)}</span><button class="x" data-rm-bot="${esc(b)}" aria-label="Remove ${esc(b)}">×</button></span>`).join("")
-      : `<span class="muted">No bot logins yet.</span>`;
+      : `<span class="muted">No bots hidden — add a login to filter it out</span>`;
     wrap.querySelectorAll<HTMLElement>("[data-rm-bot]").forEach(btn =>
-      btn.addEventListener("click", () => { draftBots = getBots().filter(b => b !== btn.dataset.rmBot); renderBots(); }));
+      btn.addEventListener("click", () => { draftBots = getBots().filter(b => b !== btn.dataset.rmBot); renderBots(); updateSaveGate(); }));
   }
-  function renderAdvanced() {
+  // Inline mirror of the tier "strictly decrease" rule for the GLOBAL cutoffs
+  // (equivalent of scoring-editor's per-kind renderTierBands hint — that closure
+  // can't be imported here). Presentational only: flags offending [data-tier-input]
+  // with aria-invalid and renders a [data-tier-invalid] hint; never blocks Save.
+  function updateGlobalTierValidity() {
+    const keys = ["p0", "p1", "p2"] as const;
+    const inputs = keys.map(k => host.querySelector<HTMLInputElement>(`[data-tier-input="${k}"]`));
+    if (inputs.some(inp => !inp)) return;
+    // Read the live input values; chain ends at the implicit P3 floor of 0.
+    const chain = [...inputs.map(inp => Number(inp!.value)), 0];
+    const offending = new Set<number>();
+    for (let i = 0; i < chain.length - 1; i++) {
+      if (chain[i] <= chain[i + 1]) { offending.add(i); offending.add(i + 1); }
+    }
+    keys.forEach((_, i) => inputs[i]!.setAttribute("aria-invalid", offending.has(i) ? "true" : "false"));
+    const pane = host.querySelector<HTMLElement>("[data-cat-pane='scoring']")!;
+    pane.querySelector("[data-tier-invalid]")?.remove();
+    if ([...offending].some(i => i < keys.length)) {
+      pane.querySelector(".tier-thresholds")!.insertAdjacentHTML("afterend",
+        `<span class="se-error" data-tier-invalid>Cutoffs must strictly decrease.</span>`);
+    }
+  }
+  function renderScoring() {
     editor.render();
-    renderBots();
     const t = getTierDraft();
     (["p0", "p1", "p2"] as const).forEach(k => {
       const inp = host.querySelector<HTMLInputElement>(`[data-tier-input="${k}"]`);
       if (!inp) return;
       inp.value = String(t[k]);
-      inp.oninput = () => { const v = Number(inp.value); if (!inp.value.trim() || !Number.isFinite(v) || v < 0) return; draftTiers = { ...getTierDraft(), [k]: v }; };
+      inp.oninput = () => {
+        const v = Number(inp.value);
+        if (inp.value.trim() && Number.isFinite(v) && v >= 0) draftTiers = { ...getTierDraft(), [k]: v };
+        updateGlobalTierValidity();
+      };
     });
+    updateGlobalTierValidity();
   }
 
   // ── Integrations catalog: Connected on top, Available below, filterable ──
@@ -343,13 +386,30 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     for (const [k, d] of draftModels) { if (d === "reset") policy.clearScoreModel(k); else policy.setScoreModel(k, d); }
     draftModels.clear();
     if (draftBots) { policy.setBotLogins(draftBots); draftBots = null; }
-    draftCred.clear(); draftScope.clear(); onChange(); setHidden(true);
+    draftCred.clear(); draftScope.clear(); updateSaveGate(); onChange(); setHidden(true);
   }
   host.querySelector("[data-close]")!.addEventListener("click", discard);
   host.querySelector("[data-cancel]")!.addEventListener("click", discard);
   const saveBtn = host.querySelector<HTMLButtonElement>("[data-save]")!;
   saveBtn.addEventListener("click", save);
-  const updateSaveGate = () => { saveBtn.disabled = !allDraftsValid(); };
+  // Per-category unsaved marker: pure derived view of the draft collections. The
+  // [data-unsaved] attribute is toggled on each category's dot span so CSS can pin
+  // it and tests can query it; absent when that category has no pending edits.
+  const updateUnsavedDots = () => {
+    const dirty: Record<string, boolean> = {
+      connections: draftCred.size > 0 || draftScope.size > 0,
+      scoring: draftModels.size > 0 || draftTiers !== null,
+      filters: draftBots !== null,
+      general: false,
+    };
+    host.querySelectorAll<HTMLElement>("[data-category]").forEach(b => {
+      const dot = b.querySelector<HTMLElement>(".unsaved-dot");
+      if (!dot) return;
+      if (dirty[b.dataset.category!]) dot.setAttribute("data-unsaved", "");
+      else dot.removeAttribute("data-unsaved");
+    });
+  };
+  const updateSaveGate = () => { saveBtn.disabled = !allDraftsValid(); updateUnsavedDots(); };
   const botAdd = host.querySelector<HTMLInputElement>("[data-bot-add]");
   botAdd?.addEventListener("keydown", (e) => {
     if (e.key !== "Enter" && e.key !== ",") return;
@@ -375,24 +435,30 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   host.querySelectorAll<HTMLElement>("[data-clear]").forEach(b =>
     b.addEventListener("click", () => clearData(b.dataset.clear as "creds" | "scope")));
 
-  host.querySelectorAll<HTMLElement>("[data-tab]").forEach(b =>
-    b.addEventListener("click", () => {
-      host.querySelectorAll<HTMLElement>("[data-tab]").forEach(x => x.classList.toggle("on", x === b));
-      const tab = b.dataset.tab!;
-      host.querySelector<HTMLElement>(`[data-pane="quick"]`)!.hidden = tab !== "quick";
-      host.querySelector<HTMLElement>(`[data-pane="advanced"]`)!.hidden = tab !== "advanced";
-      if (tab === "advanced") renderAdvanced();
-    }));
+  // Sidebar category switching. All four panes live in the DOM at once (only
+  // visibility toggles), so every render function still finds its controls by
+  // [data-…] regardless of which category is active. The scoring pane renders
+  // lazily on first reveal — preserving the old Advanced-tab behavior.
+  let scoringRendered = false;
+  function showCategory(id: string) {
+    host.querySelectorAll<HTMLElement>("[data-category]").forEach(b =>
+      b.classList.toggle("on", b.dataset.category === id));
+    host.querySelectorAll<HTMLElement>("[data-cat-pane]").forEach(p =>
+      p.hidden = p.dataset.catPane !== id);
+    if (id === "scoring" && !scoringRendered) { renderScoring(); scoringRendered = true; }
+  }
+  host.querySelectorAll<HTMLElement>("[data-category]").forEach(b =>
+    b.addEventListener("click", () => showCategory(b.dataset.category!)));
 
   return {
     open(provider?: string) {
       expanded = provider ?? (providerReps[0] ? providerOf(providerReps[0]) : null);
       draftCred.clear(); draftScope.clear(); draftTiers = null; draftModels.clear(); draftBots = null; updateSaveGate(); filter.value = "";
-      // reset to Quick tab
-      host.querySelectorAll<HTMLElement>("[data-tab]").forEach(b => b.classList.toggle("on", b.dataset.tab === "quick"));
-      host.querySelector<HTMLElement>(`[data-pane="quick"]`)!.hidden = false;
-      host.querySelector<HTMLElement>(`[data-pane="advanced"]`)!.hidden = true;
-      renderTheme(); renderRefresh(); renderConns(); setHidden(false);
+      scoringRendered = false;
+      showCategory("connections");
+      // Theme/refresh/bots live in other panes but their elements exist in the
+      // DOM regardless of visibility, so render them up front like before.
+      renderTheme(); renderRefresh(); renderBots(); renderConns(); setHidden(false);
     },
   };
 }

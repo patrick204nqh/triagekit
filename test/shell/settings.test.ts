@@ -199,8 +199,8 @@ describe("mountSettings", () => {
     const host = document.getElementById("h3")!;
     const s = mountSettings(host, { sources: [github], creds, scopes, policy, onChange: () => {} });
     s.open("github");
-    // switch to Advanced
-    host.querySelector<HTMLElement>("[data-tab='advanced']")!.click();
+    // switch to Scoring & priority
+    host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
     const p0 = host.querySelector<HTMLInputElement>("[data-tier-input='p0']")!;
     p0.value = "-5"; p0.dispatchEvent(new Event("input"));
     host.querySelector<HTMLElement>("[data-save]")!.click();
@@ -214,15 +214,15 @@ describe("mountSettings", () => {
     const host = document.getElementById("h2")!;
     const s = mountSettings(host, { sources: [github], creds, scopes, policy, onChange: () => {} });
     s.open("github");
-    // switch to Advanced
-    host.querySelector<HTMLElement>("[data-tab='advanced']")!.click();
+    // switch to Scoring & priority
+    host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
     const p0 = host.querySelector<HTMLInputElement>("[data-tier-input='p0']")!;
     p0.value = ""; p0.dispatchEvent(new Event("input"));
     host.querySelector<HTMLElement>("[data-save]")!.click();
     expect(new PolicyStore().getTiers().p0).toBe(130);
   });
 
-  it("Advanced tab edits tier thresholds and persists on save", () => {
+  it("Scoring pane edits tier thresholds and persists on save", () => {
     localStorage.clear(); sessionStorage.clear();
     document.body.innerHTML = `<div id="h"></div>`;
     const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
@@ -230,14 +230,128 @@ describe("mountSettings", () => {
     const host = document.getElementById("h")!;
     const s = mountSettings(host, { sources: [github], creds, scopes, policy, onChange: () => { changed++; } });
     s.open("github");
-    // switch to Advanced
-    host.querySelector<HTMLElement>("[data-tab='advanced']")!.click();
+    // switch to Scoring & priority
+    host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
     const p0 = host.querySelector<HTMLInputElement>("[data-tier-input='p0']")!;
     expect(p0.value).toBe("130");
     p0.value = "150"; p0.dispatchEvent(new Event("input"));
     host.querySelector<HTMLElement>("[data-save]")!.click();
     expect(new PolicyStore().getTiers().p0).toBe(150);
     expect(changed).toBeGreaterThan(0);
+  });
+
+  it("labels the global cutoffs as the built-in scoring default", () => {
+    localStorage.clear(); sessionStorage.clear();
+    document.body.innerHTML = `<div id="hbid"></div>`;
+    const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
+    const host = document.getElementById("hbid")!;
+    const s = mountSettings(host, { sources: [github], creds, scopes, policy, onChange: () => {} });
+    s.open("github");
+    host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
+    expect(host.querySelector<HTMLElement>("[data-cat-pane='scoring']")!.textContent).toContain("built-in scoring");
+  });
+
+  it("flags non-decreasing global cutoffs inline (presentational only)", () => {
+    localStorage.clear(); sessionStorage.clear();
+    document.body.innerHTML = `<div id="hgv"></div>`;
+    const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
+    const host = document.getElementById("hgv")!;
+    const s = mountSettings(host, { sources: [github], creds, scopes, policy, onChange: () => {} });
+    s.open("github");
+    host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
+    const pane = host.querySelector<HTMLElement>("[data-cat-pane='scoring']")!;
+    const p0 = host.querySelector<HTMLInputElement>("[data-tier-input='p0']")!;
+    const p1 = host.querySelector<HTMLInputElement>("[data-tier-input='p1']")!;
+    // p0 below p1 → non-decreasing ordering
+    p1.value = "60"; p1.dispatchEvent(new Event("input"));
+    p0.value = "50"; p0.dispatchEvent(new Event("input"));
+    expect(pane.querySelector("[data-tier-invalid]")).toBeTruthy();
+    expect(p0.getAttribute("aria-invalid")).toBe("true");
+    // does not block Save / persist semantics
+    expect(host.querySelector<HTMLButtonElement>("[data-save]")!.disabled).toBe(false);
+  });
+
+  it("clears the inline flag when global cutoffs strictly decrease", () => {
+    localStorage.clear(); sessionStorage.clear();
+    document.body.innerHTML = `<div id="hgv2"></div>`;
+    const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
+    const host = document.getElementById("hgv2")!;
+    const s = mountSettings(host, { sources: [github], creds, scopes, policy, onChange: () => {} });
+    s.open("github");
+    host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
+    const pane = host.querySelector<HTMLElement>("[data-cat-pane='scoring']")!;
+    const p0 = host.querySelector<HTMLInputElement>("[data-tier-input='p0']")!;
+    const p1 = host.querySelector<HTMLInputElement>("[data-tier-input='p1']")!;
+    const p2 = host.querySelector<HTMLInputElement>("[data-tier-input='p2']")!;
+    p2.value = "10"; p2.dispatchEvent(new Event("input"));
+    p1.value = "50"; p1.dispatchEvent(new Event("input"));
+    p0.value = "100"; p0.dispatchEvent(new Event("input"));
+    expect(pane.querySelector("[data-tier-invalid]")).toBeNull();
+    expect(p0.getAttribute("aria-invalid")).toBe("false");
+  });
+
+  it("offers four sidebar categories", () => {
+    const { host, s } = mount();
+    s.open("github");
+    const cats = [...host.querySelectorAll("[data-category]")].map(c => (c as HTMLElement).dataset.category);
+    expect(cats).toEqual(["connections", "scoring", "filters", "general"]);
+  });
+
+  it("defaults to the Connections category on open", () => {
+    const { host, s } = mount();
+    s.open("github");
+    expect(host.querySelector("[data-category='connections']")!.classList.contains("on")).toBe(true);
+    expect(host.querySelector<HTMLElement>("[data-cat-pane='connections']")!.hidden).toBe(false);
+    for (const id of ["scoring", "filters", "general"]) {
+      expect(host.querySelector<HTMLElement>(`[data-cat-pane='${id}']`)!.hidden).toBe(true);
+    }
+  });
+
+  it("switches to the Scoring pane on click, hiding the others", () => {
+    const { host, s } = mount();
+    s.open("github");
+    host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
+    expect(host.querySelector("[data-category='scoring']")!.classList.contains("on")).toBe(true);
+    expect(host.querySelector("[data-category='connections']")!.classList.contains("on")).toBe(false);
+    expect(host.querySelector<HTMLElement>("[data-cat-pane='scoring']")!.hidden).toBe(false);
+    expect(host.querySelector<HTMLElement>("[data-cat-pane='connections']")!.hidden).toBe(true);
+  });
+
+  it("open('github') defaults to connections and expands the provider", () => {
+    const { host, s } = mount();
+    s.open("github");
+    expect(host.querySelector("[data-category='connections']")!.classList.contains("on")).toBe(true);
+    expect(host.querySelector("[data-cat-pane='connections'] [data-cred]")).toBeTruthy();
+  });
+
+  it("marks only the edited category with an unsaved dot, cleared on Cancel", () => {
+    const { host, s } = mount();
+    s.open("github");
+    // navigate to Filters and stage a bot add
+    host.querySelector<HTMLElement>("[data-category='filters']")!.click();
+    const botAdd = host.querySelector<HTMLInputElement>("[data-bot-add]")!;
+    botAdd.value = "renovate";
+    botAdd.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+
+    expect(host.querySelector("[data-category='filters'] [data-unsaved]")).toBeTruthy();
+    expect(host.querySelector("[data-category='connections'] [data-unsaved]")).toBeNull();
+    expect(host.querySelector("[data-category='scoring'] [data-unsaved]")).toBeNull();
+    expect(host.querySelector("[data-category='general'] [data-unsaved]")).toBeNull();
+
+    host.querySelector<HTMLElement>("[data-cancel]")!.click();
+    expect(host.querySelector("[data-unsaved]")).toBeNull();
+  });
+
+  it("clears the unsaved dot after Save", () => {
+    const { host, s } = mount();
+    s.open("github");
+    host.querySelector<HTMLElement>("[data-category='filters']")!.click();
+    const botAdd = host.querySelector<HTMLInputElement>("[data-bot-add]")!;
+    botAdd.value = "dependabot";
+    botAdd.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    expect(host.querySelector("[data-category='filters'] [data-unsaved]")).toBeTruthy();
+    host.querySelector<HTMLElement>("[data-save]")!.click();
+    expect(host.querySelector("[data-unsaved]")).toBeNull();
   });
 
   it("Escape closes the sheet without saving", () => {

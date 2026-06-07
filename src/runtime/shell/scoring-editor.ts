@@ -29,22 +29,42 @@ export function mountScoringEditor(host: HTMLElement, opts: ScoringEditorOpts) {
   const stage = (m: ScoreModel) => { opts.setDraft(activeKind!, m); opts.onChange?.(); };
   // Stage + full re-render (for structural changes).
   const commit = (m: ScoreModel) => { stage(m); render(); };
+  // The kind <select> options (shared by the Default and Custom branches).
+  const kindSelect = () =>
+    kinds.map(k => `<option value="${esc(k)}" ${k === activeKind ? "selected" : ""}>${esc(k)}</option>`).join("");
 
   function render(): void {
     if (!activeKind) {
       host.innerHTML = `<p class="muted">No configurable scoring models are available.</p>`;
       return;
     }
+    // Default state: no saved model and no real draft. Show an explainer + Customize fork.
+    if (opts.getDraft(activeKind) === null) {
+      host.innerHTML = `<div class="scoring-editor" data-scoring-state="default">
+        <div class="se-head">
+          <select data-kind aria-label="Kind">${kindSelect()}</select>
+          <span class="se-badge" data-scoring-badge>Default</span>
+        </div>
+        <p class="se-explainer muted">This kind uses TriageKit's built-in scoring and default cutoffs. Customize to edit the formula, signal weights, and tier bands for this kind.</p>
+        <button class="btn-ghost" data-customize>Customize scoring</button>
+      </div>`;
+      host.querySelector<HTMLButtonElement>("[data-customize]")?.addEventListener("click", () => {
+        commit(defaultModelFor(activeKind!)!);
+      });
+      wireHead();
+      return;
+    }
+
     const model = modelOf(activeKind);
     const names = Object.keys(model.signals);
     const weights = formulaToWeights(model.formula, names);
     const simpleAvailable = weights !== null;
     if (mode === "simple" && !simpleAvailable) mode = "advanced";
 
-    const kindOpts = kinds.map(k => `<option value="${esc(k)}" ${k === activeKind ? "selected" : ""}>${esc(k)}</option>`).join("");
-    host.innerHTML = `<div class="scoring-editor">
+    host.innerHTML = `<div class="scoring-editor" data-scoring-state="custom">
       <div class="se-head">
-        <select data-kind aria-label="Kind">${kindOpts}</select>
+        <select data-kind aria-label="Kind">${kindSelect()}</select>
+        <span class="se-badge" data-scoring-badge>Custom</span>
         <div class="seg se-mode">
           <button data-mode="simple" class="${mode === "simple" ? "on" : ""}" ${simpleAvailable ? "" : "disabled"}>Simple</button>
           <button data-mode="advanced" class="${mode === "advanced" ? "on" : ""}">Advanced</button>
@@ -149,6 +169,26 @@ export function mountScoringEditor(host: HTMLElement, opts: ScoringEditorOpts) {
           { name: "P3", min: 0 },
         ],
       })));
+
+    // Inline mirror of the validator's "strictly decrease" rule: flag offending inputs.
+    // Ordered cutoffs P0 > P1 > P2 > P3(=0); an input offends if it is <= its lower neighbour.
+    const editable = ["P0", "P1", "P2"];
+    const chain = ["P0", "P1", "P2", "P3"];
+    const mins = [...editable.map(minOf), 0];   // P3 floor = 0
+    const offending = new Set<string>();
+    for (let i = 0; i < chain.length - 1; i++) {
+      if (mins[i] <= mins[i + 1]) { offending.add(chain[i]); offending.add(chain[i + 1]); }
+    }
+    // Tag each editable input; the offending one(s) carry aria-invalid="true".
+    editable.forEach(name => {
+      const el = tiersHost.querySelector<HTMLInputElement>(`[data-tier-min="${name}"]`)!;
+      el.setAttribute("aria-invalid", offending.has(name) ? "true" : "false");
+    });
+    if (offending.size) {
+      const thresholds = tiersHost.querySelector<HTMLElement>(".tier-thresholds")!;
+      thresholds.insertAdjacentHTML("afterend",
+        `<span class="set-error" data-tier-invalid>Cutoffs must strictly decrease.</span>`);
+    }
   }
 
   function renderPreview(model: ScoreModel): void {
