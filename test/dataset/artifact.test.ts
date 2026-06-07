@@ -9,7 +9,7 @@ describe("artifacts", () => {
 
   it("places each artifact in a known group", () => {
     const byId = Object.fromEntries(listArtifacts().map(a => [a.id, a.group]));
-    expect(byId.vulnerabilities).toBe("findings");
+    expect(byId.dependencies).toBe("findings");
     expect(byId.secrets).toBe("findings");
     expect(byId.misconfigurations).toBe("findings");
     expect(byId.tasks).toBe("work");
@@ -25,7 +25,7 @@ describe("artifacts", () => {
   });
 
   it("maps a kind back to its artifact", () => {
-    expect(artifactOf("dependency-vuln").id).toBe("vulnerabilities");
+    expect(artifactOf("dependency-vuln").id).toBe("dependencies");
     expect(artifactOf("work-item").group).toBe("work");
   });
 
@@ -38,15 +38,21 @@ describe("artifacts", () => {
   });
 });
 
-describe("review artifact", () => {
-  it("registers a Review artifact under the work group for PR + issue kinds", () => {
-    const review = listArtifacts().find(a => a.id === "review");
-    expect(review).toBeDefined();
-    expect(review!.group).toBe("work");
-    expect(review!.kinds).toEqual(["pull-request", "issue"]);
+describe("artifacts are one-kind-per-tab", () => {
+  it("every active artifact maps to exactly one kind", () => {
+    const multi = listArtifacts().filter(a => a.kinds.length !== 1);
+    // Only upcoming-only bundles may keep multiple kinds; the shipped ones must be single.
+    const shippedMulti = multi.filter(a => ["vulnerabilities", "review"].includes(a.id));
+    expect(shippedMulti).toEqual([]);
   });
-  it("maps pull-request and issue kinds to the review artifact", () => {
-    expect(artifactOf("pull-request").id).toBe("review");
-    expect(artifactOf("issue").id).toBe("review");
+
+  it("dependency-vuln and code-scanning are separate tabs", () => {
+    expect(artifactOf("dependency-vuln").id).toBe("dependencies");
+    expect(artifactOf("code-scanning").id).toBe("code-scanning");
+  });
+
+  it("pull-request and issue are separate tabs", () => {
+    expect(artifactOf("pull-request").id).toBe("pull-requests");
+    expect(artifactOf("issue").id).toBe("issues");
   });
 });

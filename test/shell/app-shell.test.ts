@@ -30,8 +30,8 @@ describe("mountShell artifact navigation", () => {
     expect(document.querySelector("#appbar .brand .wordmark")?.textContent).toBe("Acme Triage");
     const rail = [...document.querySelectorAll<HTMLElement>("#domainRail button")];
     expect(rail.map(b => b.textContent?.replace(/\s*upcoming$/, "").trim()))
-      .toEqual(expect.arrayContaining(["Vulnerabilities", "Misconfigurations", "Tasks"]));
-    const vuln = rail.find(b => b.textContent?.startsWith("Vulnerabilities"))!;
+      .toEqual(expect.arrayContaining(["Dependencies", "Misconfigurations", "Tasks"]));
+    const vuln = rail.find(b => b.textContent?.startsWith("Dependencies"))!;
     expect(vuln.className).toContain("active");          // live artifact leads
     expect(document.querySelector("#root")?.textContent).toMatch(/connect a token/i);  // empty scope/cred
   });
