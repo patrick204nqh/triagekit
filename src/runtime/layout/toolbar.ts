@@ -4,6 +4,7 @@ import { esc } from "./triage-table";
 import { type ListState } from "./filter-state";
 import { listFilterAxes, listSortKeys, type AxisCtx, type FilterAxis } from "./axis-registry";
 import { renderProviderSwitch, type SwitchProvider } from "./provider-switch";
+import { renderRepoTabs, type RepoOption } from "./repo-tabs";
 import { wirePopovers } from "./toolbar-popover";
 
 export interface ToolbarViewMode { id: string; label: string; }
@@ -16,9 +17,12 @@ export interface ToolbarProps {
   viewModes: ToolbarViewMode[];
   activeView: string;
   providers: ToolbarProvider[];
+  repos: RepoOption[];
+  activeRepo: string;
   onFacetChange: (next: ListState) => void;
   onViewChange: (id: string) => void;
   onProviderSelect: (id: string) => void;
+  onRepoSelect: (id: string) => void;
 }
 
 function activeFilterCount(state: ListState): number {
@@ -54,13 +58,19 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
     <div class="tb-right"><div data-provider-switch></div></div>
   </div>
   <div class="fbar">
-    <div class="tb-ctl"><button class="tb-btn" data-tb-filter aria-haspopup="true">≡ Filter${fcount ? ` · ${fcount}` : ""}</button>${filterPop}</div>
-    <div class="tb-ctl"><button class="tb-btn" data-tb-sort aria-haspopup="true">↕ ${esc(curSort)}</button>${sortPop}</div>
+    <div data-repo-tabs></div>
+    <div class="fbar-controls">
+      <div class="tb-ctl"><button class="tb-btn" data-tb-filter aria-haspopup="true">≡ Filter${fcount ? ` · ${fcount}` : ""}</button>${filterPop}</div>
+      <div class="tb-ctl"><button class="tb-btn" data-tb-sort aria-haspopup="true">↕ ${esc(curSort)}</button>${sortPop}</div>
+    </div>
   </div>`;
 
   // Mount the provider scope switch into its dedicated host slot
   const provHost = host.querySelector<HTMLElement>("[data-provider-switch]")!;
   renderProviderSwitch(provHost, { providers: p.providers, onSelect: p.onProviderSelect });
+
+  const repoHost = host.querySelector<HTMLElement>("[data-repo-tabs]")!;
+  renderRepoTabs(repoHost, { repos: p.repos, active: p.activeRepo, onSelect: p.onRepoSelect });
 
   // View tabs
   host.querySelectorAll<HTMLElement>(".tb-view").forEach(b =>

@@ -22,9 +22,6 @@ describe("applyFilters (registry-driven)", () => {
   it("defaults to all, priority sort", () => {
     expect(applyFilters(rows, emptyListState()).map(r => r.id)).toEqual(["a", "b", "c"]);
   });
-  it("filters by scope axis", () => {
-    expect(applyFilters(rows, withAxes({ scope: ["acme/web"] })).map(r => r.id)).toEqual(["a", "c"]);
-  });
   it("filters by multi-value tier axis", () => {
     expect(applyFilters(rows, withAxes({ tier: ["P0", "P2"] })).map(r => r.id)).toEqual(["a", "b"]);
   });
@@ -39,11 +36,11 @@ describe("applyFilters (registry-driven)", () => {
     expect(applyFilters(rs, withAxes({ labels: ["security"] })).map(r => r.id)).toEqual(["a"]);
   });
   it("empty axis value array = no filter", () => {
-    expect(applyFilters(rows, withAxes({ scope: [] })).map(r => r.id)).toEqual(["a", "b", "c"]);
+    expect(applyFilters(rows, withAxes({ tier: [] })).map(r => r.id)).toEqual(["a", "b", "c"]);
   });
   it("combines axes (AND)", () => {
-    // scope=acme/web -> [a, c]; tier=P3 -> [c]; intersection -> [c]
-    expect(applyFilters(rows, withAxes({ scope: ["acme/web"], tier: ["P3"] })).map(r => r.id)).toEqual(["c"]);
+    // tier=P2,P3 -> [b, c]; author=human -> [a, c]; intersection -> [c]
+    expect(applyFilters(rows, withAxes({ tier: ["P2", "P3"], author: ["human"] })).map(r => r.id)).toEqual(["c"]);
   });
   it("recent sort", () => {
     expect(applyFilters(rows, withAxes({}, "recent")).map(r => r.id)).toEqual(["b", "c", "a"]);

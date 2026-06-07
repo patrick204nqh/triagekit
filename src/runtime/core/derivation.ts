@@ -10,6 +10,7 @@ export interface DeriveInput {
   activeKinds: readonly Kind[];
   botLogins: string[];
   score: ScoreContext;
+  repo: string;            // "" = all repos
   facets: ListState;
 }
 export interface Derived {
@@ -27,6 +28,9 @@ export function derive(input: DeriveInput): Derived {
       return { ...it, score, tier } as ScoredItem;
     })
     .sort((a, b) => b.score - a.score);
-  const shown = applyFilters(scored, input.facets);
+  const scoped = input.repo && scored.some(r => r.location === input.repo)
+    ? scored.filter(r => r.location === input.repo)
+    : scored;
+  const shown = applyFilters(scoped, input.facets);
   return { scored, shown };
 }

@@ -22,9 +22,9 @@ describe("axis-registry built-ins", () => {
   ];
   const rctx: AxisCtx = { artifact: reviewArtifact };
 
-  it("registers scope/tier/author axes and priority/recent sorts (kind is now a tab; provider is now a scope, not a filter)", () => {
+  it("registers tier/author axes and priority/recent sorts (kind is now a tab; provider and repo are now scopes, not filters)", () => {
     expect(getFilterAxis("provider")).toBeUndefined();
-    expect(getFilterAxis("scope")).toBeDefined();
+    expect(getFilterAxis("scope")).toBeUndefined();
     expect(getFilterAxis("kind")).toBeUndefined();
     expect(getFilterAxis("tier")).toBeDefined();
     expect(getFilterAxis("author")).toBeDefined();
@@ -32,12 +32,8 @@ describe("axis-registry built-ins", () => {
     expect(getSortKey("recent")).toBeDefined();
   });
 
-  it("scope is always applicable and lists distinct locations", () => {
-    const scope = getFilterAxis("scope")!;
-    expect(scope.appliesTo(rows, rctx)).toBe(true);
-    expect(scope.optionsFrom(rows, rctx).map(o => o.value)).toEqual(["acme/api", "acme/web"]);
-    expect(scope.test(rows[0], ["acme/web"])).toBe(true);
-    expect(scope.test(rows[0], ["acme/api"])).toBe(false);
+  it("does not register a scope filter axis (repo is a display scope, not a filter)", () => {
+    expect(getFilterAxis("scope")).toBeUndefined();
   });
 
   it("author applies only when all rows carry author.kind", () => {
@@ -63,7 +59,7 @@ describe("axis-registry built-ins", () => {
   });
 
   it("listFilterAxes/listSortKeys include the built-ins", () => {
-    expect(listFilterAxes().map(a => a.id)).toEqual(expect.arrayContaining(["scope", "tier", "author"]));
+    expect(listFilterAxes().map(a => a.id)).toEqual(expect.arrayContaining(["tier", "author"]));
     expect(listSortKeys().map(s => s.id)).toEqual(expect.arrayContaining(["priority", "recent"]));
   });
 

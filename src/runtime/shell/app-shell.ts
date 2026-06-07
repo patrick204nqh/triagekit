@@ -48,19 +48,30 @@ export interface ToolbarPropsInput {
   hasInsights: boolean; activeView: string;
   sources: { id: string; provider: string; status: string }[];
   activeProvider: string;
+  activeRepo: string;
   extraTabs: { id: string; label: string }[];
 }
 
 // Pure assembly of the toolbar's view-mode / provider-scope / facet props from the
 // shell's state, extracted so it's testable without mounting the whole shell.
-export function toolbarPropsFromShell(i: ToolbarPropsInput): Omit<ToolbarProps, "onFacetChange" | "onViewChange" | "onProviderSelect"> {
+export function toolbarPropsFromShell(i: ToolbarPropsInput): Omit<ToolbarProps, "onFacetChange" | "onViewChange" | "onProviderSelect" | "onRepoSelect"> {
   const viewModes = [{ id: "list", label: "List" }];
   if (i.hasInsights) viewModes.push({ id: "insights", label: "Insights" });
   for (const t of i.extraTabs) viewModes.push({ id: t.id, label: t.label });
   const providers = i.sources.map(s => ({
     id: s.id, label: s.provider, on: s.id === i.activeProvider, live: s.status === "ready",
   }));
-  return { artifact: i.artifact, rows: i.rows, facets: i.facets, viewModes, activeView: i.activeView, providers };
+  // Repo display-scope options: distinct row locations, count-descending.
+  const counts = new Map<string, number>();
+  for (const r of i.rows) counts.set(r.location, (counts.get(r.location) ?? 0) + 1);
+  const repos = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([location]) => ({ id: location, label: location }));
+  // Coerce the displayed active tab to "All" when the sticky repo isn't among the
+  // current options — matches derive()'s auto-fallback. State is NOT reset upstream,
+  // so stickiness survives a round-trip to an artifact that DOES have the repo.
+  const activeRepo = repos.some(r => r.id === i.activeRepo) ? i.activeRepo : "";
+  return { artifact: i.artifact, rows: i.rows, facets: i.facets, viewModes, activeView: i.activeView, providers, repos, activeRepo };
 }
 
 export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
@@ -84,6 +95,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   let active: Artifact = artifacts.find(a => liveSourcesFor(a).length) ?? artifacts[0];
   let view: string = "list";
   let activeProvider: string = (liveSourcesFor(active)[0] ?? sourcesFor(active)[0])?.id ?? "";
+  let activeRepo = "";   // "" = All; sticky across artifact switches, reset on provider change
   let lastRows: ScoredItem[] = [];
   let facetState: ListState = emptyListState();
   let lastFetchedAt: number | null = null;
@@ -138,6 +150,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       override: env.scoreOverride,
     }),
     facets: () => facetState,
+    repo: () => activeRepo,
   });
 
   // ── Command bar: brand + merged status chip + sync stamp + refresh + theme ──
@@ -234,6 +247,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       hasInsights, activeView: view,
       sources: sourcesFor(active).map(s => ({ id: s.id, provider: providerOf(s), status: s.status })),
       activeProvider,
+      activeRepo,
       extraTabs: applicableTabs(active, lastRows).map(t => ({ id: t.id, label: t.label })),
     });
     renderToolbar(nav, {
@@ -242,8 +256,14 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       onViewChange: (id) => { view = id; buildNav(); render(); },
       onProviderSelect: (id) => {
         activeProvider = id;
+        activeRepo = "";
         lastRows = []; facetState = emptyListState(); lastFetchedAt = null;
         buildNav(); refreshBar(); render();
+      },
+      onRepoSelect: (id) => {
+        activeRepo = id;
+        core.rerender();      // client-side re-derive, no refetch
+        buildNav();           // re-render tabs so the active one updates
       },
     });
   }

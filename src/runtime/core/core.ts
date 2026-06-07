@@ -16,6 +16,7 @@ export interface CoreDeps {
   botLogins(): string[];
   scoreContext(): ScoreContext;
   facets(): ListState;
+  repo(): string;
 }
 
 export function createCore(deps: CoreDeps) {
@@ -27,6 +28,7 @@ export function createCore(deps: CoreDeps) {
       activeKinds: deps.activeKinds(),
       botLogins: deps.botLogins(),
       score: deps.scoreContext(),
+      repo: deps.repo(),
       facets: deps.facets(),
     });
     deps.view.render({ scored, shown, errors: lastErrors, stats: deps.store.stats() });

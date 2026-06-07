@@ -25,6 +25,7 @@ describe("derive", () => {
       activeKinds: ["issue"],
       botLogins: [],
       score,
+      repo: "",
       facets: emptyListState(),
     });
     expect(out.scored.map(r => r.id)).toEqual(["b", "a"]); // change-request filtered out, sorted desc
@@ -38,6 +39,7 @@ describe("derive", () => {
       activeKinds: ["issue"],
       botLogins: [],
       score,
+      repo: "",
       facets: emptyListState(),
     });
     expect(out.shown.map(r => r.id)).toEqual(out.scored.map(r => r.id));
@@ -46,7 +48,35 @@ describe("derive", () => {
   it("is pure: does not mutate the input items array", () => {
     const items = [item("a", 10), item("b", 90)];
     const before = items.map(i => i.id);
-    derive({ items, activeKinds: ["issue"], botLogins: [], score, facets: emptyListState() });
+    derive({ items, activeKinds: ["issue"], botLogins: [], score, repo: "", facets: emptyListState() });
     expect(items.map(i => i.id)).toEqual(before);
+  });
+
+  it("repo scope filters shown to a single location", () => {
+    const items: TriageItem[] = [
+      { id: "a", source: "github", kind: "issue", title: "a", location: "acme/api", signal: 90, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
+      { id: "b", source: "github", kind: "issue", title: "b", location: "acme/web", signal: 80, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
+    ];
+    const out = derive({ items, activeKinds: ["issue"], botLogins: [], score, repo: "acme/api", facets: emptyListState() });
+    expect(out.shown.map(r => r.id)).toEqual(["a"]);
+    expect(out.scored.map(r => r.id)).toEqual(["a", "b"]); // scored is unscoped
+  });
+
+  it("empty repo scope shows all locations (facet-only result)", () => {
+    const items: TriageItem[] = [
+      { id: "a", source: "github", kind: "issue", title: "a", location: "acme/api", signal: 90, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
+      { id: "b", source: "github", kind: "issue", title: "b", location: "acme/web", signal: 80, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
+    ];
+    const out = derive({ items, activeKinds: ["issue"], botLogins: [], score, repo: "", facets: emptyListState() });
+    expect(out.shown.map(r => r.id)).toEqual(["a", "b"]);
+  });
+
+  it("repo scope absent from the set shows all (auto-fallback, not empty)", () => {
+    const items: TriageItem[] = [
+      { id: "a", source: "github", kind: "issue", title: "a", location: "acme/api", signal: 90, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
+      { id: "b", source: "github", kind: "issue", title: "b", location: "acme/web", signal: 80, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
+    ];
+    const out = derive({ items, activeKinds: ["issue"], botLogins: [], score, repo: "acme/NOPE", facets: emptyListState() });
+    expect(out.shown.map(r => r.id)).toEqual(["a", "b"]); // falls back to all, not empty
   });
 });
