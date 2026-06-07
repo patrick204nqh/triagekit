@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { mountShell } from "../../src/runtime/shell/app-shell";
+import { bootstrap } from "../../src/runtime/bootstrap";
 import { githubSource } from "../../src/runtime/ingest/github/adapter";
 import type { TriageConfigT } from "../../src/config/schema";
 
@@ -41,7 +41,7 @@ describe("app-shell score breakdown in drawer", () => {
     localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: ["acme/web"] }));
     const spy = vi.spyOn(githubSource, "fetch").mockResolvedValue({ items: [vulnItem], errors: [] } as any);
     try {
-      mountShell(config);
+      bootstrap(config);
       await flush();
       document.querySelector<HTMLElement>("#root .surface-body .alert-row")!.click();
       expect(document.querySelector("#root .drawer .breakdown")).not.toBeNull();
@@ -54,7 +54,7 @@ describe("app-shell score breakdown in drawer", () => {
     localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: ["acme/web"] }));
     const spy = vi.spyOn(githubSource, "fetch").mockResolvedValue({ items: [vulnItem], errors: [] } as any);
     try {
-      mountShell(config);
+      bootstrap(config);
       await flush();
       document.querySelector<HTMLElement>("#root .surface-body .alert-row")!.click();
       expect(document.querySelector("#root .drawer .breakdown")).toBeNull();

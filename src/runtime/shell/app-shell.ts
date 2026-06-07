@@ -1,28 +1,39 @@
 import type { TriageConfigT } from "../../config/schema";
 import { isCompiledConfig } from "./mode";
-import { getSource, listSources, providerOf, type Source, type TriageError } from "../ingest/source";
+import { getSource, listSources, providerOf, type Source } from "../ingest/source";
 import { listArtifacts, GROUP_LABEL, GROUP_ORDER, type Artifact } from "../dataset/artifact";
 import type { Scorer } from "../scoring/registry";
-import { scoreAndTier } from "../scoring/configured";
 import { fieldsFor } from "../scoring/field-catalog";
 import { explainScoreModel, validateModel, type ScoreExplanation } from "../scoring/score-model";
-import { renderTriageList, renderTableSkeleton, esc, type ScoredItem } from "../layout/triage-table";
+import { renderTableSkeleton, esc, type ScoredItem } from "../layout/triage-table";
 import { renderInsights } from "../layout/insights";
 import { applicableTabs, getTab } from "../layout/tab-registry";
 import "../layout/due-soon";   // register the Due soon tab (side-effect)
-import { renderFacetBar, applyFacets, emptyFacetState, type FacetState } from "../layout/facet-bar";
+import { emptyFacetState, type FacetState } from "../layout/facet-bar";
 import { CredStore } from "./cred-store";
 import { ScopeStore } from "./scope-store";
 import { PolicyStore } from "./policy-store";
-import { withBotPolicy } from "../core/author-policy";
 import { healthOf, scopeSummary } from "./health";
 import { mountSettings } from "./settings";
 import { providerIcon } from "./provider-icons";
 import { getThemeChoice, cycleTheme } from "./theme";
 import { getRefreshInterval, relativeSince } from "./refresh";
+import { scopeKey } from "../core/scope-key";
+import type { DatasetStore } from "../core/store";
+import type { TimerPort, ViewPort } from "../core/ports";
+import type { CoreDeps, Core } from "../core/core";
+import type { DomViewDeps } from "../adapters/dom-view";
 import "../views/security-alerts/view";   // register view + scorer + ready source + charts
 import "../views/review/view";            // register review surface + scorer + github-review source
 import "../ingest/upcoming";              // register roadmap sources
+
+export interface ShellEnv {
+  store: DatasetStore;
+  timer: TimerPort;
+  createCore: (deps: CoreDeps) => Core;
+  createDomView: (host: HTMLElement, deps: DomViewDeps) => ViewPort;
+  scoreOverride?: Scorer;
+}
 
 // Product mark: a funnel (many signals in → a triaged few out) whose drip is the
 // teal accent, echoing the "·" in the wordmark.
@@ -34,7 +45,7 @@ const GEAR = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke
 const AUTO = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>`;
 const REFRESH = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>`;
 
-export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
+export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   const creds = new CredStore();
   const scopes = new ScopeStore();
   const policy = new PolicyStore();
@@ -53,7 +64,55 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
   let lastRows: ScoredItem[] = [];
   let facetState: FacetState = emptyFacetState();
   let lastFetchedAt: number | null = null;
-  let refreshTimer: ReturnType<typeof setInterval> | undefined;
+  let cancelRefresh: (() => void) | undefined;
+
+  // The set of selected, credentialed, scoped sources for the active artifact.
+  const usableSources = () => liveSourcesFor(active).filter(s =>
+    selected.has(s.id) && creds.get(providerOf(s)) && Object.keys(scopes.get(providerOf(s))).length);
+
+  // Per-item score breakdown for the list drawer (lifted from renderListWithFacets).
+  const scoreExplain = (i: ScoredItem): ScoreExplanation | null => {
+    const m = policy.getScoreModel(i.kind);
+    if (!m || validateModel(m, fieldsFor(i.kind)).length !== 0) return null;
+    try { return explainScoreModel(m, i); } catch { return null; }
+  };
+
+  // Facet change: update state, re-derive from the store (no refetch).
+  const onFacetChange = (next: FacetState) => { facetState = next; core.rerender(); };
+
+  // Dispatcher view: owns view-mode selection (mirrors the original post-fetch
+  // branching). insights/tab render directly; list mode delegates to the DOM view.
+  const dispatchView: ViewPort = {
+    render(vm) {
+      lastRows = vm.scored;
+      lastFetchedAt = Date.now(); updateSync();
+      if (view === "insights") { renderInsights(root, vm.scored, active.kinds); return; }
+      if (view !== "list") { const t = getTab(view); if (t) { t.render(root, vm.scored); return; } }
+      const token = creds.get(providerOf(usableSources()[0])) ?? "";
+      env.createDomView(root, { artifact: active, onFacetChange, facets: () => facetState, token, scoreExplain }).render(vm);
+    },
+  };
+
+  const core = env.createCore({
+    store: env.store,
+    view: dispatchView,
+    jobsFor: () => usableSources().map(s => ({
+      provider: providerOf(s),
+      scopeKey: scopeKey(scopes.get(providerOf(s))),
+      scope: scopes.get(providerOf(s)),
+      token: creds.get(providerOf(s))!,
+      port: s,
+    })),
+    activeKinds: () => active.kinds,
+    botLogins: () => policy.getBotLogins(),
+    scoreContext: () => ({
+      getModel: (k) => policy.getScoreModel(k),
+      getFields: (k) => fieldsFor(k),
+      getThresholds: () => policy.getTiers(),
+      override: env.scoreOverride,
+    }),
+    facets: () => facetState,
+  });
 
   // ── Command bar: brand + merged status chip + sync stamp + refresh + theme ──
   const bar = document.getElementById("appbar")!;
@@ -113,9 +172,9 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
     sync.textContent = lastFetchedAt == null ? "" : `updated ${relativeSince(lastFetchedAt)}`;
   }
   function applyRefreshTimer() {
-    if (refreshTimer) clearInterval(refreshTimer);
+    if (cancelRefresh) cancelRefresh();
     const secs = getRefreshInterval();
-    if (secs > 0) refreshTimer = setInterval(() => { if (liveSourcesFor(active).length) render(true); }, secs * 1000);
+    if (secs > 0) cancelRefresh = env.timer.every(secs * 1000, () => { if (liveSourcesFor(active).length) render(true); });
   }
 
   // ── Navigation: grouped artifact rail (Findings / Work) → list/insights + facet ──
@@ -194,63 +253,15 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
       const t = getTab(view); if (t) { t.render(root, lastRows); return; }
     }
 
-    const usable = live.filter(s => selected.has(s.id) && creds.get(providerOf(s)) && Object.keys(scopes.get(providerOf(s))).length);
-    if (!usable.length) {
+    if (!usableSources().length) {
       const needScope = live.some(s => selected.has(s.id) && creds.get(providerOf(s)) && !Object.keys(scopes.get(providerOf(s))).length);
       root.innerHTML = `<p class="muted">Open Settings to ${needScope ? "choose your scope" : "connect a token"}.</p>`;
       lastFetchedAt = null; updateSync();
       return;
     }
     if (!silent) renderTableSkeleton(root);
-    Promise.all(usable.map(s => s.fetch(scopes.get(providerOf(s)), creds.get(providerOf(s))!)
-      .then(r => r, (e): { items: never[]; errors: { target: string; message: string }[] } =>
-        ({ items: [], errors: [{ target: s.id, message: e?.message ?? String(e) }] }))))
-      .then(results => {
-        const items = results.flatMap(r => r.items).filter(it => active.kinds.includes(it.kind));
-        const errors = results.flatMap(r => r.errors);
-        const botLogins = policy.getBotLogins();
-        const rows: ScoredItem[] = items
-          .map(it => withBotPolicy(it, botLogins))
-          .map(it => {
-            const { score, tier } = scoreAndTier(it, {
-              getModel: (k) => policy.getScoreModel(k),
-              getFields: (k) => fieldsFor(k),
-              getThresholds: () => policy.getTiers(),
-              override: scoreOverride,
-            });
-            return { ...it, score, tier };
-          })
-          .sort((a, b) => b.score - a.score);
-        lastRows = rows; lastFetchedAt = Date.now(); updateSync();
-        if (view === "insights") { renderInsights(root, rows, active.kinds); return; }
-        const extra = getTab(view);
-        if (extra) { extra.render(root, rows); return; }
-        renderListWithFacets(rows, errors, creds.get(providerOf(usable[0]))!);
-      })
-      .catch(err => { root.innerHTML = `<p class="error">Failed to load: ${err?.message ?? err}</p>`; });
+    core.refreshNow();   // refresh → derive → dispatchView.render(vm)
   };
-
-  // List view: shell-owned FacetBar above a render-only body. Facet changes
-  // re-filter lastRows and re-render only the body — never refetch.
-  function renderListWithFacets(rows: ScoredItem[], errors: TriageError[], token: string) {
-    root.innerHTML = `<div class="facet-host"></div><div class="surface-body"></div>`;
-    const facetHost = root.querySelector<HTMLElement>(".facet-host")!;
-    const body = root.querySelector<HTMLElement>(".surface-body")!;
-    const scoreExplain = (i: ScoredItem): ScoreExplanation | null => {
-      const m = policy.getScoreModel(i.kind);
-      if (!m || validateModel(m, fieldsFor(i.kind)).length !== 0) return null;
-      try { return explainScoreModel(m, i); } catch { return null; }
-    };
-    const drawBody = () => {
-      const shown = applyFacets(rows, facetState);
-      renderTriageList(body, shown, errors, { token, scoreExplain });
-    };
-    const drawBar = () => renderFacetBar(facetHost, active, rows, facetState, next => {
-      facetState = next; drawBar(); drawBody();
-    });
-    drawBar();
-    drawBody();
-  }
 
   syncTheme();
   buildRail();
@@ -260,4 +271,5 @@ export function mountShell(config: TriageConfigT, scoreOverride?: Scorer) {
   applyRefreshTimer();
   setInterval(updateSync, 30_000);   // keep the "updated Xm ago" stamp fresh
   render();
+  return core;
 }
