@@ -16,7 +16,7 @@ export interface ToolbarProps {
   providers: ToolbarProvider[];
   onFacetChange: (next: ListState) => void;
   onViewChange: (id: string) => void;
-  onProviderToggle: (id: string) => void;
+  onProviderSelect: (id: string) => void;
 }
 
 function activeFilterCount(state: ListState): number {
@@ -78,7 +78,7 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
       s.axes[id] = cur.includes(val) ? cur.filter(v => v !== val) : [...cur, val];
     })));
   host.querySelectorAll<HTMLInputElement>("[data-prov]").forEach(cb =>
-    cb.addEventListener("change", () => p.onProviderToggle(cb.dataset.prov!)));
+    cb.addEventListener("change", () => p.onProviderSelect(cb.dataset.prov!)));
   host.querySelectorAll<HTMLElement>("[data-sort]").forEach(b =>
     b.addEventListener("click", () => emit(s => { s.sort = b.dataset.sort!; })));
 

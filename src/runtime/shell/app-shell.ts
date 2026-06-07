@@ -46,18 +46,18 @@ export interface ToolbarPropsInput {
   artifact: Artifact; rows: ScoredItem[]; facets: ListState;
   hasInsights: boolean; activeView: string;
   sources: { id: string; provider: string; status: string }[];
-  selected: Set<string>;
+  activeProvider: string;
   extraTabs: { id: string; label: string }[];
 }
 
 // Pure assembly of the toolbar's view-mode/provider/facet props from the shell's
 // state, extracted so it's testable without mounting the whole shell.
-export function toolbarPropsFromShell(i: ToolbarPropsInput): Omit<ToolbarProps, "onFacetChange" | "onViewChange" | "onProviderToggle"> {
+export function toolbarPropsFromShell(i: ToolbarPropsInput): Omit<ToolbarProps, "onFacetChange" | "onViewChange" | "onProviderSelect"> {
   const viewModes = [{ id: "list", label: "List" }];
   if (i.hasInsights) viewModes.push({ id: "insights", label: "Insights" });
   for (const t of i.extraTabs) viewModes.push({ id: t.id, label: t.label });
   const providers = i.sources.map(s => ({
-    id: s.id, label: s.provider, on: i.selected.has(s.id), live: s.status === "ready",
+    id: s.id, label: s.provider, on: s.id === i.activeProvider, live: s.status === "ready",
   }));
   return { artifact: i.artifact, rows: i.rows, facets: i.facets, viewModes, activeView: i.activeView, providers };
 }
@@ -77,15 +77,15 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
 
   let active: Artifact = artifacts.find(a => liveSourcesFor(a).length) ?? artifacts[0];
   let view: string = "list";
-  let selected = new Set(liveSourcesFor(active).map(s => s.id));   // provider facet
+  let activeProvider: string = (liveSourcesFor(active)[0] ?? sourcesFor(active)[0])?.id ?? "";
   let lastRows: ScoredItem[] = [];
   let facetState: ListState = emptyListState();
   let lastFetchedAt: number | null = null;
   let cancelRefresh: (() => void) | undefined;
 
-  // The set of selected, credentialed, scoped sources for the active artifact.
+  // The credentialed, scoped sources for the active artifact's active provider.
   const usableSources = () => liveSourcesFor(active).filter(s =>
-    selected.has(s.id) && creds.get(providerOf(s)) && Object.keys(scopes.get(providerOf(s))).length);
+    s.id === activeProvider && creds.get(providerOf(s)) && Object.keys(scopes.get(providerOf(s))).length);
 
   // Per-item score breakdown for the list drawer (lifted from renderListWithFacets).
   const scoreExplain = (i: ScoredItem): ScoreExplanation | null => {
@@ -167,25 +167,19 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   }
   themeBtn.addEventListener("click", () => { cycleTheme(); syncTheme(); });
 
-  // Status chip reflects the active artifact's selected providers (not just one):
-  // a single provider shows its scope; several show a count, warning if any is
-  // missing a credential.
+  // Status chip shows the single active provider scope.
   function refreshBar() {
     const live = liveSourcesFor(active);
-    const sel = live.filter(s => selected.has(s.id));
-    const srcs = sel.length ? sel : [primarySource(active)];
-    const lead = srcs[0];
+    const lead = live.find(s => s.id === activeProvider) ?? primarySource(active);
     let cls = "warn", tail: string;
     if (!live.length) { tail = "upcoming"; }
     else {
-      const missing = srcs.some(s => healthOf(s, creds) !== "connected");
+      const missing = healthOf(lead, creds) !== "connected";
       cls = missing ? "warn" : "ok";
-      if (srcs.length === 1) tail = missing ? "no token" : scopeSummary(lead, scopes.get(providerOf(lead)));
-      else tail = missing ? `${srcs.length} providers · no token` : `${srcs.length} providers`;
+      tail = missing ? "no token" : scopeSummary(lead, scopes.get(providerOf(lead)));
     }
     status.className = "status-chip " + cls;
-    const label = srcs.length > 1 ? `${esc(providerOf(lead))} +${srcs.length - 1}` : esc(providerOf(lead));
-    status.innerHTML = `${providerIcon(providerOf(lead), 15)}<span class="sid">${label}</span><span class="sep">·</span><span class="muted">${esc(tail)}</span>`;
+    status.innerHTML = `${providerIcon(providerOf(lead), 15)}<span class="sid">${esc(providerOf(lead))}</span><span class="sep">·</span><span class="muted">${esc(tail)}</span>`;
   }
 
   function updateSync() {
@@ -216,7 +210,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
         b.innerHTML = live ? esc(a.label) : `${esc(a.label)} <span class="chip">upcoming</span>`;
         if (a.id === active.id) b.className = "active";
         b.addEventListener("click", () => {
-          active = a; view = "list"; selected = new Set(liveSourcesFor(a).map(s => s.id));
+          active = a; view = "list"; activeProvider = (liveSourcesFor(a)[0] ?? sourcesFor(a)[0])?.id ?? "";
           lastRows = []; facetState = emptyListState(); lastFetchedAt = null;
           buildRail(); buildNav(); refreshBar(); render();
         });
@@ -233,15 +227,15 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       artifact: active, rows: lastRows, facets: facetState,
       hasInsights, activeView: view,
       sources: sourcesFor(active).map(s => ({ id: s.id, provider: providerOf(s), status: s.status })),
-      selected,
+      activeProvider,
       extraTabs: applicableTabs(active, lastRows).map(t => ({ id: t.id, label: t.label })),
     });
     renderToolbar(nav, {
       ...base,
       onFacetChange,
       onViewChange: (id) => { view = id; buildNav(); render(); },
-      onProviderToggle: (id) => {
-        selected.has(id) ? selected.delete(id) : selected.add(id);
+      onProviderSelect: (id) => {
+        activeProvider = id;
         lastRows = []; facetState = emptyListState(); lastFetchedAt = null;
         buildNav(); refreshBar(); render();
       },
@@ -264,7 +258,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     }
 
     if (!usableSources().length) {
-      const needScope = live.some(s => selected.has(s.id) && creds.get(providerOf(s)) && !Object.keys(scopes.get(providerOf(s))).length);
+      const needScope = live.some(s => s.id === activeProvider && creds.get(providerOf(s)) && !Object.keys(scopes.get(providerOf(s))).length);
       root.innerHTML = `<p class="muted">Open Settings to ${needScope ? "choose your scope" : "connect a token"}.</p>`;
       lastFetchedAt = null; updateSync();
       return;
