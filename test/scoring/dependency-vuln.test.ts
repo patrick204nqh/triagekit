@@ -18,7 +18,9 @@ describe("dependencyVulnScore", () => {
   });
 
   it("publishes a field catalog for dependency-vuln", async () => {
-    await import("../../src/runtime/scoring/dependency-vuln");   // side-effect registration
+    const { registerKinds } = await import("../../src/runtime/core/register-kinds");
+    const { dependencyVulnKind } = await import("../../src/runtime/kinds/dependency-vuln");
+    registerKinds([dependencyVulnKind]);   // registers field catalog (+ scorer, model)
     const { fieldsFor } = await import("../../src/runtime/scoring/field-catalog");
     const names = fieldsFor("dependency-vuln").map(f => f.name);
     expect(names).toEqual(expect.arrayContaining(["severity", "cvss", "fixAvailable", "scope"]));

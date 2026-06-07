@@ -1,6 +1,5 @@
 import type { TriageItem } from "../dataset/item";
-import { type ReviewDetails, PULL_REQUEST, ISSUE } from "../dataset/kinds/review";
-import { registerScorer, type Scorer } from "./registry";
+import { type ReviewDetails, PULL_REQUEST } from "../dataset/kinds/review";
 
 // Heuristic review priority, from list-available data only (CI is loaded lazily on
 // expand and never feeds the score). Transparent, tunable constants:
@@ -40,6 +39,3 @@ export function reviewScore(item: TriageItem<ReviewDetails>): number {
   if (d.author.kind === "bot" && !vulnLinked) score -= 35;
   return Math.round(score);
 }
-
-registerScorer(PULL_REQUEST, reviewScore as Scorer);
-registerScorer(ISSUE, reviewScore as Scorer);

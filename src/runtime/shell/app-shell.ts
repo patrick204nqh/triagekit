@@ -8,7 +8,6 @@ import { explainScoreModel, validateModel, type ScoreExplanation } from "../scor
 import { renderTableSkeleton, esc, type ScoredItem } from "../layout/triage-table";
 import { renderInsights } from "../layout/insights";
 import { applicableTabs, getTab } from "../layout/tab-registry";
-import "../layout/due-soon";   // register the Due soon tab (side-effect)
 import { emptyFacetState, type FacetState } from "../layout/facet-bar";
 import { CredStore } from "./cred-store";
 import { ScopeStore } from "./scope-store";
@@ -23,9 +22,6 @@ import type { DatasetStore } from "../core/store";
 import type { TimerPort, ViewPort } from "../core/ports";
 import type { CoreDeps, Core } from "../core/core";
 import type { DomViewDeps } from "../adapters/dom-view";
-import "../views/security-alerts/view";   // register view + scorer + ready source + charts
-import "../views/review/view";            // register review surface + scorer + github-review source
-import "../ingest/upcoming";              // register roadmap sources
 
 export interface ShellEnv {
   store: DatasetStore;

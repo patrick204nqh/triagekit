@@ -1,3 +1,7 @@
+import "./views/security-alerts/view";   // register view + ready source + charts + sort-key
+import "./views/review/view";            // register review surface + github-review source
+import "./ingest/upcoming";              // register roadmap sources
+import "./layout/due-soon";              // register the Due soon tab
 import type { TriageConfigT } from "../config/schema";
 import type { Scorer } from "./scoring/registry";
 import { registerKinds } from "./core/register-kinds";
