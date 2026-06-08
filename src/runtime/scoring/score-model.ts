@@ -1,4 +1,5 @@
 import type { Kind, TriageItem } from "../dataset/item";
+import { detailsAs } from "../dataset/details";
 import type { Transform } from "./signal-transform";
 import { applyTransform } from "./signal-transform";
 import { parseFormula, evalFormula, formulaVars, FormulaError, type Expr } from "./formula";
@@ -23,7 +24,7 @@ function readField(item: TriageItem, from: string): unknown {
   if (Object.prototype.hasOwnProperty.call(item, from)) {
     return (item as unknown as Record<string, unknown>)[from];
   }
-  const d = item.details as Record<string, unknown> | null | undefined;
+  const d = detailsAs<Record<string, unknown>>(item);
   return d ? d[from] : undefined;
 }
 
