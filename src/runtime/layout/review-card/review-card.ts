@@ -6,7 +6,7 @@ import {
 import {
   type Sla, tierBadgeHtml, slaTagHtml, actorChipHtml, labelChipHtml,
   checkIndicatorHtml, relationStripHtml,
-} from "../atoms";
+} from "../atoms/atoms";
 import { reviewBodyHtml } from "./body";
 import { actionBarHtml } from "./actions";
 

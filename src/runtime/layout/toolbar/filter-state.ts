@@ -1,4 +1,4 @@
-import type { ScoredItem } from "./table/kind-renderer";
+import type { ScoredItem } from "../table/kind-renderer";
 import { getFilterAxis, getSortKey } from "./axis-registry";
 
 // Pure filter+sort state for a triage list. WHERE (provider) is handled outside

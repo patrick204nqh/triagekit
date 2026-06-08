@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { installAvatarFallback } from "../../src/runtime/layout/avatar-fallback";
+import { installAvatarFallback } from "../../src/runtime/layout/atoms/avatar-fallback";
 
 describe("installAvatarFallback", () => {
   it("replaces a broken avatar img with its initials span", () => {

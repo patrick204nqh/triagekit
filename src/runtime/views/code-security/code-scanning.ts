@@ -2,11 +2,11 @@ import { type ScoredItem, type KindRenderer } from "../../layout/table/kind-rend
 import { esc } from "../../layout/util";
 import { type CodeScanningDetails, CODE_SCANNING } from "../../dataset/kinds/code-scanning";
 import { registerView } from "../registry";
-import { type FilterAxis, registerSortKey } from "../../layout/axis-registry";
+import { type FilterAxis, registerSortKey } from "../../layout/toolbar/axis-registry";
 import { registerChart } from "../../layout/charts/registry";
 import "../../ingest/github/code-scanning-source";   // side-effect: register source
 import { detailsAs } from "../../dataset/details";
-import { uniqueValues } from "../../layout/axis-utils";
+import { uniqueValues } from "../../layout/toolbar/axis-utils";
 
 const cs = (r: ScoredItem) => detailsAs<CodeScanningDetails>(r)!;
 const SEV_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };

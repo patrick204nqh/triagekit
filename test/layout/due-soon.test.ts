@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { dueSoonRows, renderDueSoon } from "../../src/runtime/layout/due-soon";
 import { deadlineOf } from "../../src/runtime/dataset/details";
-import { getTab } from "../../src/runtime/layout/tab-registry";
+import { getTab } from "../../src/runtime/layout/navigation/tab-registry";
 import "../../src/runtime/layout/due-soon";   // side-effect: registers the tab
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 

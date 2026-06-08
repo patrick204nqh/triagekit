@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { actorChipHtml } from "../../src/runtime/layout/atoms";
+import { actorChipHtml } from "../../src/runtime/layout/atoms/atoms";
 import type { Actor } from "../../src/runtime/dataset/shared";
 
 const human: Actor = { login: "dkohl", avatarUrl: "https://avatars.githubusercontent.com/u/1", kind: "human" };

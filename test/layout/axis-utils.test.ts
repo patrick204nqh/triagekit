@@ -1,6 +1,6 @@
 // test/layout/axis-utils.test.ts
 import { describe, it, expect } from "vitest";
-import { uniqueValues } from "../../src/runtime/layout/axis-utils";
+import { uniqueValues } from "../../src/runtime/layout/toolbar/axis-utils";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 
 const row = (kind: string, labels: string[]): ScoredItem =>

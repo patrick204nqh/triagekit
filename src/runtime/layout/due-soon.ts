@@ -1,6 +1,6 @@
 import type { ScoredItem } from "./table/kind-renderer";
 import { esc } from "./util";
-import { registerTab } from "./tab-registry";
+import { registerTab } from "./navigation/tab-registry";
 import { deadlineOf } from "../dataset/details";
 
 export function dueSoonRows(rows: ScoredItem[]): ScoredItem[] {

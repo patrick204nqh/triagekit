@@ -1,4 +1,4 @@
-import { dismissible } from "../shell/dismissible";
+import { dismissible } from "../../shell/dismissible";
 
 // Wires the Filter/Sort popovers' open/close + dismiss (Esc / outside-click).
 // A single active handle is hoisted so switching filter<->sort releases whichever

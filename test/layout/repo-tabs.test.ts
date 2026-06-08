@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest";
-import { renderRepoTabs } from "../../src/runtime/layout/repo-tabs";
+import { renderRepoTabs } from "../../src/runtime/layout/navigation/repo-tabs";
 
 const opt = (id: string) => ({ id, label: id });
 

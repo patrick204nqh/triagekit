@@ -5,9 +5,9 @@ import type { ReviewItem, ReviewDetails } from "../../dataset/shapes/review";
 import { CHANGE_REQUEST, ISSUE } from "../../dataset/shapes/review";
 import { makeGithubActions } from "../../ingest/github/actions";
 import { enrichReview } from "../../ingest/github/change-request-source";   // also pins the source's registerSource() side-effect
-import { type FilterAxis } from "../../layout/axis-registry";
+import { type FilterAxis } from "../../layout/toolbar/axis-registry";
 import { detailsAs } from "../../dataset/details";
-import { uniqueValues } from "../../layout/axis-utils";
+import { uniqueValues } from "../../layout/toolbar/axis-utils";
 
 const det = (r: ScoredItem) => detailsAs<ReviewDetails>(r)!;
 const reviewColumns = [

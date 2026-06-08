@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { emptyListState, applyFilters, type ListState } from "../../src/runtime/layout/filter-state";
-import "../../src/runtime/layout/axis-registry";   // ensure built-ins are registered
+import { emptyListState, applyFilters, type ListState } from "../../src/runtime/layout/toolbar/filter-state";
+import "../../src/runtime/layout/toolbar/axis-registry";   // ensure built-ins are registered
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 
 function row(over: Partial<ScoredItem> & { details?: unknown }): ScoredItem {

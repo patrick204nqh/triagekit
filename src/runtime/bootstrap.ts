@@ -18,7 +18,7 @@ import { changeRequestKind } from "./kinds/change-request";
 import { issueKind } from "./kinds/issue";
 import { github } from "./providers/github";
 import { mountShell } from "./shell/app-shell";
-import { installAvatarFallback } from "./layout/avatar-fallback";
+import { installAvatarFallback } from "./layout/atoms/avatar-fallback";
 
 // The one wiring point: register kinds from manifests, build adapters + store, mount the shell as a driving adapter.
 export function bootstrap(config: TriageConfigT, scoreOverride?: Scorer): Core {

@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import {
   registerTab, getTab, applicableTabs, _resetTabs, type TabModule,
-} from "../../src/runtime/layout/tab-registry";
+} from "../../src/runtime/layout/navigation/tab-registry";
 import type { Artifact } from "../../src/runtime/dataset/artifact";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 

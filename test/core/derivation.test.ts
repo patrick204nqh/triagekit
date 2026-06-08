@@ -1,7 +1,7 @@
 // test/core/derivation.test.ts
 import { describe, it, expect } from "vitest";
 import { derive } from "../../src/runtime/core/derivation";
-import { emptyListState } from "../../src/runtime/layout/filter-state";
+import { emptyListState } from "../../src/runtime/layout/toolbar/filter-state";
 import type { TriageItem } from "../../src/runtime/dataset/item";
 import type { ScoreContext } from "../../src/runtime/scoring/configured";
 

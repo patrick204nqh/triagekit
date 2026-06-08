@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   tierBadgeHtml, slaTagHtml, actorChipHtml, labelChipHtml,
   checkIndicatorHtml, permalinkLinkHtml, relationStripHtml,
-} from "../../src/runtime/layout/atoms";
+} from "../../src/runtime/layout/atoms/atoms";
 
 describe("atoms", () => {
   it("tierBadgeHtml uses the existing tier classes", () => {

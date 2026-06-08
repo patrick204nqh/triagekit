@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { wirePopovers } from "../../src/runtime/layout/toolbar-popover";
+import { wirePopovers } from "../../src/runtime/layout/toolbar/toolbar-popover";
 
 // Minimal toolbar fragment: the two trigger buttons + their hidden popovers,
 // matching the markup renderToolbar produces.

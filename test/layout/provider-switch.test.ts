@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { renderProviderSwitch } from "../../src/runtime/layout/provider-switch";
+import { renderProviderSwitch } from "../../src/runtime/layout/navigation/provider-switch";
 
 const make = (html = "") => { const el = document.createElement("div"); el.innerHTML = html; return el; };
 

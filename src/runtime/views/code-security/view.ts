@@ -23,7 +23,7 @@ export const dependencyVulnRenderer: KindRenderer = {
 registerView({ id: "code-security", kind: DEPENDENCY_VULN });
 
 import { registerChart } from "../../layout/charts/registry";
-import { type FilterAxis, registerSortKey } from "../../layout/axis-registry";
+import { type FilterAxis, registerSortKey } from "../../layout/toolbar/axis-registry";
 
 const SEV_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, moderate: 2, low: 1 };
 

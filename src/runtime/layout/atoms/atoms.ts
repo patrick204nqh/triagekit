@@ -1,6 +1,6 @@
-import { esc } from "./util";
-import type { Tier } from "../scoring/tier";
-import type { Actor, Label, CheckStatus, Permalink, Relation } from "../dataset/shared";
+import { esc } from "../util";
+import type { Tier } from "../../scoring/tier";
+import type { Actor, Label, CheckStatus, Permalink, Relation } from "../../dataset/shared";
 
 export interface Sla { label: string; state: "ok" | "warn" | "breach"; }
 

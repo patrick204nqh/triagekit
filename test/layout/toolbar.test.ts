@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest";
-import { renderToolbar, type ToolbarProps } from "../../src/runtime/layout/toolbar";
+import { renderToolbar, type ToolbarProps } from "../../src/runtime/layout/toolbar/toolbar";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
-import { emptyListState } from "../../src/runtime/layout/filter-state";
+import { emptyListState } from "../../src/runtime/layout/toolbar/filter-state";
 
 const rows: ScoredItem[] = [{
   id: "1", source: "github", kind: "change-request", title: "t", location: "acme/api",

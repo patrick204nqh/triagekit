@@ -1,5 +1,5 @@
-// src/runtime/layout/axis-utils.ts
-import type { ScoredItem } from "./table/kind-renderer";
+// src/runtime/layout/toolbar/axis-utils.ts
+import type { ScoredItem } from "../table/kind-renderer";
 
 export function uniqueValues(
   rows: ScoredItem[],

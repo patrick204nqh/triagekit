@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   listFilterAxes, getFilterAxis, listSortKeys, getSortKey, type AxisCtx,
-} from "../../src/runtime/layout/axis-registry";
+} from "../../src/runtime/layout/toolbar/axis-registry";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 import type { Artifact } from "../../src/runtime/dataset/artifact";
 
