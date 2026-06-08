@@ -23,14 +23,14 @@ describe("DOM view adapter", () => {
     const host = document.getElementById("root")!;
     const view = createDomView(host, {
       artifact: { id: "issue", label: "Issues", group: "work", kinds: ["issue"] } as any,
-      onFacetChange: () => {},
+      onFilterChange: () => {},
       token: "t",
       scoreExplain: () => null,
     });
     const vm: ViewModel = { scored: [row("a", 9)], shown: [row("a", 9)], errors: [], stats: { byProvider: { github: 1 }, byKind: { issue: 1 } } };
     view.render(vm);
     expect(host.querySelector(".surface-body")).not.toBeNull();
-    expect(host.querySelector(".facet-host")).toBeNull();   // facet bar retired; toolbar owns facets now
+    expect(host.querySelector(".facet-host")).toBeNull();   // retired filter bar's DOM stays absent; toolbar owns filters now
     expect(host.textContent).toContain("a");
   });
 });

@@ -55,7 +55,7 @@ describe("mountShell artifact navigation", () => {
     expect(tabs.map(t => t.textContent)).toEqual(expect.arrayContaining(["List", "Insights"]));
   });
 
-  it("renders the list in a render-only body with the toolbar driving facets, and a facet change does not refetch", async () => {
+  it("renders the list in a render-only body with the toolbar driving filters, and a filter change does not refetch", async () => {
     // A ready source with a satisfied cred + scope reaches the rendered-rows path.
     sessionStorage.setItem("triagekit.cred.github", "tok");
     localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: [] }));
@@ -69,11 +69,11 @@ describe("mountShell artifact navigation", () => {
       expect(document.querySelector("#viewswitch .toolbar")).toBeTruthy();
       const body = document.querySelector<HTMLElement>("#root .surface-body");
       expect(body).toBeTruthy();
-      expect(document.querySelector("#root .facet-bar")).toBeNull();   // retired renderer stays out of the surface
+      expect(document.querySelector("#root .facet-bar")).toBeNull();   // retired renderer's DOM stays out of the surface
       expect(document.querySelector("#root .surface-body table.alerts, #root .surface-body .empty")).toBeTruthy();
       expect(fetchSpy).toHaveBeenCalledTimes(1);
 
-      // (b) a facet change (sort) via the toolbar re-renders the body without refetching.
+      // (b) a filter change (sort) via the toolbar re-renders the body without refetching.
       const sortBtn = document.querySelector<HTMLElement>("#viewswitch [data-sort='recent']")!;
       sortBtn.click();
       expect(document.querySelector("#root .surface-body")).toBeTruthy();
@@ -108,7 +108,7 @@ describe("mountShell artifact navigation", () => {
     });
     const base = {
       artifact: { id: "issue", label: "Issues", group: "work" as const, kinds: ["issue" as const] },
-      facets: { axes: {}, sort: "priority" }, hasInsights: false, activeView: "list",
+      filters: { axes: {}, sort: "priority" }, hasInsights: false, activeView: "list",
       sources: [{ id: "github", provider: "github", status: "ready" }],
       activeProvider: "github", extraTabs: [],
     };

@@ -15,7 +15,7 @@ export interface CoreDeps {
   activeKinds(): Kind[];
   botLogins(): string[];
   scoreContext(): ScoreContext;
-  facets(): ListState;
+  filters(): ListState;
   repo(): string;
 }
 
@@ -29,7 +29,7 @@ export function createCore(deps: CoreDeps) {
       botLogins: deps.botLogins(),
       score: deps.scoreContext(),
       repo: deps.repo(),
-      facets: deps.facets(),
+      filters: deps.filters(),
     });
     deps.view.render({ scored, shown, errors: lastErrors, stats: deps.store.stats() });
   }
@@ -40,7 +40,7 @@ export function createCore(deps: CoreDeps) {
     paint();
   }
 
-  // Facet/scope/active-kind change: re-derive from the store, no refetch.
+  // Filter/scope/active-kind change: re-derive from the store, no refetch.
   function rerender(): void { paint(); }
 
   return { refreshNow, rerender };

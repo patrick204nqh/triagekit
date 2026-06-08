@@ -2,7 +2,7 @@ import type { Kind } from "./item";
 import { listDomains, type Class } from "./taxonomy";
 
 // What you triage. This is the top-level navigation axis: KIND is a tab, and a
-// PROVIDER is a facet within a tab (github + gitlab both feed the neutral
+// PROVIDER is a filter within a tab (github + gitlab both feed the neutral
 // change-request artifact, displayed as "Change requests"), never a tab of its
 // own. Each artifact is derived from the taxonomy (one per kind), so the rail
 // tracks taxonomy changes automatically.

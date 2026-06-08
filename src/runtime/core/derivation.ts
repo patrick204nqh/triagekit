@@ -11,11 +11,11 @@ export interface DeriveInput {
   botLogins: string[];
   score: ScoreContext;
   repo: string;            // "" = all repos
-  facets: ListState;
+  filters: ListState;
 }
 export interface Derived {
-  scored: ScoredItem[];   // active-kind items, bot-policy applied, scored + sorted (pre-facet)
-  shown: ScoredItem[];    // scored filtered through the facet state
+  scored: ScoredItem[];   // active-kind items, bot-policy applied, scored + sorted (pre-filter)
+  shown: ScoredItem[];    // scored filtered through the filter state
 }
 
 // Mirrors app-shell.ts:209-223 exactly, as a pure function over a snapshot.
@@ -31,6 +31,6 @@ export function derive(input: DeriveInput): Derived {
   const scoped = input.repo && scored.some(r => r.location === input.repo)
     ? scored.filter(r => r.location === input.repo)
     : scored;
-  const shown = applyFilters(scoped, input.facets);
+  const shown = applyFilters(scoped, input.filters);
   return { scored, shown };
 }
