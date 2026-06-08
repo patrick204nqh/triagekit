@@ -13,6 +13,11 @@ describe("providerIcon", () => {
     expect(svg).not.toContain("prov-mono");           // a real mark, not the fallback
     expect(svg).toContain('viewBox="0 0 32 32"');     // per-provider viewBox override
   });
+  it("carries a brand glyph for bitbucket (vendored from Simple Icons)", () => {
+    const svg = providerIcon("bitbucket");
+    expect(svg).toContain("<path");
+    expect(svg).not.toContain("prov-mono");           // a real mark, not the fallback
+  });
   it("falls back to a lettered monogram for unknown providers", () => {
     const svg = providerIcon("slack");
     expect(svg).toContain("prov-mono");

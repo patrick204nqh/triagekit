@@ -40,4 +40,17 @@ describe("roadmap providers surface as 'soon' in the provider switch", () => {
     const gitlab = opts.find(b => b.dataset.prov === "gitlab")!;
     expect(gitlab.getAttribute("aria-disabled")).toBe("true");
   });
+
+  it("shows the GitHub brand mark on the Change requests artifact (source id 'github-review', provider 'github')", () => {
+    bootstrap(config);
+    // Navigate to the change-request artifact, whose live source id is "github-review".
+    const cr = [...document.querySelectorAll<HTMLElement>("#domainRail button")]
+      .find(b => /Change requests/.test(b.textContent || ""));
+    cr!.click();
+    const chip = document.querySelector<HTMLElement>("#viewswitch [data-prov='github-review']")!;
+    expect(chip).not.toBeNull();
+    // Brand resolves by provider ("github") — a real path, not the lettered monogram.
+    expect(chip.querySelector("path")).not.toBeNull();
+    expect(chip.querySelector(".prov-mono")).toBeNull();
+  });
 });
