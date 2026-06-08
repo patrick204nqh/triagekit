@@ -126,6 +126,32 @@ describe("mountShell artifact navigation", () => {
     expect(backToA.activeRepo).toBe("acme/api");
   });
 
+  it("scopes the toolbar's option rows to the active repo, but lists every repo as a tab", () => {
+    // Filter options + count must reflect the SELECTED repo (per-repo labels), while the
+    // repo tab list must still show all repos so the user can switch. Regression guard:
+    // toolbar `rows` (options/count source) was previously the all-repos set.
+    const row = (location: string): ScoredItem => ({
+      id: location + ":1", source: "github", kind: "issue", title: "t",
+      location, signal: 1, createdAt: "2026-01-01T00:00:00Z", url: "", details: {},
+      score: 1, tier: "P3",
+    });
+    const base = {
+      artifact: { id: "issue", label: "Issues", group: "work" as const, kinds: ["issue" as const] },
+      filters: { axes: {}, sort: "priority" }, hasInsights: false, activeView: "list",
+      sources: [{ id: "github", provider: "github", status: "ready" }],
+      activeProvider: "github", extraTabs: [],
+    };
+    const rows = [row("acme/api"), row("acme/api"), row("acme/web")];
+
+    const scoped = toolbarPropsFromShell({ ...base, rows, activeRepo: "acme/api" });
+    expect(scoped.repos.map(r => r.id)).toEqual(["acme/api", "acme/web"]);   // all repos as tabs
+    expect(scoped.rows.every(r => r.location === "acme/api")).toBe(true);     // options scoped
+    expect(scoped.rows.length).toBe(2);
+
+    const all = toolbarPropsFromShell({ ...base, rows, activeRepo: "" });
+    expect(all.rows.length).toBe(3);                                          // All = unscoped
+  });
+
   it("writes state changes to the URL query string", async () => {
     history.replaceState(null, "", "/");
     bootstrap(config);

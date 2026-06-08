@@ -47,4 +47,19 @@ describe("wirePopovers", () => {
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     expect(pop(host, "filter").hidden).toBe(true);
   });
+
+  it("a pointerdown outside the popover closes it", () => {
+    const host = fragment(); wirePopovers(host);
+    btn(host, "filter").click();
+    expect(pop(host, "filter").hidden).toBe(false);
+    document.body.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+    expect(pop(host, "filter").hidden).toBe(true);
+  });
+
+  it("a pointerdown inside the popover keeps it open", () => {
+    const host = fragment(); wirePopovers(host);
+    btn(host, "filter").click();
+    pop(host, "filter").dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+    expect(pop(host, "filter").hidden).toBe(false);
+  });
 });

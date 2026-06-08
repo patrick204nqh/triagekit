@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { emptyListState, applyFilters, type ListState } from "../../src/runtime/layout/toolbar/filter-state";
+import { emptyListState, applyFilters, pruneFilters, type ListState } from "../../src/runtime/layout/toolbar/filter-state";
 import "../../src/runtime/layout/toolbar/axis-registry";   // ensure built-ins are registered
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 
@@ -44,5 +44,32 @@ describe("applyFilters (registry-driven)", () => {
   });
   it("recent sort", () => {
     expect(applyFilters(rows, withAxes({}, "recent")).map(r => r.id)).toEqual(["b", "c", "a"]);
+  });
+});
+
+describe("pruneFilters (drops stale selections after a repo switch)", () => {
+  const ctx = { artifact: { id: "issue", label: "Issues", group: "work", kinds: ["issue"] } } as any;
+
+  it("drops label values absent from the given rows, keeps valid ones", () => {
+    const rows = [row({ details: { labels: [{ name: "security", color: "" }] } })];
+    const pruned = pruneFilters(withAxes({ labels: ["security", "bug"] }), rows, ctx);
+    expect(pruned.axes.labels).toEqual(["security"]);
+  });
+
+  it("removes an axis entirely when no selected value remains valid", () => {
+    const rows = [row({ details: { labels: [{ name: "security", color: "" }] } })];
+    const pruned = pruneFilters(withAxes({ labels: ["bug"] }), rows, ctx);
+    expect(pruned.axes.labels).toBeUndefined();
+  });
+
+  it("keeps tier/author selections (their option set is row-independent)", () => {
+    const rows = [row({ tier: "P0", details: { author: { kind: "human" } } })];
+    const pruned = pruneFilters(withAxes({ tier: ["P0", "P1"], author: ["bot"] }), rows, ctx);
+    expect(pruned.axes.tier).toEqual(["P0", "P1"]);
+    expect(pruned.axes.author).toEqual(["bot"]);
+  });
+
+  it("preserves the sort key", () => {
+    expect(pruneFilters(withAxes({}, "recent"), [], ctx).sort).toBe("recent");
   });
 });

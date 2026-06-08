@@ -27,8 +27,13 @@ const STATE_LABEL: Record<string, string> = { open: "Open", merged: "Merged", cl
 function stateBadgeHtml(item: ReviewItem): string {
   const s = item.details.state;
   const prov = item.source;
+  // Link the #number straight to the PR/issue on the provider (self permalink, else url).
+  const href = item.details.permalinks.find(p => p.kind === "pr" || p.kind === "issue")?.href ?? item.url;
+  const num = href
+    ? `<a class="rc-link" href="${esc(href)}" target="_blank" rel="noreferrer">#${item.details.number}</a>`
+    : `#${item.details.number}`;
   return `<span class="rc-state rc-state-${s}">${STATE_LABEL[s] ?? s}</span>`
-    + `<span class="rc-prov">${esc(prov)} · #${item.details.number}</span>`;
+    + `<span class="rc-prov">${esc(prov)} · ${num}</span>`;
 }
 
 // A PR whose checks are unfetched (lazy) shows a neutral "open to load" affordance;
@@ -68,8 +73,11 @@ export function reviewCardHtml(
     `${relationStripHtml(d.relations, d.permalinks)}</div>` +
     `<div class="rc-title-row"><span class="rc-title">${esc(item.title)}</span></div>`;
 
+  // Byline = the author. Show the name (the role label "author" is redundant in the
+  // first byline position); the chip used to render only an avatar, leaving the name
+  // reachable solely via the tooltip.
   const byline =
-    `<div class="rc-byline">${actorChipHtml(d.author, "author")}${checksHtml(item)}</div>`;
+    `<div class="rc-byline">${actorChipHtml(d.author, undefined, { showName: true })}${checksHtml(item)}</div>`;
 
   const meta =
     `<div class="rc-meta">` +

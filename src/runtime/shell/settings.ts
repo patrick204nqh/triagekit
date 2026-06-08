@@ -64,7 +64,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
         </nav>
         <div class="set-content">
           <div class="cat-pane" data-cat-pane="connections">
-            <section class="set-section"><label class="set-label">Connections</label>
+            <section class="set-section wide"><label class="set-label">Connections</label>
               <input class="conn-filter" data-conn-filter type="text" placeholder="Filter integrations…" aria-label="Filter integrations"/>
               <div class="conn-list" data-conns></div>
               <span class="set-helper">One credential per provider — kept in this tab only (session), never persisted or embedded.</span></section>
@@ -78,12 +78,12 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
                 <label>P2 ≥ <input type="number" min="0" step="1" data-tier-input="p2"></label>
               </div>
               <span class="set-helper">Saved in this browser; re-tiers on Save.</span></section>
-            <section class="set-section"><label class="set-label">Scoring</label>
+            <section class="set-section wide"><label class="set-label">Scoring</label>
               <p class="set-helper">Per-kind score model. Simple = weight sliders; Advanced = formula + signals. Saved in this browser.</p>
               <div data-scoring-editor></div></section>
           </div>
           <div class="cat-pane" data-cat-pane="filters" hidden>
-            <section class="set-section"><label class="set-label">Bot accounts</label>
+            <section class="set-section wide"><label class="set-label">Bot accounts</label>
               <p class="set-helper">Logins to treat as bots, in addition to provider-flagged bots. Affects the Author filter. Saved in this browser.</p>
               <div class="bot-chips" data-bot-chips></div>
               <input class="bot-add" data-bot-add type="text" placeholder="Add a login — Enter or comma" aria-label="Add bot login"></section>

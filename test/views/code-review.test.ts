@@ -8,9 +8,10 @@ import { issueKind } from "../../src/runtime/kinds/issue";
 registerKinds([changeRequestKind, issueKind]);   // registers change-request + issue kind renderers + axes
 import { getFilterAxis } from "../../src/runtime/layout/toolbar/axis-registry";
 
-it("registers review label + assignee axes", () => {
-  expect(getFilterAxis("label")).toBeDefined();
+it("registers the assignee axis and exactly one (generic) labels axis — no duplicate", () => {
   expect(getFilterAxis("assignee")).toBeDefined();
+  expect(getFilterAxis("labels")).toBeDefined();    // generic axis already covers review labels
+  expect(getFilterAxis("label")).toBeUndefined();   // the redundant review-specific "Label" axis is gone
 });
 
 function pr(over: Partial<ScoredItem> = {}): ScoredItem {

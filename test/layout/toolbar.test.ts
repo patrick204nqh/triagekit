@@ -74,6 +74,24 @@ describe("renderToolbar", () => {
     expect(onFilterChange.mock.calls[0][0].axes.tier).toEqual(["P0"]);
   });
 
+  it("shows a truthful 'shown / total' count when filters hide some rows", () => {
+    const host = document.createElement("div");
+    const mk = (id: string, tier: ScoredItem["tier"]): ScoredItem => ({
+      ...rows[0], id, tier,
+    });
+    const three = [mk("a", "P0"), mk("b", "P1"), mk("c", "P2")];
+    renderToolbar(host, props({ rows: three, filters: { axes: { tier: ["P0"] }, sort: "priority" } }));
+    const count = host.querySelector(".tb-count")!.textContent!;
+    expect(count).toContain("1");   // one row shown
+    expect(count).toContain("3");   // of three total
+  });
+
+  it("shows a single number when nothing is filtered out", () => {
+    const host = document.createElement("div");
+    renderToolbar(host, props());   // one row, no filters
+    expect(host.querySelector(".tb-count")!.textContent!.trim()).toBe("1");
+  });
+
   it("mounts the provider-switch in row 1 and the filter/sort row below it", () => {
     const host = document.createElement("div");
     renderToolbar(host, props({

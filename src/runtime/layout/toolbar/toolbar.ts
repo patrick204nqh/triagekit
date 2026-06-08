@@ -1,7 +1,7 @@
 import type { ScoredItem } from "../table/kind-renderer";
 import type { Artifact } from "../../dataset/artifact";
 import { esc } from "../util";
-import { type ListState } from "./filter-state";
+import { applyFilters, type ListState } from "./filter-state";
 import { listFilterAxes, listSortKeys, type AxisCtx, type FilterAxis } from "./axis-registry";
 import { renderProviderSwitch, type SwitchProvider } from "../navigation/provider-switch";
 import { renderRepoTabs, type RepoOption } from "../navigation/repo-tabs";
@@ -36,6 +36,12 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
   const sel = (id: string) => p.filters.axes[id] ?? [];
   const fcount = activeFilterCount(p.filters);
   const curSort = sorts.find(s => s.id === p.filters.sort)?.label ?? "Priority";
+  // p.rows is the active-repo-scoped set (see toolbarPropsFromShell); count what the
+  // filters actually leave visible vs. that scoped total, so the badge never claims
+  // more rows than the table shows.
+  const total = p.rows.length;
+  const shown = applyFilters(p.rows, p.filters).length;
+  const countLabel = shown === total ? `${total}` : `${shown} / ${total}`;
 
   const views = p.viewModes.map(v =>
     `<button class="tb-view${v.id === p.activeView ? " active" : ""}" data-view="${esc(v.id)}">${esc(v.label)}</button>`).join("");
@@ -54,7 +60,7 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
   // Row 1: view tabs + provider scope switch (top-right)
   // Row 2 (.fbar): Filter + Sort controls, right-aligned, directly above the table
   host.innerHTML = `<div class="toolbar">
-    <div class="tb-left">${views}<span class="tb-count">${p.rows.length}</span></div>
+    <div class="tb-left">${views}<span class="tb-count">${countLabel}</span></div>
     <div class="tb-right"><div data-provider-switch></div></div>
   </div>
   <div class="fbar">

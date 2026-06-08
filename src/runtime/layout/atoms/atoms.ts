@@ -20,14 +20,18 @@ export function slaTagHtml(sla: Sla): string {
   return `<span class="sla sla-${sla.state}">${esc(sla.label)}</span>`;
 }
 
-export function actorChipHtml(a: Actor, role?: string): string {
+export function actorChipHtml(a: Actor, role?: string, opts: { showName?: boolean } = {}): string {
   const init = esc(a.login.slice(0, 2).toUpperCase());
   const botCls = a.kind === "bot" ? " bot" : "";
+  // GitHub bot logins carry a noisy "[bot]" suffix; the avatar's bot styling already
+  // marks them, so drop it from the visible name (the full login stays in the tooltip).
+  const display = a.login.replace(/\[bot\]$/i, "");
+  const name = opts.showName ? ` <span class="actor-name">${esc(display)}</span>` : "";
   const r = role ? ` <span class="muted">${esc(role)}</span>` : "";
   const av = a.avatarUrl
     ? `<img class="av av-img${botCls}" src="${esc(a.avatarUrl)}" alt="${esc(a.login)}" data-initials="${init}" loading="lazy">`
     : `<span class="av${botCls}">${init}</span>`;
-  return `<span class="actor" title="${esc(a.login)}">${av}${r}</span>`;
+  return `<span class="actor" title="${esc(a.login)}">${av}${name}${r}</span>`;
 }
 
 export function labelChipHtml(l: Label): string {

@@ -65,7 +65,7 @@ export function renderRepoTabs(host: HTMLElement, p: RepoTabsProps): void {
       moreEl.setAttribute("aria-expanded", "false");
       handle.release();
     };
-    const handle: DismissibleHandle = dismissible(pop, { onDismiss: close });
+    const handle: DismissibleHandle = dismissible(pop, { onDismiss: close, closeOnOutsideClick: true, outsideClickIgnore: moreEl });
     handles.set(host, handle);
     moreEl.addEventListener("click", () => {
       if (pop.hidden) {

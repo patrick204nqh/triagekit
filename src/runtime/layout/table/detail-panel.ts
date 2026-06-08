@@ -26,14 +26,18 @@ export function renderTriageList(root: HTMLElement, rows: ScoredItem[], errors: 
   }
   const r0 = renderers.get(rows[0].kind);
   root.innerHTML = warnings + tableHtml(rows, r0?.columns)
+    + `<div class="scrim" data-drawer-scrim></div>`
     + `<aside class="drawer" hidden><div class="drawer-head"><button class="drawer-close" aria-label="Close">×</button></div><div class="drawer-content"></div></aside>`;
   const drawer = root.querySelector<HTMLElement>(".drawer")!;
+  const scrim = root.querySelector<HTMLElement>("[data-drawer-scrim]")!;
   const content = drawer.querySelector<HTMLElement>(".drawer-content")!;
-  // Non-modal inspector: Escape closes it and focus returns to the row, but the list
-  // behind stays interactive (no scrim, no focus-trap).
+  // The drawer overlays the list; a scrim dims it (and closes on click) so the table
+  // behind reads as backgrounded rather than awkwardly cropped. Escape also closes,
+  // returning focus to the row.
   const dismiss = dismissible(drawer, { onDismiss: () => closeDrawer() });
-  function closeDrawer() { drawer.hidden = true; dismiss.release(); }
+  function closeDrawer() { drawer.hidden = true; scrim.classList.remove("open"); dismiss.release(); }
   drawer.querySelector<HTMLElement>(".drawer-close")!.addEventListener("click", closeDrawer);
+  scrim.addEventListener("click", closeDrawer);
   root.querySelectorAll<HTMLElement>(".alert-row").forEach(tr => {
     tr.addEventListener("click", () => {
       const r = rows[Number(tr.dataset.i)];
@@ -42,6 +46,7 @@ export function renderTriageList(root: HTMLElement, rows: ScoredItem[], errors: 
       if (kr?.detail) kr.detail(content, r, ctx); else defaultDetail(content, r);
       if (ctx.scoreExplain) renderScoreBreakdown(content, r, ctx.scoreExplain(r));
       drawer.hidden = false;
+      scrim.classList.add("open");
       dismiss.activate();
     });
   });

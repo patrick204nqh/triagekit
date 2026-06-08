@@ -79,6 +79,11 @@ button { font:600 14px var(--sans); cursor:pointer; border-radius:8px; }
 input, select { background:var(--slate); color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:9px 11px; font:inherit; min-height:40px; width:100%; transition:border-color .15s, box-shadow .15s; }
 input:focus, select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 45%,transparent); }
 input::placeholder { color:var(--muted); } select { appearance:none; cursor:pointer; }
+/* Checkboxes/radios must NOT inherit the full-width 40px text-field treatment above
+   (it blows each filter-popover checkbox into a giant slate box and shoves its label
+   off to the side). Reset to a native control sized to its glyph, tinted to the accent. */
+input[type="checkbox"], input[type="radio"] { width:auto; min-height:0; flex:none; margin:0; padding:0; border:0; border-radius:0; background:none; accent-color:var(--accent); cursor:pointer; }
+input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outline:2px solid var(--accent); outline-offset:2px; box-shadow:none; }
 
 /* ── Domain rail (#domainRail — left sidebar; vertical Findings/Work groups) ── */
 .domains { display:flex; flex-direction:column; gap:2px; padding:16px 12px;
@@ -181,20 +186,28 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 .sheet { position:fixed; top:0; right:0; height:100dvh; background:var(--carbon); border-left:1px solid var(--line); box-shadow:-8px 0 32px var(--drawer-shadow), -1px 0 0 color-mix(in srgb,var(--accent) 22%,transparent); overflow-y:auto; transform:translateX(100%); transition:transform .32s var(--spring); z-index:11; }
 .sheet.open { transform:none; }
 
-/* table drawer — standalone slide-over toggled by [hidden] (no .open class) */
-.drawer { position:fixed; top:0; right:0; height:100dvh; width:min(440px,92vw); background:var(--carbon); border-left:1px solid var(--line); box-shadow:-8px 0 32px var(--drawer-shadow), -1px 0 0 color-mix(in srgb,var(--accent) 22%,transparent); overflow-y:auto; z-index:11; }
+/* table drawer — overlay slide-over toggled by [hidden]; a scrim (.scrim.open) dims
+   the list behind it. Wider than the old 440px so PR/issue bodies breathe. */
+.drawer { position:fixed; top:0; right:0; height:100dvh; width:min(520px,92vw); background:var(--carbon); border-left:1px solid var(--line); box-shadow:-8px 0 32px var(--drawer-shadow), -1px 0 0 color-mix(in srgb,var(--accent) 22%,transparent); overflow-y:auto; z-index:12; }
 .drawer[hidden] { display:none; }
-.drawer h3 { margin:0 0 4px; font-size:1.125rem; font-weight:600; font-family:var(--mono); display:flex; align-items:center; gap:10px; }
-.drawer .muted { margin:0 0 20px; font-size:13px; }
+.drawer h3 { margin:0 0 4px; padding-right:34px; font-size:1.125rem; font-weight:600; font-family:var(--mono); display:flex; align-items:center; gap:10px; }
+/* Subtitle paragraph spacing only — scoped to <p> so it can't bleed onto inline
+   .muted spans (e.g. the byline's "no conflicts"), where a bottom margin would
+   knock the flex item out of vertical centre. */
+.drawer p.muted { margin:0 0 20px; font-size:13px; }
 .drawer dl { display:grid; grid-template-columns:max-content 1fr; gap:10px 18px; margin:0 0 24px; }
 .drawer dt { color:var(--muted); font-size:13px; } .drawer dd { margin:0; }
 .drawer dd a, .drawer a { color:var(--accent); word-break:break-all; }
-.drawer-head { display:flex; justify-content:flex-end; padding:6px 6px 0; }
-.drawer-close { background:none; border:0; color:var(--muted); font-size:18px; line-height:1; cursor:pointer; padding:4px 8px; border-radius:6px; }
-.drawer-close:hover { color:var(--fg); }
-.drawer-content { padding:0 14px 14px; }
+/* Close floats top-right in a sticky, zero-height bar — no wasted header row, and it
+   stays reachable while the body scrolls. The first content block reserves right
+   padding (see .drawer h3 / .rc-head) so a long title never slides under it. */
+.drawer-head { position:sticky; top:0; z-index:3; height:0; padding:0; display:flex; justify-content:flex-end; pointer-events:none; }
+.drawer-close { pointer-events:auto; margin:12px 14px 0 0; width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; background:var(--carbon); border:1px solid var(--line-strong); color:var(--muted); font-size:16px; line-height:1; cursor:pointer; padding:0; border-radius:7px; }
+.drawer-close:hover { color:var(--fg); background:var(--slate); }
+.drawer-content { padding:14px 18px 22px; }
 .drawer-content .review-card { border:0; padding:0; }
-.drawer-inner { padding:14px 0 0; }
+.drawer-content .rc-head { padding-right:34px; }
+.drawer-inner { padding:0; }
 @media (max-width:768px) { .drawer { left:0; right:0; width:auto; } }
 
 /* ── Score breakdown (drawer detail block) ─────────────────────────── */
@@ -211,8 +224,9 @@ table.breakdown td.num { text-align:right; font-family:var(--mono); font-variant
 .sheet.panel { inset:0; width:100%; max-width:none; height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
 .panel-head { display:flex; align-items:center; justify-content:space-between; padding:22px 24px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--carbon); }
 .panel-head h3 { margin:0; font-size:1.125rem; font-weight:600; }
-/* Two-column body: fixed sidebar (left) + flexible content (right), capped to a centered column. */
-.panel-body { padding:0; display:grid; grid-template-columns:170px 1fr; flex:1; min-height:0; width:min(1100px,100%); margin:0 auto; }
+/* Two-column body: fixed sidebar (left) + flexible content (right), capped to a centered
+   column. Cap widened to 1440 so the full-screen surface is actually used on wide displays. */
+.panel-body { padding:0; display:grid; grid-template-columns:190px 1fr; flex:1; min-height:0; width:min(1440px,100%); margin:0 auto; }
 
 /* Sidebar — vertical list of category rows */
 .set-sidebar { display:flex; flex-direction:column; gap:3px; padding:18px 12px; border-right:1px solid var(--line); }
@@ -224,12 +238,17 @@ table.breakdown td.num { text-align:right; font-family:var(--mono); font-variant
 .cat .unsaved-dot { display:none; }
 .cat .unsaved-dot[data-unsaved] { display:block; width:7px; height:7px; border-radius:50%; background:var(--p2); flex:none; margin-left:auto; }
 
-/* Content — visible pane stacks its sections with the old panel-body gap */
-.set-content { padding:22px 24px; overflow-y:auto; min-width:0; }
-.cat-pane { display:flex; flex-direction:column; gap:26px; }
+/* Content — the visible pane lays its sections in a responsive grid so the wide
+   canvas is used (cards side by side) instead of one tall column. Sections that need
+   the full width (a list, the scoring editor) opt out with .wide. */
+.set-content { padding:26px 32px; overflow-y:auto; min-width:0; }
+.cat-pane { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:22px 24px; align-items:start; }
 .cat-pane[hidden] { display:none; }
 
-.set-section { display:flex; flex-direction:column; gap:9px; }
+.set-section { display:flex; flex-direction:column; gap:9px; background:var(--slate); border:1px solid var(--line); border-radius:12px; padding:18px 18px; }
+.set-section.wide { grid-column:1 / -1; }
+/* Cap free-text controls inside full-width sections so they don't stretch to 1200px. */
+.set-section.wide .conn-filter, .set-section.wide .bot-add { max-width:560px; }
 .set-group { display:flex; flex-direction:column; gap:7px; }
 
 /* Segmented control (Appearance) */
@@ -273,7 +292,7 @@ table.breakdown td.num { text-align:right; font-family:var(--mono); font-variant
 .conn-item .cmeta { font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .conn-item .cstat { font:500 11px var(--sans); color:var(--muted); flex:none; }
 .conn-item.ok .cstat { color:var(--accent); }
-.panel-foot { position:sticky; bottom:0; display:flex; align-items:center; justify-content:space-between; width:min(1100px,100%); margin:0 auto; padding:14px 24px; border-top:1px solid var(--line); background:var(--carbon); }
+.panel-foot { position:sticky; bottom:0; display:flex; align-items:center; justify-content:space-between; width:min(1440px,100%); margin:0 auto; padding:14px 28px; border-top:1px solid var(--line); background:var(--carbon); }
 .unsaved-summary { display:flex; align-items:center; gap:8px; color:var(--muted); font:500 13px var(--sans); }
 .unsaved-summary .dot { width:8px; height:8px; border-radius:50%; background:var(--p1); flex:none; }
 .foot-actions { display:flex; gap:10px; }
@@ -409,12 +428,15 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 .rc-comments { font-family: var(--mono); color: var(--muted); }
 .rc-actions { border-top: 1px solid var(--line); padding-top: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .rc-prov { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.rc-link { color: var(--accent); text-decoration: none; }
+.rc-link:hover { text-decoration: underline; }
 .rc-state { padding: 1px 8px; border-radius: 10px; font-size: .8em; }
 .rc-state-open { background: color-mix(in srgb, var(--p2) 22%, transparent); color: var(--p2); }
 .rc-state-merged { background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--accent); }
 .rc-state-closed, .rc-state-draft { background: color-mix(in srgb, var(--muted) 22%, transparent); color: var(--muted); }
 
 .actor { display: inline-flex; align-items: center; gap: 5px; }
+.actor-name { font-family: var(--mono); font-size: 0.92em; color: var(--fg); }
 .av { width: 20px; height: 20px; border-radius: 999px; border: 1px solid var(--line);
   display: inline-flex; align-items: center; justify-content: center;
   font-family: var(--mono); font-size: 10px; background: var(--slate); color: var(--fg); }

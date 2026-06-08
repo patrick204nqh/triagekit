@@ -11,7 +11,7 @@ import type { ScoredItem } from "../layout/table/kind-renderer";
 import { renderInsights } from "../layout/insights";
 import { applicableTabs, getTab } from "../layout/navigation/tab-registry";
 import { getSortKey, getFilterAxis } from "../layout/toolbar/axis-registry";
-import { emptyListState, type ListState } from "../layout/toolbar/filter-state";
+import { emptyListState, pruneFilters, type ListState } from "../layout/toolbar/filter-state";
 import { renderToolbar, type ToolbarProps } from "../layout/toolbar/toolbar";
 import { CredStore } from "./cred-store";
 import { ScopeStore } from "./scope-store";
@@ -74,7 +74,11 @@ export function toolbarPropsFromShell(i: ToolbarPropsInput): Omit<ToolbarProps, 
   // current options — matches derive()'s auto-fallback. State is NOT reset upstream,
   // so stickiness survives a round-trip to an artifact that DOES have the repo.
   const activeRepo = repos.some(r => r.id === i.activeRepo) ? i.activeRepo : "";
-  return { artifact: i.artifact, rows: i.rows, filters: i.filters, viewModes, activeView: i.activeView, providers, repos, activeRepo };
+  // The toolbar's filter options + count derive from `rows`; scope them to the active
+  // repo so labels (and the count) are per-repo. The repo TABS, computed above from the
+  // full set, still list every repo so the user can switch.
+  const rows = activeRepo ? i.rows.filter(r => r.location === activeRepo) : i.rows;
+  return { artifact: i.artifact, rows, filters: i.filters, viewModes, activeView: i.activeView, providers, repos, activeRepo };
 }
 
 export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
@@ -338,6 +342,12 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       },
       onRepoSelect: (id) => {
         repoView = id;
+        // Prune selections that don't exist in the repo we're switching to (e.g. a
+        // label unique to the previous repo) so the table doesn't silently empty out
+        // against an option that's no longer in the dropdown to un-check.
+        const scoped = id && lastRows.some(r => r.location === id)
+          ? lastRows.filter(r => r.location === id) : lastRows;
+        filterState = pruneFilters(filterState, scoped, { artifact: active });
         syncUrl();
         core.rerender();      // client-side re-derive, no refetch
         buildNav();           // re-render tabs so the active one updates

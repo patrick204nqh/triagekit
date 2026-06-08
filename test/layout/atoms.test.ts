@@ -32,6 +32,18 @@ describe("atoms", () => {
     expect(human).not.toContain("av bot");
   });
 
+  it("actorChipHtml omits the visible name by default but shows it (without the [bot] suffix) on request", () => {
+    const noName = actorChipHtml({ login: "octella", avatarUrl: "", kind: "human" });
+    expect(noName).not.toContain("actor-name");          // default: avatar-only, name in tooltip
+
+    const named = actorChipHtml({ login: "octella", avatarUrl: "", kind: "human" }, undefined, { showName: true });
+    expect(named).toContain('class="actor-name">octella<');
+
+    const bot = actorChipHtml({ login: "dependabot[bot]", avatarUrl: "", kind: "bot" }, undefined, { showName: true });
+    expect(bot).toContain('class="actor-name">dependabot<');  // noisy [bot] suffix stripped for display
+    expect(bot).toContain('title="dependabot[bot]"');        // full login still in the tooltip
+  });
+
   it("labelChipHtml passes the color through a CSS var and escapes the name", () => {
     const out = labelChipHtml({ name: "security", color: "d6504a" });
     expect(out).toContain("--lbl:#d6504a");

@@ -31,12 +31,10 @@ export const changeRequestRenderer: KindRenderer = { kind: CHANGE_REQUEST, colum
 export const issueRenderer: KindRenderer = { kind: ISSUE, columns: reviewColumns, detail };
 
 const isReview = (k: string) => k === CHANGE_REQUEST || k === ISSUE;
-export const labelAxis: FilterAxis = {
-  id: "label", label: "Label", widget: "chips", quick: false,
-  appliesTo: (rows) => rows.some(r => isReview(r.kind) && det(r).labels.length > 0),
-  optionsFrom: (rows) => uniqueValues(rows, r => det(r).labels.map(l => l.name), r => isReview(r.kind)),
-  test: (i, sel) => isReview(i.kind) && det(i).labels.some(l => sel.includes(l.name)),
-};
+// NOTE: there is no review-specific "label" axis — the built-in generic `labels` axis
+// (axis-registry) already reads `details.labels[].name` via labelNamesOf, which covers
+// change-request/issue rows. A second axis here only produced a duplicate "Label" group
+// in the Filter popover alongside "Labels".
 export const assigneeAxis: FilterAxis = {
   id: "assignee", label: "Assignee", widget: "chips", quick: false,
   appliesTo: (rows) => rows.some(r => isReview(r.kind) && det(r).assignees.length > 0),

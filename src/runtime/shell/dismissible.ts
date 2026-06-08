@@ -15,6 +15,10 @@ export interface DismissibleOptions {
   modal?: boolean;
   /** Focus target on activate() for modal surfaces. Defaults to the first focusable. */
   initialFocus?: () => HTMLElement | null;
+  /** Dismiss when a pointerdown lands outside the panel — for light popovers with no scrim. Default false. */
+  closeOnOutsideClick?: boolean;
+  /** A pointerdown inside this element does NOT count as "outside" (the toggle trigger, so its own click can close). */
+  outsideClickIgnore?: HTMLElement | null;
 }
 
 export interface DismissibleHandle {
@@ -59,6 +63,18 @@ export function dismissible(panel: HTMLElement, opts: DismissibleOptions): Dismi
   const dismiss = () => opts.onDismiss();
   const entry: StackEntry = { dismiss };
 
+  // Light-popover outside-click: a pointerdown outside the panel (and outside the
+  // toggle trigger, whose own click handles closing) dismisses. Capture phase so it
+  // fires before in-panel handlers. The opening click has already completed before
+  // activate() registers this, so it never self-closes on open.
+  function onOutsidePointerDown(e: Event): void {
+    const t = e.target as Node | null;
+    if (!t) return;
+    if (panel.contains(t)) return;
+    if (opts.outsideClickIgnore?.contains(t)) return;
+    dismiss();
+  }
+
   function onTrapKeydown(e: KeyboardEvent): void {
     if (e.key !== "Tab") return;
     const f = focusables(panel);
@@ -87,6 +103,7 @@ export function dismissible(panel: HTMLElement, opts: DismissibleOptions): Dismi
       ensureKeyListener();
       stack.push(entry);
       opts.scrim?.addEventListener("click", dismiss);
+      if (opts.closeOnOutsideClick) document.addEventListener("pointerdown", onOutsidePointerDown, true);
       if (modal) {
         panel.addEventListener("keydown", onTrapKeydown, true);
         setBackgroundInert(true);
@@ -99,6 +116,7 @@ export function dismissible(panel: HTMLElement, opts: DismissibleOptions): Dismi
       const i = stack.indexOf(entry);
       if (i >= 0) stack.splice(i, 1);
       opts.scrim?.removeEventListener("click", dismiss);
+      if (opts.closeOnOutsideClick) document.removeEventListener("pointerdown", onOutsidePointerDown, true);
       if (modal) {
         panel.removeEventListener("keydown", onTrapKeydown, true);
         setBackgroundInert(false);

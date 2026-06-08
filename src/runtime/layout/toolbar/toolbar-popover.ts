@@ -15,7 +15,11 @@ export function wirePopovers(host: HTMLElement): void {
       if (activeHandle) { activeHandle.release(); activeHandle = null; activePop = null; }
       if (opening) {
         pop.hidden = false;
-        activeHandle = dismissible(pop, { onDismiss: () => { pop.hidden = true; activeHandle = null; activePop = null; } });
+        activeHandle = dismissible(pop, {
+          onDismiss: () => { pop.hidden = true; activeHandle = null; activePop = null; },
+          closeOnOutsideClick: true,   // click anywhere off the popover closes it
+          outsideClickIgnore: btn,     // except the trigger, whose own click toggles
+        });
         activeHandle.activate();
         activePop = pop;
       }
