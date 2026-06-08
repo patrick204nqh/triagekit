@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { deadlineOf, dueSoonRows, renderDueSoon } from "../../src/runtime/layout/due-soon";
+import { dueSoonRows, renderDueSoon } from "../../src/runtime/layout/due-soon";
+import { deadlineOf } from "../../src/runtime/dataset/details";
 import { getTab } from "../../src/runtime/layout/tab-registry";
 import "../../src/runtime/layout/due-soon";   // side-effect: registers the tab
 import type { ScoredItem } from "../../src/runtime/layout/triage-table";
@@ -19,9 +20,9 @@ describe("due-soon lens", () => {
     row({ id: "none", details: {} }),
   ];
 
-  it("deadlineOf reads details.dueAt or null", () => {
+  it("deadlineOf reads details.dueAt or undefined", () => {
     expect(deadlineOf(rows[0])).toBe("2026-09-01T00:00:00Z");
-    expect(deadlineOf(rows[2])).toBeNull();
+    expect(deadlineOf(rows[2])).toBeUndefined();
   });
 
   it("dueSoonRows keeps only dated rows, ascending by deadline", () => {
