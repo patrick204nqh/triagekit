@@ -1,0 +1,62 @@
+# Contributing to triagekit
+
+Thanks for your interest in improving triagekit. It's a backend-free, single-file repo
+triage tool — that constraint shapes everything below.
+
+## Development setup
+
+Requires **Node ≥ 20**.
+
+```bash
+npm install          # install dependencies
+npm test             # vitest — the full unit suite
+npm run build:cli    # compile the CLI to dist-cli/
+npm run lint:anon    # anonymity guardrail (see below)
+npm run pack:smoke   # tarball smoke test: pack → install → build --generic → assert
+```
+
+Build a dashboard locally to try a change end to end:
+
+```bash
+node dist-cli/cli/index.js build --generic   # writes dist/triage.html
+open dist/triage.html
+```
+
+## How we work
+
+- **Test-driven.** Write a failing test first, make it pass, then refactor. New behavior
+  arrives with tests; bug fixes arrive with a regression test that fails before the fix.
+- **Keep the single-file invariant.** The built dashboard must inline everything — no
+  external scripts, no CDN. CI fails if `src="http…"` appears in the output, and the
+  strict hash-based CSP is computed at build time. Don't add runtime network dependencies.
+- **No backend.** Features are snapshot-only and run entirely in the browser. If something
+  needs a server or persistent history, it doesn't belong here.
+- **Small, focused changes.** One concern per PR; match the surrounding code's style.
+
+## The public / private boundary
+
+This repository is the **engine** — it contains **no** real org names, repo names,
+hostnames, or tokens. Everything that identifies a user lives in gitignored inputs:
+
+| File | Tracked? | Contains |
+| --- | --- | --- |
+| `triage.config.example.yml` | ✅ committed | the fictional `acme-corp` example |
+| `triage.config.yml` | 🚫 gitignored | your real scope (repo names) |
+| `triage.hooks.ts` | 🚫 gitignored | your optional scoring overrides |
+| `dist/triage.html` | 🚫 gitignored | the built dashboard |
+
+**`npm run lint:anon` enforces this** — it fails if a private artifact is tracked or a
+credential pattern (`ghp_…`, `github_pat_…`) appears in a tracked file. Run it before you
+push. Never commit a real token, repo name, or screenshot containing private data.
+
+## Commit & PR style
+
+- Conventional-commit prefixes: `feat`, `fix`, `docs`, `refactor`, `test`, `build`, `ci`.
+- **No AI co-author / attribution footers** in commits or PRs.
+- Before opening a PR: `npm test`, `npm run lint:anon`, and `npm run pack:smoke` all pass.
+- PRs run CI (tests, anon-lint, build smoke, Pages drift). Green CI is required to merge.
+
+## Releasing
+
+Maintainer-only; see [`RELEASING.md`](RELEASING.md). Publishing happens in CI on a `v*`
+tag — never locally.
