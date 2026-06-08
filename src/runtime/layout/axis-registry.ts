@@ -2,6 +2,7 @@ import type { ScoredItem } from "./triage-table";
 import type { Artifact } from "../dataset/artifact";
 import type { Tier } from "../scoring/tier";
 import { authorKindOf, labelNamesOf } from "../dataset/details";
+import { uniqueValues } from "./axis-utils";
 
 export interface AxisCtx { artifact: Artifact; }
 export interface AxisOption { value: string; label: string; }
@@ -53,7 +54,7 @@ registerFilterAxis({
 registerFilterAxis({
   id: "labels", label: "Labels", widget: "chips", quick: false,
   appliesTo: (rows) => rows.some(r => labelNamesOf(r).length > 0),
-  optionsFrom: (rows) => [...new Set(rows.flatMap(labelNamesOf))].sort().map(v => ({ value: v, label: v })),
+  optionsFrom: (rows) => uniqueValues(rows, labelNamesOf),
   test: (i, sel) => labelNamesOf(i).some(n => sel.includes(n)),
 });
 
