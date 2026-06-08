@@ -13,13 +13,13 @@ export type ToolbarProvider = SwitchProvider;
 export interface ToolbarProps {
   artifact: Artifact;
   rows: ScoredItem[];
-  facets: ListState;
+  filters: ListState;
   viewModes: ToolbarViewMode[];
   activeView: string;
   providers: ToolbarProvider[];
   repos: RepoOption[];
   activeRepo: string;
-  onFacetChange: (next: ListState) => void;
+  onFilterChange: (next: ListState) => void;
   onViewChange: (id: string) => void;
   onProviderSelect: (id: string) => void;
   onRepoSelect: (id: string) => void;
@@ -33,9 +33,9 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
   const ctx: AxisCtx = { artifact: p.artifact };
   const axes = listFilterAxes().filter(a => a.appliesTo(p.rows, ctx));
   const sorts = listSortKeys().filter(s => !s.appliesTo || s.appliesTo(ctx));
-  const sel = (id: string) => p.facets.axes[id] ?? [];
-  const fcount = activeFilterCount(p.facets);
-  const curSort = sorts.find(s => s.id === p.facets.sort)?.label ?? "Priority";
+  const sel = (id: string) => p.filters.axes[id] ?? [];
+  const fcount = activeFilterCount(p.filters);
+  const curSort = sorts.find(s => s.id === p.filters.sort)?.label ?? "Priority";
 
   const views = p.viewModes.map(v =>
     `<button class="tb-view${v.id === p.activeView ? " active" : ""}" data-view="${esc(v.id)}">${esc(v.label)}</button>`).join("");
@@ -48,7 +48,7 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
 
   const filterPop = `<div class="tb-pop" data-pop="filter" hidden>${axes.map(axisGroup).join("") || `<div class="muted pop-empty">No filters for this list.</div>`}</div>`;
   const sortPop = `<div class="tb-pop" data-pop="sort" hidden>`
-    + sorts.map(s => `<button class="pop-sort${s.id === p.facets.sort ? " on" : ""}" data-sort="${esc(s.id)}">${esc(s.label)}</button>`).join("")
+    + sorts.map(s => `<button class="pop-sort${s.id === p.filters.sort ? " on" : ""}" data-sort="${esc(s.id)}">${esc(s.label)}</button>`).join("")
     + `</div>`;
 
   // Row 1: view tabs + provider scope switch (top-right)
@@ -78,9 +78,9 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
 
   // Emit helper for filter mutations (clone like filter-state does).
   const emit = (mut: (s: ListState) => void) => {
-    const clone: ListState = { axes: {}, sort: p.facets.sort };
-    for (const [k, v] of Object.entries(p.facets.axes)) clone.axes[k] = [...v];
-    mut(clone); p.onFacetChange(clone);
+    const clone: ListState = { axes: {}, sort: p.filters.sort };
+    for (const [k, v] of Object.entries(p.filters.axes)) clone.axes[k] = [...v];
+    mut(clone); p.onFilterChange(clone);
   };
   host.querySelectorAll<HTMLInputElement>("[data-axis]").forEach(cb =>
     cb.addEventListener("change", () => emit(s => {

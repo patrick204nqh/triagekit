@@ -13,12 +13,12 @@ const rows: ScoredItem[] = [{
 function props(over: Partial<ToolbarProps> = {}): ToolbarProps {
   return {
     artifact: { id: "change-request", label: "Pull requests", group: "work", kinds: ["change-request"] },
-    rows, facets: emptyListState(),
+    rows, filters: emptyListState(),
     viewModes: [{ id: "list", label: "List" }, { id: "insights", label: "Insights" }],
     activeView: "list",
     providers: [{ id: "github-review", label: "github", on: true, live: true }],
     repos: [], activeRepo: "",
-    onFacetChange: () => {}, onViewChange: () => {}, onProviderSelect: () => {}, onRepoSelect: () => {},
+    onFilterChange: () => {}, onViewChange: () => {}, onProviderSelect: () => {}, onRepoSelect: () => {},
     ...over,
   };
 }
@@ -38,7 +38,7 @@ describe("renderToolbar", () => {
   });
   it("shows the active-filter count on the Filter button", () => {
     const host = document.createElement("div");
-    renderToolbar(host, props({ facets: { axes: { tier: ["P0", "P1"] }, sort: "priority" } }));
+    renderToolbar(host, props({ filters: { axes: { tier: ["P0", "P1"] }, sort: "priority" } }));
     expect(host.querySelector("[data-tb-filter]")!.textContent).toContain("2");
   });
   it("emits onViewChange when a tab is clicked", () => {
@@ -49,29 +49,29 @@ describe("renderToolbar", () => {
     expect(got).toBe("insights");
   });
 
-  it("clicking a sort button emits onFacetChange with the new sort id", () => {
+  it("clicking a sort button emits onFilterChange with the new sort id", () => {
     const host = document.createElement("div");
-    const onFacetChange = vi.fn();
-    renderToolbar(host, props({ onFacetChange }));
+    const onFilterChange = vi.fn();
+    renderToolbar(host, props({ onFilterChange }));
     // [data-sort] buttons exist in the DOM regardless of popover hidden state
     const recentBtn = host.querySelector<HTMLElement>("[data-sort='recent']");
     expect(recentBtn).not.toBeNull();
     recentBtn!.click();
-    expect(onFacetChange).toHaveBeenCalledOnce();
-    expect(onFacetChange.mock.calls[0][0].sort).toBe("recent");
+    expect(onFilterChange).toHaveBeenCalledOnce();
+    expect(onFilterChange.mock.calls[0][0].sort).toBe("recent");
   });
 
-  it("checking a filter axis checkbox emits onFacetChange with that value in .axes", () => {
+  it("checking a filter axis checkbox emits onFilterChange with that value in .axes", () => {
     const host = document.createElement("div");
-    const onFacetChange = vi.fn();
+    const onFilterChange = vi.fn();
     // rows.length > 0, so the 'tier' axis always applies and renders checkboxes
-    renderToolbar(host, props({ onFacetChange }));
+    renderToolbar(host, props({ onFilterChange }));
     const tierCb = host.querySelector<HTMLInputElement>("[data-axis='tier'][data-val='P0']");
     expect(tierCb).not.toBeNull();
     tierCb!.checked = true;
     tierCb!.dispatchEvent(new Event("change"));
-    expect(onFacetChange).toHaveBeenCalledOnce();
-    expect(onFacetChange.mock.calls[0][0].axes.tier).toEqual(["P0"]);
+    expect(onFilterChange).toHaveBeenCalledOnce();
+    expect(onFilterChange.mock.calls[0][0].axes.tier).toEqual(["P0"]);
   });
 
   it("mounts the provider-switch in row 1 and the filter/sort row below it", () => {

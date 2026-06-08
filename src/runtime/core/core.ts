@@ -15,8 +15,8 @@ export interface CoreDeps {
   activeKinds(): Kind[];
   botLogins(): string[];
   scoreContext(): ScoreContext;
-  facets(): ListState;
-  repo(): string;
+  filters(): ListState;
+  repoView(): string;   // active repo display-filter ("" = all); not fetch-config Scope
 }
 
 export function createCore(deps: CoreDeps) {
@@ -28,8 +28,8 @@ export function createCore(deps: CoreDeps) {
       activeKinds: deps.activeKinds(),
       botLogins: deps.botLogins(),
       score: deps.scoreContext(),
-      repo: deps.repo(),
-      facets: deps.facets(),
+      repoView: deps.repoView(),
+      filters: deps.filters(),
     });
     deps.view.render({ scored, shown, errors: lastErrors, stats: deps.store.stats() });
   }
@@ -40,7 +40,7 @@ export function createCore(deps: CoreDeps) {
     paint();
   }
 
-  // Facet/scope/active-kind change: re-derive from the store, no refetch.
+  // Filter/scope/active-kind change: re-derive from the store, no refetch.
   function rerender(): void { paint(); }
 
   return { refreshNow, rerender };

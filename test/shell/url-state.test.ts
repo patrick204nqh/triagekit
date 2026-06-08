@@ -9,12 +9,21 @@ describe("readUrlState", () => {
     const s = readUrlState("?provider=github&repo=acme%2Fapi&artifact=change-request&view=list&sort=recent&tier=P0,P1");
     expect(s).toEqual({
       provider: "github",
-      repo: "acme/api",
+      repoView: "acme/api",
       artifact: "change-request",
       view: "list",
       sort: "recent",
       axes: { tier: ["P0", "P1"] },
     });
+  });
+
+  it("round-trips the wire param 'repo' into the internal repoView field", () => {
+    // read: ?repo=acme%2Fweb -> state.repoView === "acme/web"
+    const state = readUrlState("?repo=acme%2Fweb");
+    expect(state.repoView).toBe("acme/web");
+    // write: { repoView } -> "repo=" on the wire
+    writeUrlState({ repoView: "acme/web" });
+    expect(location.search).toContain("repo=acme%2Fweb");
   });
 
   it("returns {} for an empty query", () => {
@@ -31,7 +40,7 @@ describe("readUrlState", () => {
 describe("writeUrlState", () => {
   it("round-trips through readUrlState", () => {
     const state = {
-      provider: "github", repo: "acme/api", artifact: "issue",
+      provider: "github", repoView: "acme/api", artifact: "issue",
       view: "list", sort: "recent", axes: { tier: ["P0", "P1"], author: ["bot"] },
     };
     writeUrlState(state);
@@ -39,7 +48,7 @@ describe("writeUrlState", () => {
   });
 
   it("omits empty/absent fields from the query string", () => {
-    writeUrlState({ provider: "github", repo: "", axes: { tier: [] } });
+    writeUrlState({ provider: "github", repoView: "", axes: { tier: [] } });
     const params = new URLSearchParams(location.search);
     expect(params.get("provider")).toBe("github");
     expect(params.has("repo")).toBe(false);   // empty repo omitted

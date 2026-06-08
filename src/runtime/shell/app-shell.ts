@@ -45,7 +45,7 @@ const AUTO = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke
 const REFRESH = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>`;
 
 export interface ToolbarPropsInput {
-  artifact: Artifact; rows: ScoredItem[]; facets: ListState;
+  artifact: Artifact; rows: ScoredItem[]; filters: ListState;
   hasInsights: boolean; activeView: string;
   sources: { id: string; provider: string; status: string }[];
   activeProvider: string;
@@ -53,9 +53,9 @@ export interface ToolbarPropsInput {
   extraTabs: { id: string; label: string }[];
 }
 
-// Pure assembly of the toolbar's view-mode / provider-scope / facet props from the
+// Pure assembly of the toolbar's view-mode / provider-scope / filter props from the
 // shell's state, extracted so it's testable without mounting the whole shell.
-export function toolbarPropsFromShell(i: ToolbarPropsInput): Omit<ToolbarProps, "onFacetChange" | "onViewChange" | "onProviderSelect" | "onRepoSelect"> {
+export function toolbarPropsFromShell(i: ToolbarPropsInput): Omit<ToolbarProps, "onFilterChange" | "onViewChange" | "onProviderSelect" | "onRepoSelect"> {
   const viewModes = [{ id: "list", label: "List" }];
   if (i.hasInsights) viewModes.push({ id: "insights", label: "Insights" });
   for (const t of i.extraTabs) viewModes.push({ id: t.id, label: t.label });
@@ -72,7 +72,7 @@ export function toolbarPropsFromShell(i: ToolbarPropsInput): Omit<ToolbarProps, 
   // current options — matches derive()'s auto-fallback. State is NOT reset upstream,
   // so stickiness survives a round-trip to an artifact that DOES have the repo.
   const activeRepo = repos.some(r => r.id === i.activeRepo) ? i.activeRepo : "";
-  return { artifact: i.artifact, rows: i.rows, facets: i.facets, viewModes, activeView: i.activeView, providers, repos, activeRepo };
+  return { artifact: i.artifact, rows: i.rows, filters: i.filters, viewModes, activeView: i.activeView, providers, repos, activeRepo };
 }
 
 export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
@@ -91,9 +91,9 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   let active: Artifact = artifacts.find(a => liveSourcesFor(a).length) ?? artifacts[0];
   let view: string = "list";
   let activeProvider: string = (liveSourcesFor(active)[0] ?? sourcesFor(active)[0])?.id ?? "";
-  let activeRepo = "";   // "" = All; sticky across artifact switches, reset on provider change
+  let repoView = "";   // "" = All; sticky across artifact switches, reset on provider change
   let lastRows: ScoredItem[] = [];
-  let facetState: ListState = emptyListState();
+  let filterState: ListState = emptyListState();
   let lastFetchedAt: number | null = null;
   let cancelRefresh: (() => void) | undefined;
 
@@ -129,7 +129,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
 
     // repo: applied optimistically (cannot validate pre-fetch; self-corrects via the
     // repo control + the "All" fallback when the repo isn't among the loaded rows)
-    if (u.repo) activeRepo = u.repo;
+    if (u.repoView) repoView = u.repoView;
 
     // view: list / insights (when available) / a registered extra tab applicable to
     // the artifact. applicableTabs needs rows to report a tab applicable, so pre-fetch
@@ -141,15 +141,15 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     }
 
     // sort: only if the sort key exists
-    if (u.sort && getSortKey(u.sort)) facetState = { ...facetState, sort: u.sort };
+    if (u.sort && getSortKey(u.sort)) filterState = { ...filterState, sort: u.sort };
 
     // axes: only axis ids that exist (values not deep-validated — unknown values match nothing)
     if (u.axes) {
-      const axes: Record<string, string[]> = { ...facetState.axes };
+      const axes: Record<string, string[]> = { ...filterState.axes };
       for (const [id, vals] of Object.entries(u.axes)) {
         if (getFilterAxis(id) && vals.length) axes[id] = vals;
       }
-      facetState = { ...facetState, axes };
+      filterState = { ...filterState, axes };
     }
   }
 
@@ -157,7 +157,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   const usableSources = () => liveSourcesFor(active).filter(s =>
     s.id === activeProvider && creds.get(providerOf(s)) && Object.keys(scopes.get(providerOf(s))).length);
 
-  // Per-item score breakdown for the list drawer (lifted from renderListWithFacets).
+  // Per-item score breakdown for the list drawer (lifted from renderListWithFilters).
   const scoreExplain = (i: ScoredItem): ScoreExplanation | null => {
     const m = policy.getScoreModel(i.kind);
     if (!m || validateModel(m, fieldsFor(i.kind)).length !== 0) return null;
@@ -167,10 +167,10 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   // Assemble the current page state and mirror it to the URL query string.
   // Called from every state-mutation handler (replaceState — no history spam).
   const syncUrl = () => {
-    const { sort, axes } = facetState;
+    const { sort, axes } = filterState;
     writeUrlState({
       provider: activeProvider || undefined,
-      repo: activeRepo || undefined,
+      repoView: repoView || undefined,
       artifact: active?.id,
       view,
       sort,
@@ -178,8 +178,8 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     });
   };
 
-  // Facet change: update state, re-derive from the store (no refetch).
-  const onFacetChange = (next: ListState) => { facetState = next; syncUrl(); core.rerender(); };
+  // Filter change: update state, re-derive from the store (no refetch).
+  const onFilterChange = (next: ListState) => { filterState = next; syncUrl(); core.rerender(); };
 
   // Dispatcher view: owns view-mode selection (mirrors the original post-fetch
   // branching). insights/tab render directly; list mode delegates to the DOM view.
@@ -220,8 +220,8 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       getThresholds: () => policy.getTiers(),
       override: env.scoreOverride,
     }),
-    facets: () => facetState,
-    repo: () => activeRepo,
+    filters: () => filterState,
+    repoView: () => repoView,
   });
 
   // ── Command bar: brand + merged status chip + sync stamp + refresh + theme ──
@@ -281,7 +281,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     if (secs > 0) cancelRefresh = env.timer.every(secs * 1000, () => { if (liveSourcesFor(active).length) render(true); });
   }
 
-  // ── Navigation: grouped artifact rail (Findings / Work) → list/insights + facet ──
+  // ── Navigation: grouped artifact rail (Findings / Work) → list/insights + filter ──
   const rail = document.getElementById("domainRail")!;
   const nav = document.getElementById("viewswitch")!;
   const root = document.getElementById("root")!;
@@ -301,7 +301,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
         b.className = [a.id === active.id ? "active" : "", live ? "" : "upcoming"].filter(Boolean).join(" ");
         b.addEventListener("click", () => {
           active = a; view = "list"; activeProvider = (liveSourcesFor(a)[0] ?? sourcesFor(a)[0])?.id ?? "";
-          lastRows = []; facetState = emptyListState(); lastFetchedAt = null;
+          lastRows = []; filterState = emptyListState(); lastFetchedAt = null;
           syncUrl();
           buildRail(); buildNav(); refreshBar(); render();
         });
@@ -316,26 +316,26 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     nav.innerHTML = "";
     if (!liveSourcesFor(active).length) return;   // upcoming artifact: no toolbar
     const base = toolbarPropsFromShell({
-      artifact: active, rows: lastRows, facets: facetState,
+      artifact: active, rows: lastRows, filters: filterState,
       hasInsights, activeView: view,
       sources: sourcesFor(active).map(s => ({ id: s.id, provider: providerOf(s), status: s.status })),
       activeProvider,
-      activeRepo,
+      activeRepo: repoView,
       extraTabs: applicableTabs(active, lastRows).map(t => ({ id: t.id, label: t.label })),
     });
     renderToolbar(nav, {
       ...base,
-      onFacetChange,
+      onFilterChange,
       onViewChange: (id) => { view = id; syncUrl(); buildNav(); render(); },
       onProviderSelect: (id) => {
         activeProvider = id;
-        activeRepo = "";
-        lastRows = []; facetState = emptyListState(); lastFetchedAt = null;
+        repoView = "";
+        lastRows = []; filterState = emptyListState(); lastFetchedAt = null;
         syncUrl();
         buildNav(); refreshBar(); render();
       },
       onRepoSelect: (id) => {
-        activeRepo = id;
+        repoView = id;
         syncUrl();
         core.rerender();      // client-side re-derive, no refetch
         buildNav();           // re-render tabs so the active one updates

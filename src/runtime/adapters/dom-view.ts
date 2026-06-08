@@ -13,7 +13,7 @@ export interface DomViewDeps {
 }
 
 // Render-only list surface. Filtering/sorting is driven by the unified toolbar
-// (mounted in the shell's nav) via onFacetChange; this adapter just paints the
+// (mounted in the shell's nav) via onFilterChange; this adapter just paints the
 // already-derived rows.
 export function createDomView(host: HTMLElement, deps: DomViewDeps): ViewPort {
   return {

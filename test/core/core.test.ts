@@ -27,8 +27,8 @@ describe("createCore", () => {
       activeKinds: () => ["issue"],
       botLogins: () => [],
       scoreContext: () => score,
-      facets: () => emptyListState(),
-      repo: () => "",
+      filters: () => emptyListState(),
+      repoView: () => "",
     });
 
     await core.refreshNow();
@@ -47,7 +47,7 @@ describe("createCore", () => {
     const core = createCore({
       store, view: { render: (m) => { renders++; vm = m; } },
       jobsFor: () => [{ provider: "github", scopeKey: "r1", scope: {}, token: "t", port: gh }],
-      activeKinds: () => ["issue"], botLogins: () => [], scoreContext: () => score, facets: () => emptyListState(), repo: () => "",
+      activeKinds: () => ["issue"], botLogins: () => [], scoreContext: () => score, filters: () => emptyListState(), repoView: () => "",
     });
 
     core.rerender();

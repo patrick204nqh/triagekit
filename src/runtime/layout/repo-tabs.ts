@@ -19,7 +19,7 @@ export const MAX_REPO_TABS = 3;
 // handle's escape-stack entry — a zombie that swallows a later Escape.
 const handles = new WeakMap<HTMLElement, DismissibleHandle>();
 
-// Repo scope tabs: "All" + up to MAX_REPO_TABS repo tabs inline, the rest behind
+// Repo view tabs: "All" + up to MAX_REPO_TABS repo tabs inline, the rest behind
 // a "+N ▾" overflow dropdown (dismissible via Esc + the more-button toggle). <=1 repo -> nothing.
 export function renderRepoTabs(host: HTMLElement, p: RepoTabsProps): void {
   // Tear down any handle from a prior render of this host BEFORE the innerHTML
