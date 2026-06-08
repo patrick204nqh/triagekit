@@ -197,6 +197,16 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 .drawer-inner { padding:14px 0 0; }
 @media (max-width:768px) { .drawer { left:0; right:0; width:auto; } }
 
+/* ── Score breakdown (drawer detail block) ─────────────────────────── */
+.score-detail { border-top:1px solid var(--line); margin-top:20px; padding-top:16px; }
+.score-detail h4 { margin:0 0 10px; font-size:0.875rem; font-weight:600; font-family:var(--sans); }
+table.breakdown { width:100%; border-collapse:collapse; font-size:12px; }
+table.breakdown th { text-align:left; color:var(--muted); font:600 11px var(--sans); letter-spacing:.04em; text-transform:uppercase; padding:4px 8px 6px; border-bottom:1px solid var(--line-strong); }
+table.breakdown td { padding:6px 8px; border-top:1px solid var(--line); }
+table.breakdown td.num { text-align:right; font-family:var(--mono); font-variant-numeric:tabular-nums; }
+.bd-total { margin:10px 0 0; font-size:12px; color:var(--muted); }
+.bd-total strong { color:var(--fg); }
+
 /* settings panel — full-screen surface with a centered content column */
 .sheet.panel { inset:0; width:100%; max-width:none; height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
 .panel-head { display:flex; align-items:center; justify-content:space-between; padding:22px 24px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--carbon); }
