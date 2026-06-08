@@ -20,6 +20,16 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           cache: npm
       - run: npm ci
+      - name: Tag matches package version
+        if: github.event_name == 'push'
+        run: |
+          PKG="v$(node -p "require('./package.json').version")"
+          REF="${GITHUB_REF#refs/tags/}"
+          if [ "$REF" != "$PKG" ]; then
+            echo "✗ tag $REF does not match package.json version $PKG — bump the version before tagging"
+            exit 1
+          fi
+          echo "✓ tag $REF matches package.json version"
       - name: Unit tests
         run: npm test
       - name: Anonymity lint
