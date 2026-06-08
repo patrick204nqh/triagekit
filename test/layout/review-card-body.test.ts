@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // test/layout/review-card-body.test.ts
 import { describe, it, expect } from "vitest";
-import { reviewCardHtml } from "../../src/runtime/layout/review-card";
+import { reviewCardHtml } from "../../src/runtime/layout/review-card/review-card";
 import type { ReviewItem } from "../../src/runtime/dataset/shapes/review";
 
 const item: ReviewItem = {

@@ -1,5 +1,5 @@
-import { renderMarkdown } from "./markdown";
-import type { ReviewItem } from "../dataset/shapes/review";
+import { renderMarkdown } from "../markdown";
+import type { ReviewItem } from "../../dataset/shapes/review";
 
 // The sanitized GFM Markdown body of a review card.
 export function reviewBodyHtml(item: ReviewItem): string {

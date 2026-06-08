@@ -1,6 +1,6 @@
 import { type ScoredItem, type KindRenderer, type DetailCtx } from "../../layout/table/kind-renderer";
 import { esc } from "../../layout/util";
-import { mountReviewCard } from "../../layout/review-card";
+import { mountReviewCard } from "../../layout/review-card/review-card";
 import type { ReviewItem, ReviewDetails } from "../../dataset/shapes/review";
 import { CHANGE_REQUEST, ISSUE } from "../../dataset/shapes/review";
 import { makeGithubActions } from "../../ingest/github/actions";

@@ -1,8 +1,8 @@
-import { esc } from "./util";
+import { esc } from "../util";
 import {
   type ReviewItem, type ActionId, type MergeMethod,
   actionsFor, mergeable, reasonNotMergeable,
-} from "../dataset/shapes/review";
+} from "../../dataset/shapes/review";
 import type { CardState } from "./review-card";   // type-only — erased at compile time, no runtime cycle
 
 const ACTION_LABEL: Record<Exclude<ActionId, "open">, string> = {
