@@ -4,7 +4,7 @@ import { dueSoonRows, renderDueSoon } from "../../src/runtime/layout/due-soon";
 import { deadlineOf } from "../../src/runtime/dataset/details";
 import { getTab } from "../../src/runtime/layout/tab-registry";
 import "../../src/runtime/layout/due-soon";   // side-effect: registers the tab
-import type { ScoredItem } from "../../src/runtime/layout/triage-table";
+import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 
 function row(over: Partial<ScoredItem> & { details?: unknown }): ScoredItem {
   return {

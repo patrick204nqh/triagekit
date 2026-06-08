@@ -1,4 +1,4 @@
-import { esc } from "./triage-table";
+import { esc } from "./util";
 import type { Tier } from "../scoring/tier";
 import type { Actor, Label, CheckStatus, Permalink, Relation } from "../dataset/shared";
 

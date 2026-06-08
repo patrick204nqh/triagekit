@@ -2,7 +2,7 @@
 // test/views/code-scanning.test.ts
 import { describe, it, expect } from "vitest";
 import { codeScanningRenderer, toolAxis, stateAxis, severityAxis, renderByTool } from "../../src/runtime/views/code-security/code-scanning";
-import type { ScoredItem } from "../../src/runtime/layout/triage-table";
+import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 import type { CodeScanningDetails } from "../../src/runtime/dataset/kinds/code-scanning";
 
 const row = (d: Partial<CodeScanningDetails>): ScoredItem => ({

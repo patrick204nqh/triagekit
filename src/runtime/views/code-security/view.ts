@@ -1,4 +1,5 @@
-import { type ScoredItem, type KindRenderer, esc } from "../../layout/triage-table";
+import { type ScoredItem, type KindRenderer } from "../../layout/table/kind-renderer";
+import { esc } from "../../layout/util";
 import { type DependencyVulnDetails, DEPENDENCY_VULN } from "../../dataset/kinds/dependency-vuln";
 import { registerView } from "../registry";
 import "../../ingest/github/dependency-vuln-source";          // side-effect: register source

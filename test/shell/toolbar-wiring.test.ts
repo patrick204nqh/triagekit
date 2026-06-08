@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { toolbarPropsFromShell } from "../../src/runtime/shell/app-shell";
-import type { ScoredItem } from "../../src/runtime/layout/triage-table";
+import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 
 const row = (location: string): ScoredItem => ({
   id: location + ":1", source: "github", kind: "issue", title: "t",

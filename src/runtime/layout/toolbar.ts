@@ -1,6 +1,6 @@
-import type { ScoredItem } from "./triage-table";
+import type { ScoredItem } from "./table/kind-renderer";
 import type { Artifact } from "../dataset/artifact";
-import { esc } from "./triage-table";
+import { esc } from "./util";
 import { type ListState } from "./filter-state";
 import { listFilterAxes, listSortKeys, type AxisCtx, type FilterAxis } from "./axis-registry";
 import { renderProviderSwitch, type SwitchProvider } from "./provider-switch";

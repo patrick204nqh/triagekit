@@ -4,7 +4,7 @@ import type { DomainId } from "../dataset/taxonomy";
 import type { Scorer } from "../scoring/registry";
 import type { FieldDef } from "../scoring/field-catalog";
 import type { ScoreModel } from "../scoring/score-model";
-import type { KindRenderer } from "../layout/triage-table";
+import type { KindRenderer } from "../layout/table/kind-renderer";
 import type { FilterAxis } from "../layout/axis-registry";
 import type { Source } from "../ingest/source";
 

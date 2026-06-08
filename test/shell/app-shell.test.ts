@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { bootstrap } from "../../src/runtime/bootstrap";
 import { toolbarPropsFromShell } from "../../src/runtime/shell/app-shell";
-import type { ScoredItem } from "../../src/runtime/layout/triage-table";
+import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 import { githubSource } from "../../src/runtime/ingest/github/dependency-vuln-source";
 import { readUrlState } from "../../src/runtime/shell/url-state";
 import type { TriageConfigT } from "../../src/config/schema";

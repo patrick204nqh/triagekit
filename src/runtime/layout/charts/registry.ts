@@ -1,5 +1,5 @@
 import type { Kind } from "../../dataset/item";
-import type { ScoredItem } from "../triage-table";
+import type { ScoredItem } from "../table/kind-renderer";
 
 export interface TriageChart {
   id: string;

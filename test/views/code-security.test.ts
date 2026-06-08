@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { renderTriageList, type ScoredItem } from "../../src/runtime/layout/triage-table";
+import { renderTriageList } from "../../src/runtime/layout/table/detail-panel";
+import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 import "../../src/runtime/views/code-security/view";   // registers the severity sort key + view + charts
 import { registerKinds } from "../../src/runtime/core/register-kinds";
 import { dependencyVulnKind } from "../../src/runtime/kinds/dependency-vuln";

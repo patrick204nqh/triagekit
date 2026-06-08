@@ -3,7 +3,7 @@ import type { Kind, TriageItem } from "../dataset/item";
 import { scoreAndTier, type ScoreContext } from "../scoring/configured";
 import { withBotPolicy } from "./author-policy";
 import { applyFilters, type ListState } from "../layout/filter-state";
-import type { ScoredItem } from "../layout/triage-table";
+import type { ScoredItem } from "../layout/table/kind-renderer";
 
 export interface DeriveInput {
   items: readonly TriageItem[];

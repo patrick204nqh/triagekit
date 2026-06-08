@@ -1,4 +1,4 @@
-import { esc } from "./triage-table";
+import { esc } from "./util";
 import {
   type ReviewItem, type ActionId, type MergeMethod,
   actionsFor, mergeable, reasonNotMergeable,

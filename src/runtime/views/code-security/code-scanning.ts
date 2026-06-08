@@ -1,4 +1,5 @@
-import { type ScoredItem, type KindRenderer, esc } from "../../layout/triage-table";
+import { type ScoredItem, type KindRenderer } from "../../layout/table/kind-renderer";
+import { esc } from "../../layout/util";
 import { type CodeScanningDetails, CODE_SCANNING } from "../../dataset/kinds/code-scanning";
 import { registerView } from "../registry";
 import { type FilterAxis, registerSortKey } from "../../layout/axis-registry";

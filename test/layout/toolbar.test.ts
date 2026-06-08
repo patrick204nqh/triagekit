@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest";
 import { renderToolbar, type ToolbarProps } from "../../src/runtime/layout/toolbar";
-import type { ScoredItem } from "../../src/runtime/layout/triage-table";
+import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 import { emptyListState } from "../../src/runtime/layout/filter-state";
 
 const rows: ScoredItem[] = [{

@@ -1,5 +1,5 @@
 // src/runtime/layout/repo-tabs.ts
-import { esc } from "./triage-table";
+import { esc } from "./util";
 import { dismissible, type DismissibleHandle } from "../shell/dismissible";
 
 export interface RepoOption { id: string; label: string; }   // id "" = "All"

@@ -1,5 +1,5 @@
 // src/runtime/layout/provider-switch.ts
-import { esc } from "./triage-table";
+import { esc } from "./util";
 import { providerIcon } from "../shell/provider-icons";
 
 export interface SwitchProvider { id: string; label: string; on: boolean; live: boolean; }

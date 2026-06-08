@@ -1,4 +1,5 @@
-import { type ScoredItem, type KindRenderer, type DetailCtx, esc } from "../../layout/triage-table";
+import { type ScoredItem, type KindRenderer, type DetailCtx } from "../../layout/table/kind-renderer";
+import { esc } from "../../layout/util";
 import { mountReviewCard } from "../../layout/review-card";
 import type { ReviewItem, ReviewDetails } from "../../dataset/shapes/review";
 import { CHANGE_REQUEST, ISSUE } from "../../dataset/shapes/review";

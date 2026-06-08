@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
 import { tierChart, ageChart, topLocationsChart } from "../../../src/runtime/layout/charts/generic";
-import type { ScoredItem } from "../../../src/runtime/layout/triage-table";
+import type { ScoredItem } from "../../../src/runtime/layout/table/kind-renderer";
 
 const row = (over: Partial<ScoredItem>): ScoredItem => ({
   id: "x", source: "github", kind: "dependency-vuln", title: "p", location: "acme/web",

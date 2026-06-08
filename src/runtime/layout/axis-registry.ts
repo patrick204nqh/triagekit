@@ -1,4 +1,4 @@
-import type { ScoredItem } from "./triage-table";
+import type { ScoredItem } from "./table/kind-renderer";
 import type { Artifact } from "../dataset/artifact";
 import type { Tier } from "../scoring/tier";
 import { authorKindOf, labelNamesOf } from "../dataset/details";

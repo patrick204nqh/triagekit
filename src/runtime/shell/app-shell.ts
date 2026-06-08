@@ -5,7 +5,9 @@ import { listArtifacts, GROUP_LABEL, GROUP_ORDER, type Artifact } from "../datas
 import type { Scorer } from "../scoring/registry";
 import { fieldsFor } from "../scoring/field-catalog";
 import { explainScoreModel, validateModel, type ScoreExplanation } from "../scoring/score-model";
-import { renderTableSkeleton, esc, type ScoredItem } from "../layout/triage-table";
+import { renderTableSkeleton } from "../layout/table/triage-table";
+import { esc } from "../layout/util";
+import type { ScoredItem } from "../layout/table/kind-renderer";
 import { renderInsights } from "../layout/insights";
 import { applicableTabs, getTab } from "../layout/tab-registry";
 import { getSortKey, getFilterAxis } from "../layout/axis-registry";
