@@ -135,52 +135,111 @@ def build_demo_dashboard():
     assert (DIST / "triage.html").exists(), "build did not produce dist/triage.html"
 
 
-def capture():
-    from playwright.sync_api import sync_playwright
+INIT_JS = (
+    "sessionStorage.setItem('triagekit.cred.github','ghp_demo_not_a_real_token');"
+    "localStorage.setItem('triagekit.theme','dark');"
+)
 
-    OUT.mkdir(parents=True, exist_ok=True)
-    handler = http.server.SimpleHTTPRequestHandler
-    httpd = socketserver.TCPServer(("127.0.0.1", PORT), functools.partial(handler, directory=str(DIST)))
+
+def _serve():
+    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(DIST))
+    httpd = socketserver.TCPServer(("127.0.0.1", PORT), handler)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    return httpd
+
+
+def capture_stills(browser, routed):
+    ctx = browser.new_context(viewport={"width": 1512, "height": 900}, device_scale_factor=2, color_scheme="dark")
+    ctx.add_init_script(INIT_JS)
+    page = ctx.new_page()
+    page.route("**/api.github.com/**", make_handler(routed))
+    page.goto(f"http://127.0.0.1:{PORT}/triage.html")
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(1200)
+
+    page.screenshot(path=str(OUT / "dashboard.png"))
+    print("✓ dashboard.png (Dependencies findings)")
+
+    page.get_by_role("button", name="Insights", exact=True).click()
+    page.wait_for_timeout(1500)
+    page.screenshot(path=str(OUT / "insights.png"))
+    print("✓ insights.png")
+    page.get_by_role("button", name="List", exact=True).click()
+    page.wait_for_timeout(500)
+
+    page.get_by_role("button", name="Code scanning", exact=True).click()
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(1000)
+    page.screenshot(path=str(OUT / "code-scanning.png"))
+    print("✓ code-scanning.png")
+
+    page.get_by_role("button", name="Change requests", exact=True).click()
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(1000)
+    page.get_by_text("Add request rate limiting to the gateway", exact=False).first.click()
+    page.wait_for_timeout(1800)  # let enrich (pulls + check-runs) resolve
+    page.screenshot(path=str(OUT / "review.png"))
+    print("✓ review.png (review panel)")
+    ctx.close()
+
+
+def record_gif(browser, routed):
+    """Record a scripted walkthrough video, then convert to an optimized GIF via ffmpeg."""
+    import shutil as _sh
+    if not _sh.which("ffmpeg"):
+        raise SystemExit("✗ ffmpeg not found — install it (brew install ffmpeg) to build the GIF.")
+    vdir = Path(tempfile.mkdtemp(prefix="tk-gif-"))
+    # 1x scale + modest viewport keeps the video (and resulting GIF) a sane size.
+    ctx = browser.new_context(
+        viewport={"width": 1440, "height": 860}, color_scheme="dark",
+        record_video_dir=str(vdir), record_video_size={"width": 1440, "height": 860},
+    )
+    ctx.add_init_script(INIT_JS)
+    page = ctx.new_page()
+    page.route("**/api.github.com/**", make_handler(routed))
+    page.goto(f"http://127.0.0.1:{PORT}/triage.html")
+    page.wait_for_load_state("networkidle")
+
+    def beat(ms): page.wait_for_timeout(ms)
+
+    beat(2200)                                                   # Dependencies findings
+    page.get_by_role("button", name="Insights", exact=True).click(); beat(2600)   # Insights charts
+    page.get_by_role("button", name="List", exact=True).click(); beat(400)
+    page.get_by_role("button", name="Code scanning", exact=True).click()
+    page.wait_for_load_state("networkidle"); beat(2400)          # Code scanning findings
+    page.get_by_role("button", name="Change requests", exact=True).click()
+    page.wait_for_load_state("networkidle"); beat(1400)          # Work: change requests
+    page.get_by_text("Add request rate limiting to the gateway", exact=False).first.click()
+    beat(3200)                                                   # review panel slides in
+
+    vid = page.video
+    ctx.close()                                                  # finalizes the .webm
+    webm = Path(vid.path())
+
+    gif = OUT / "walkthrough.gif"
+    palette = vdir / "palette.png"
+    vf = "fps=15,scale=960:-1:flags=lanczos"
+    subprocess.run(["ffmpeg", "-y", "-i", str(webm), "-vf", f"{vf},palettegen=stats_mode=diff", str(palette)],
+                   check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["ffmpeg", "-y", "-i", str(webm), "-i", str(palette),
+                    "-lavfi", f"{vf} [v];[v][1:v]paletteuse=dither=bayer:bayer_scale=3", str(gif)],
+                   check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    _sh.rmtree(vdir, ignore_errors=True)
+    print(f"✓ walkthrough.gif ({gif.stat().st_size // 1024} KB)")
+
+
+def run(stills: bool, gif: bool):
+    from playwright.sync_api import sync_playwright
+    OUT.mkdir(parents=True, exist_ok=True)
+    httpd = _serve()
     routed = []
     try:
         with sync_playwright() as p:
             b = p.chromium.launch(headless=True)
-            ctx = b.new_context(viewport={"width": 1512, "height": 900}, device_scale_factor=2, color_scheme="dark")
-            ctx.add_init_script(
-                "sessionStorage.setItem('triagekit.cred.github','ghp_demo_not_a_real_token');"
-                "localStorage.setItem('triagekit.theme','dark');"
-            )
-            page = ctx.new_page()
-            page.route("**/api.github.com/**", make_handler(routed))
-            page.goto(f"http://127.0.0.1:{PORT}/triage.html")
-            page.wait_for_load_state("networkidle")
-            page.wait_for_timeout(1200)
-
-            page.screenshot(path=str(OUT / "dashboard.png"))
-            print("✓ dashboard.png (Dependencies findings)")
-
-            page.get_by_role("button", name="Insights", exact=True).click()
-            page.wait_for_timeout(1500)
-            page.screenshot(path=str(OUT / "insights.png"))
-            print("✓ insights.png")
-            page.get_by_role("button", name="List", exact=True).click()
-            page.wait_for_timeout(500)
-
-            page.get_by_role("button", name="Code scanning", exact=True).click()
-            page.wait_for_load_state("networkidle")
-            page.wait_for_timeout(1000)
-            page.screenshot(path=str(OUT / "code-scanning.png"))
-            print("✓ code-scanning.png")
-
-            page.get_by_role("button", name="Change requests", exact=True).click()
-            page.wait_for_load_state("networkidle")
-            page.wait_for_timeout(1000)
-            page.get_by_text("Add request rate limiting to the gateway", exact=False).first.click()
-            page.wait_for_timeout(1800)  # let enrich (pulls + check-runs) resolve
-            page.screenshot(path=str(OUT / "review.png"))
-            print("✓ review.png (review panel)")
-
+            if stills:
+                capture_stills(b, routed)
+            if gif:
+                record_gif(b, routed)
             b.close()
     finally:
         httpd.shutdown()
@@ -188,8 +247,13 @@ def capture():
 
 
 if __name__ == "__main__":
+    import argparse
+    ap = argparse.ArgumentParser(description="Regenerate marketing assets in site/screenshots/.")
+    ap.add_argument("--gif", action="store_true", help="also record the walkthrough GIF (needs ffmpeg)")
+    ap.add_argument("--gif-only", action="store_true", help="record only the GIF, skip the stills")
+    args = ap.parse_args()
     print("• building demo dashboard (fictional acme-corp config)…")
     build_demo_dashboard()
-    print("• capturing screenshots →", OUT.relative_to(REPO))
-    capture()
-    print("done. Review the PNGs, then commit site/screenshots/.")
+    print("• rendering →", OUT.relative_to(REPO))
+    run(stills=not args.gif_only, gif=args.gif or args.gif_only)
+    print("done. Review the assets, then commit site/screenshots/.")

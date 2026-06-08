@@ -65,7 +65,8 @@ authentic but never contain real repo names, tokens, or network calls. To regene
 
 ```bash
 python3 -m pip install playwright && python3 -m playwright install chromium   # one-time
-npm run screenshots
+npm run screenshots        # stills → site/screenshots/*.png
+npm run screenshots:gif    # walkthrough GIF (needs ffmpeg) → site/screenshots/walkthrough.gif
 ```
 
 Edit the fixtures/views in `scripts/gen-screenshots.py` to change what they show, then

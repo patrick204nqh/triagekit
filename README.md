@@ -19,7 +19,7 @@ GitHub actions; an optional Insights view swaps the table for compositional char
 
 <p align="center">
   <a href="https://patrick204nqh.github.io/triagekit/app/">
-    <img alt="triagekit dashboard — a dark triage cockpit listing findings scored and tiered P0–P3" src="site/screenshots/dashboard.png" width="820" />
+    <img alt="triagekit walkthrough — Dependencies findings, Insights charts, Code scanning, and the PR review panel" src="site/screenshots/walkthrough.gif" width="820" />
   </a>
   <br />
   <em><a href="https://patrick204nqh.github.io/triagekit/">Live demo →</a></em>
