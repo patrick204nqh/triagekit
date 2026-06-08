@@ -17,6 +17,16 @@ Issues — each scored, tiered, and sortable from a data-driven filter/sort tool
 requests and issues open a review panel with avatars, full-Markdown bodies, and inline
 GitHub actions; an optional Insights view swaps the table for compositional charts.
 
+<p align="center">
+  <a href="https://patrick204nqh.github.io/triagekit/app/">
+    <img alt="triagekit dashboard — a dark triage cockpit listing findings scored and tiered P0–P3" src="site/screenshots/dashboard.png" width="820" />
+  </a>
+  <br />
+  <em><a href="https://patrick204nqh.github.io/triagekit/">Live demo →</a></em>
+</p>
+
+> Screenshots use fictional `acme-corp` data — the tool never ships or commits real repo names or tokens.
+
 ## Two build modes
 
 | Mode | Command | scope | Artifact |
@@ -174,6 +184,9 @@ It is bundled into the HTML at build time.
 
 Alongside the table, the **Insights** view (add `insights` to `views`) renders a grid of
 charts for the loaded items — a separate surface so the table stays a clean cockpit.
+
+<p align="center"><img alt="triagekit Insights — quick-wins ratio, priority distribution, age buckets, top locations" src="site/screenshots/insights.png" width="820" /></p>
+
 
 - **Snapshot-only.** Every chart is compositional (distribution / ranking / ratio) —
   never a time-series. A backend-free fetch has no history to trend.
