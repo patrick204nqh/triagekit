@@ -32,9 +32,9 @@ jobs:
       - name: Pages artifact in sync
         run: |
           npm run build:pages
-          if ! git diff --quiet -- docs/index.html; then
-            echo "✗ docs/index.html is stale — run 'npm run build:pages' and commit the result"
-            git diff -- docs/index.html | head -40
+          if ! git diff --quiet -- site/app/index.html; then
+            echo "✗ site/app/index.html is stale — run 'npm run build:pages' and commit the result"
+            git diff -- site/app/index.html | head -40
             exit 1
           fi
-          echo "✓ docs/index.html matches a fresh generic build"
+          echo "✓ site/app/index.html matches a fresh generic build"
