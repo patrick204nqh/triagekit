@@ -14,6 +14,7 @@ import { getThemeChoice, setThemeChoice, type ThemeChoice } from "./theme";
 import { getRefreshInterval, setRefreshInterval, REFRESH_OPTIONS } from "./refresh";
 import { dismissible } from "./dismissible";
 import type { ScoredItem } from "../layout/triage-table";
+import { esc } from "../layout/util";
 
 // Single source of truth for the sidebar nav — id paired with its label. The id
 // drives data-category, the categoryIcon() lookup, and the per-category unsaved-dot.
@@ -24,9 +25,6 @@ const CATEGORIES = [
   ["general", "General"],
 ] as const;
 
-function esc(s: unknown): string {
-  return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
-}
 interface Opts {
   sources: Source[]; creds: CredStore; scopes: ScopeStore; policy: PolicyStore;
   onChange: () => void;            // credentials/scope committed or cleared

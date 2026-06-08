@@ -5,10 +5,7 @@ import { listDefaultModels, defaultModelFor } from "../scoring/default-model";
 import { weightsToFormula, formulaToWeights } from "../scoring/weights";
 import { renderSignalEditor } from "./signal-editor";
 import { previewRerank } from "../scoring/preview";
-
-function esc(s: unknown): string {
-  return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
-}
+import { esc } from "../layout/util";
 
 export interface ScoringEditorOpts {
   getDraft(kind: string): ScoreModel | null;
