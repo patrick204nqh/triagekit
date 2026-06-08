@@ -1,30 +1,41 @@
 {
   "name": "triagekit",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Compile a config into a shareable, backend-free repo-triage dashboard — one self-contained HTML file.",
+  "keywords": ["triage", "dashboard", "github", "dependabot", "code-scanning", "security", "cli", "static", "single-file"],
+  "homepage": "https://patrick204nqh.github.io/triagekit",
+  "repository": { "type": "git", "url": "git+https://github.com/patrick204nqh/triagekit.git" },
+  "bugs": { "url": "https://github.com/patrick204nqh/triagekit/issues" },
+  "author": "Patrick (@patrick204nqh)",
+  "license": "MIT",
   "type": "module",
+  "engines": { "node": ">=20" },
+  "publishConfig": { "access": "public" },
   "bin": {
     "triagekit": "./dist-cli/cli/index.js"
   },
+  "files": ["dist-cli/**", "src/runtime/**", "src/vite/**", "src/config/**", "assets/**", "README.md", "LICENSE"],
   "scripts": {
     "build:cli": "tsc -p tsconfig.json",
     "build:pages": "npm run build:cli && node dist-cli/cli/index.js build --generic && mkdir -p site/app && cp dist/triage.html site/app/index.html && cp assets/og.png site/og.png && cp assets/og.png site/app/og.png",
     "test": "vitest run",
-    "lint:anon": "node scripts/anon-lint.mjs"
+    "lint:anon": "node scripts/anon-lint.mjs",
+    "pack:smoke": "node scripts/pack-smoke.mjs",
+    "prepublishOnly": "npm run build:cli"
   },
-  "license": "MIT",
   "devDependencies": {
     "@types/dompurify": "^3.0.5",
     "@types/node": "^25.9.1",
     "jsdom": "^29.1.1",
     "typescript": "^6.0.3",
-    "vite": "^8.0.16",
-    "vite-plugin-singlefile": "^2.3.3",
     "vitest": "^4.1.8"
   },
   "dependencies": {
     "commander": "^15.0.0",
     "dompurify": "^3.4.8",
     "marked": "^15.0.12",
+    "vite": "^8.0.16",
+    "vite-plugin-singlefile": "^2.3.3",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"
   }
