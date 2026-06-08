@@ -5,14 +5,17 @@
   </picture>
 </p>
 
-<p align="center"><em>Compile a config into a shareable, backend-free repo-triage dashboard.</em></p>
+<p align="center"><em>Backend-free repo triage. One HTML file.</em></p>
 
 `triagekit` builds a single, self-contained HTML triage dashboard that runs entirely in
 the browser — no backend, no build server, no third-party scripts. You paste your own
 token at runtime; nothing is ever embedded at build time.
 
-GitHub is the first provider, shipping with a **security-alerts** view that scores and
-tiers your open Dependabot alerts.
+GitHub is the first provider. The dashboard groups what you triage into **Findings** —
+Dependencies (Dependabot alerts) and Code scanning — and **Work** — Pull requests and
+Issues — each scored, tiered, and sortable from a data-driven filter/sort toolbar. Pull
+requests and issues open a review panel with avatars, full-Markdown bodies, and inline
+GitHub actions; an optional Insights view swaps the table for compositional charts.
 
 ## Two build modes
 
@@ -52,9 +55,10 @@ open dist/triage.html            # or double-click — it's just a file
 ```
 
 In the page, open **Settings** (⚙) and connect a **fine-grained personal access token**
-with read access to Dependabot alerts, then use **"Find repositories I can access"** to
-pick your repos and click **Load**. Your scope persists locally for convenience; the
-token stays in this tab only.
+with read access to the resources you triage (Dependabot alerts, code scanning, pull
+requests, issues), then use **"Find repositories I can access"** to pick your repos and
+click **Load**. Your scope persists locally for convenience; the token stays in this tab
+only.
 
 ### Hosted version
 
@@ -88,7 +92,8 @@ scope:
     - acme-corp/api-gateway
     - acme-corp/billing-service
 views:
-  - security-alerts
+  - code-security        # security findings: Dependabot + code scanning
+  # - insights           # add to enable the Insights (charts) tab
 branding:
   title: "Acme Triage"
 # Optional: a JS/TS module exporting scoring overrides.
@@ -120,36 +125,43 @@ All configuration lives in the **Settings** slide-over (⚙ in the command bar).
 command bar carries a scope/health status chip plus a **manual refresh** and a **theme**
 toggle; everything else lives in Settings:
 
-- **Integrations catalog** — sources split into **Connected** (a credential is set) and
-  **Available** (ready to add, or `upcoming`), filterable by name or domain, so the list
-  scales as providers grow.
-- **Per-source credential** — provider-appropriate (GitHub fine-grained PAT, …),
-  **session-only** (`sessionStorage`), one per source, never persisted or embedded.
-- **Schema-driven scope** — each source declares its own scope fields; discoverable
-  fields (e.g. GitHub repositories) offer **"Find … I can access"**, which calls the
-  source's `discover()` and lists the targets your credential can reach. Results are
-  **cached** per credential (filter and re-select without re-querying; "Re-scan" forces a
-  refresh), and the picker is a filterable multi-select with select-all / clear and a live
+Settings is organized into four tabs:
+
+- **Connections** — an integrations catalog split into **Connected** (a credential is set)
+  and **Available** (ready to add, or `upcoming`), filterable by name or domain. Each
+  source takes one **session-only** credential (`sessionStorage`, never persisted or
+  embedded). Scope is **schema-driven**: each source declares its own fields, and
+  discoverable ones (e.g. GitHub repositories) offer **"Find … I can access"**, which
+  calls the source's `discover()` and lists the targets your credential can reach. Results
+  are **cached** per credential (filter and re-select without re-querying; "Re-scan" forces
+  a refresh); the picker is a filterable multi-select with select-all / clear and a live
   count. Scope is non-secret, so it persists in `localStorage` keyed per source.
-- **Auto-refresh** — optionally re-fetch every **5 or 10 minutes** (snapshot-only; there
-  is no backend history to trend). The command bar shows an "updated *N*m ago" stamp.
-- **Appearance** — `Auto` (follow the OS) / `Light` / `Dark`; the top-right toggle cycles
-  the same three so an `Auto` preference is never silently lost.
+- **Scoring & priority** — tier thresholds (P0 / P1 / P2 cutoffs; P3 is the implicit floor)
+  and a per-kind score model (**Simple** weights or an **Advanced** formula over the kind's
+  signals). Persisted per browser in `localStorage`.
+- **Filters** — a bot-account allowlist (logins treated as bots, so automation noise can be
+  filtered out of the Work surfaces). Persisted per browser.
+- **General** — **Appearance** (`Auto` / `Light` / `Dark`; the top-right toggle cycles the
+  same three so an `Auto` preference is never silently lost), **Auto-refresh** (optionally
+  re-fetch every **5 or 10 minutes** — snapshot-only, with an "updated *N*m ago" stamp in
+  the command bar), and **Data** (clear credentials or saved scope).
 
 Compiled builds seed their baked `scope` automatically, so a turnkey dashboard only needs
 a token.
 
 ## Customizing the scoring
 
-The default scoring model is transparent and lives in
-`src/runtime/scoring/dependency-vuln.ts`. To override it without forking the engine,
-point `logicHooks` at a module that exports a `score` function:
+Each kind ships a transparent built-in scorer (the dependency-vuln model lives in
+`src/runtime/scoring/dependency-vuln.ts`, built on the shared `makeSeverityScorer`
+factory). To override scoring without forking the engine, point `logicHooks` at a module
+that exports a `score` function — a single `(item) => number` matching the `Scorer` type:
 
 ```ts
 // triage.hooks.ts  (gitignored)
-import type { TriageItem } from "./src/runtime/dataset/item";
+import type { Scorer } from "./src/runtime/scoring/registry";
 import type { DependencyVulnDetails } from "./src/runtime/dataset/kinds/dependency-vuln";
-export const score = (item: TriageItem): number => {
+
+export const score: Scorer = (item) => {
   const d = item.details as DependencyVulnDetails;
   // your weighting…
   return d.severity === "critical" ? 1000 : item.signal;
@@ -168,8 +180,8 @@ charts for the loaded items — a separate surface so the table stays a clean co
 - **Contributed per kind/source.** Charts register against a kind: generic ones
   (priority distribution, age buckets tinted by worst tier, top locations) apply to
   everything; `dependency-vuln` adds a fix-available "quick wins" ratio and a runtime-vs-
-  development split. New sources light up their own charts automatically — the Insights
-  view itself never changes.
+  development split; `code-scanning` adds open-by-severity and by-tool breakdowns. New
+  sources light up their own charts automatically — the Insights view itself never changes.
 - Switching to Insights reuses the rows already loaded for the table (no refetch).
 
 ## Security posture
@@ -185,8 +197,9 @@ charts for the loaded items — a separate surface so the table stays a clean co
 The visual language — a dark-first operations cockpit (Void Zinc canvas, a single Kelp
 Teal accent, a semantic P0–P3 ramp, monospace numerals, divider-based tables) — is
 documented in [`DESIGN.md`](DESIGN.md). The runtime theme in `src/runtime/theme/` is the
-implementation of that language; JetBrains Mono is self-hosted and inlined (no CDN), and
-the strict CSP allows fonts only via `font-src 'self' data:`.
+implementation of that language; **Space Grotesk** (sans) and **JetBrains Mono**
+(numerals) are self-hosted and inlined (no CDN), and the strict CSP allows fonts only via
+`font-src 'self' data:`.
 
 ## Development
 
