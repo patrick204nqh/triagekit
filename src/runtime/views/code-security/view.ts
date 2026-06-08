@@ -1,5 +1,6 @@
 import { type ScoredItem, type KindRenderer } from "../../layout/table/kind-renderer";
 import { esc } from "../../layout/util";
+import { detailHeaderHtml } from "../../layout/atoms/atoms";
 import { type DependencyVulnDetails, DEPENDENCY_VULN } from "../../dataset/kinds/dependency-vuln";
 import { registerView } from "../registry";
 import "../../ingest/github/dependency-vuln-source";          // side-effect: register source
@@ -13,8 +14,7 @@ export const dependencyVulnRenderer: KindRenderer = {
     { header: "Severity", cell: (r) => { const s = det(r).severity; return `<span class="sev sev-${esc(s)}">${esc(s)}</span>`; } },
   ],
   detail: (host, r) => { const d = det(r); host.innerHTML = `<div class="drawer-inner">
-    <h3>${esc(d.package)} <span class="tier tier-${r.tier}">${r.tier}</span></h3>
-    <p class="muted">${esc(r.location)} · score ${r.score}</p>
+    ${detailHeaderHtml({ title: d.package, tier: r.tier, sub: `${r.location} · score ${r.score}` })}
     <dl><dt>Severity</dt><dd>${esc(d.severity)} (CVSS ${d.cvss})</dd>
     <dt>Scope</dt><dd>${esc(d.scope ?? "unknown")}</dd>
     <dt>Fix</dt><dd>${d.fixAvailable ? (d.fixVersion ? "available: " + esc(d.fixVersion) : "available") : "none yet"}</dd>

@@ -25,8 +25,12 @@ describe("vuln detail in shared panel", () => {
     const root = document.createElement("div");
     renderTriageList(root, [r], []);
     (root.querySelector(".alert-row") as HTMLElement).click();
+    const html = root.querySelector(".drawer")!.innerHTML;
+    // shared detailHeaderHtml: package in <h3> + tier chip, location · score in .muted
+    expect(html).toContain('<h3>log4j <span class="tier tier-P0">P0</span></h3>');
+    expect(html).toContain('<p class="muted">acme/web · score 140</p>');
     const txt = root.querySelector(".drawer")!.textContent!;
-    expect(txt).toContain("critical");
+    expect(txt).toContain("critical");   // <dl> body preserved
     expect(txt).toContain("2.17.1");
   });
 });

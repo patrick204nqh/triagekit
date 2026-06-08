@@ -1,5 +1,6 @@
 import { type ScoredItem, type KindRenderer } from "../../layout/table/kind-renderer";
 import { esc } from "../../layout/util";
+import { detailHeaderHtml } from "../../layout/atoms/atoms";
 import { type CodeScanningDetails, CODE_SCANNING } from "../../dataset/kinds/code-scanning";
 import { registerView } from "../registry";
 import { type FilterAxis, registerSortKey } from "../../layout/toolbar/axis-registry";
@@ -21,8 +22,7 @@ export const codeScanningRenderer: KindRenderer = {
   detail: (host, r) => {
     const d = cs(r);
     host.innerHTML = `<div class="drawer-inner">
-    <h3>${esc(d.ruleName)} <span class="tier tier-${r.tier}">${r.tier}</span></h3>
-    <p class="muted">${esc(d.location.path)}:${d.location.line} · score ${r.score}</p>
+    ${detailHeaderHtml({ title: d.ruleName, tier: r.tier, sub: `${d.location.path}:${d.location.line} · score ${r.score}` })}
     <dl><dt>Severity</dt><dd>${esc(d.securitySeverity)}</dd>
     <dt>Rule</dt><dd>${esc(d.ruleId)}</dd>
     <dt>Tool</dt><dd>${esc(d.tool)}</dd>

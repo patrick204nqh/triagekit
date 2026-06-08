@@ -5,10 +5,10 @@ import { tableHtml } from "./triage-table";
 import { renderScoreBreakdown } from "./score-breakdown";
 import { dismissible } from "../../shell/dismissible";
 import { esc } from "../util";
+import { detailHeaderHtml } from "../atoms/atoms";
 
 function defaultDetail(host: HTMLElement, r: ScoredItem): void {
-  host.innerHTML = `<div class="drawer-inner"><h3>${esc(r.title)} <span class="tier tier-${r.tier}">${r.tier}</span></h3>
-    <p class="muted">${esc(r.location)} · score ${r.score}</p>
+  host.innerHTML = `<div class="drawer-inner">${detailHeaderHtml({ title: r.title, tier: r.tier, sub: `${r.location} · score ${r.score}` })}
     ${r.url ? `<p><a href="${esc(r.url)}" target="_blank" rel="noreferrer">${esc(r.url)}</a></p>` : ""}</div>`;
 }
 

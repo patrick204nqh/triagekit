@@ -24,8 +24,10 @@ describe("code-scanning renderer", () => {
   it("renders a detail panel with location and tool", () => {
     const host = document.createElement("div");
     codeScanningRenderer.detail!(host, row({}), {} as any);
-    expect(host.innerHTML).toContain("src/db.ts");
-    expect(host.innerHTML).toContain("CodeQL");
+    // shared detailHeaderHtml: rule name in <h3> + tier chip, location:line · score in .muted
+    expect(host.innerHTML).toContain('<h3>SQL injection <span class="tier tier-P0">P0</span></h3>');
+    expect(host.innerHTML).toContain('<p class="muted">src/db.ts:42 · score 80</p>');
+    expect(host.innerHTML).toContain("CodeQL");   // <dl> body preserved
   });
   it("derives tool options from data", () => {
     const opts = toolAxis.optionsFrom([row({ tool: "CodeQL" }), row({ tool: "ESLint" })], {} as any);
