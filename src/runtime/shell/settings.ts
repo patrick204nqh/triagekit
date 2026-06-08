@@ -13,7 +13,7 @@ import { providerIcon, categoryIcon } from "./provider-icons";
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from "./theme";
 import { getRefreshInterval, setRefreshInterval, REFRESH_OPTIONS } from "./refresh";
 import { dismissible } from "./dismissible";
-import type { ScoredItem } from "../layout/triage-table";
+import type { ScoredItem } from "../layout/table/kind-renderer";
 import { esc } from "../layout/util";
 
 // Single source of truth for the sidebar nav — id paired with its label. The id

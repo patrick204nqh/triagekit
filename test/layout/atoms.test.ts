@@ -1,12 +1,21 @@
 import { describe, it, expect } from "vitest";
 import {
   tierBadgeHtml, slaTagHtml, actorChipHtml, labelChipHtml,
-  checkIndicatorHtml, permalinkLinkHtml, relationStripHtml,
-} from "../../src/runtime/layout/atoms";
+  checkIndicatorHtml, permalinkLinkHtml, relationStripHtml, detailHeaderHtml,
+} from "../../src/runtime/layout/atoms/atoms";
 
 describe("atoms", () => {
   it("tierBadgeHtml uses the existing tier classes", () => {
     expect(tierBadgeHtml("P1")).toBe('<span class="tier tier-P1">P1</span>');
+  });
+
+  it("detailHeaderHtml escapes title, carries the tier chip, and shows the sub-line", () => {
+    const out = detailHeaderHtml({ title: "<script>x", tier: "P0", sub: "acme/api · score 80" });
+    expect(out).toContain("&lt;script&gt;x");          // title escaped
+    expect(out).not.toContain("<script>");
+    expect(out).toContain('<span class="tier tier-P0">P0</span>');  // tier chip class
+    expect(out).toContain('<p class="muted">acme/api · score 80</p>');  // sub-line text
+    expect(out.startsWith("<h3>")).toBe(true);
   });
 
   it("slaTagHtml carries the state class and escapes the label", () => {

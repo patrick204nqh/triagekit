@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { renderScoreBreakdown, type ScoredItem } from "../../src/runtime/layout/triage-table";
+import { renderScoreBreakdown } from "../../src/runtime/layout/table/score-breakdown";
+import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 import type { ScoreExplanation } from "../../src/runtime/scoring/score-model";
 
 const item = { id: "x", source: "github", kind: "dependency-vuln", title: "lodash",

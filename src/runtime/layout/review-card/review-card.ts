@@ -1,14 +1,14 @@
-import { esc } from "./triage-table";
+import { esc } from "../util";
 import {
   type ReviewItem, type ActionId, type MergeMethod, type ReviewActions,
   CHANGE_REQUEST,
-} from "../dataset/shapes/review";
+} from "../../dataset/shapes/review";
 import {
   type Sla, tierBadgeHtml, slaTagHtml, actorChipHtml, labelChipHtml,
   checkIndicatorHtml, relationStripHtml,
-} from "./atoms";
-import { reviewBodyHtml } from "./review-card-body";
-import { actionBarHtml } from "./review-card-actions";
+} from "../atoms/atoms";
+import { reviewBodyHtml } from "./body";
+import { actionBarHtml } from "./actions";
 
 export interface ReviewCardOpts {
   sla?: Sla;

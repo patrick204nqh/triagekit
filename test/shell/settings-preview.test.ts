@@ -5,7 +5,7 @@ import { PolicyStore } from "../../src/runtime/shell/policy-store";
 import { registerDefaultModel, _resetDefaultModels } from "../../src/runtime/scoring/default-model";
 import { registerFieldCatalog } from "../../src/runtime/scoring/field-catalog";
 import type { ScoreModel } from "../../src/runtime/scoring/score-model";
-import type { ScoredItem } from "../../src/runtime/layout/triage-table";
+import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 import type { Source } from "../../src/runtime/ingest/source";
 
 const KIND = "dependency-vuln";

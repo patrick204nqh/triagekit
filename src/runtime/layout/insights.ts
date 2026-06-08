@@ -1,7 +1,7 @@
 import type { Kind } from "../dataset/item";
-import type { ScoredItem } from "./triage-table";
+import type { ScoredItem } from "./table/kind-renderer";
 import { chartsFor } from "./charts/registry";
-import { esc } from "./triage-table";
+import { esc } from "./util";
 import "./charts/generic";   // register generic charts (side-effect)
 
 export function renderInsights(root: HTMLElement, rows: ScoredItem[], kinds: Kind[]): void {

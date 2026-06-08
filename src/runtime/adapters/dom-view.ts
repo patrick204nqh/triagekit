@@ -2,9 +2,9 @@
 import type { ViewPort } from "../core/ports";
 import type { ViewModel } from "../core/view-model";
 import type { Artifact } from "../dataset/artifact";
-import type { ScoredItem } from "../layout/triage-table";
+import type { ScoredItem } from "../layout/table/kind-renderer";
 import type { ScoreExplanation } from "../scoring/score-model";
-import { renderTriageList } from "../layout/triage-table";
+import { renderTriageList } from "../layout/table/detail-panel";
 
 export interface DomViewDeps {
   artifact: Artifact;

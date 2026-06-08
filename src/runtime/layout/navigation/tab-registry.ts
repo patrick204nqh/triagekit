@@ -1,5 +1,5 @@
-import type { Artifact } from "../dataset/artifact";
-import type { ScoredItem } from "./triage-table";
+import type { Artifact } from "../../dataset/artifact";
+import type { ScoredItem } from "../table/kind-renderer";
 
 // Extra tabs beyond the built-in List + Insights. Each renders the already-loaded,
 // already-scored rows for the active artifact (no fetch).

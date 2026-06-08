@@ -1,11 +1,19 @@
-import { esc } from "./triage-table";
-import type { Tier } from "../scoring/tier";
-import type { Actor, Label, CheckStatus, Permalink, Relation } from "../dataset/shared";
+import { esc } from "../util";
+import type { Tier } from "../../scoring/tier";
+import type { Actor, Label, CheckStatus, Permalink, Relation } from "../../dataset/shared";
 
 export interface Sla { label: string; state: "ok" | "warn" | "breach"; }
 
 export function tierBadgeHtml(tier: Tier): string {
   return `<span class="tier tier-${tier}">${tier}</span>`;
+}
+
+// Shared detail-panel header for plain (non-review) kinds: title + tier chip
+// inline, then a muted sub-line. Reuses the existing `.drawer h3` / `.drawer .muted`
+// styles, so no new CSS is needed. Escapes title and sub internally — pass raw strings.
+export function detailHeaderHtml(opts: { title: string; tier: Tier; sub: string }): string {
+  return `<h3>${esc(opts.title)} ${tierBadgeHtml(opts.tier)}</h3>`
+    + `<p class="muted">${esc(opts.sub)}</p>`;
 }
 
 export function slaTagHtml(sla: Sla): string {

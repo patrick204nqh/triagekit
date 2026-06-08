@@ -1,5 +1,5 @@
 // src/runtime/core/view-model.ts
-import type { ScoredItem } from "../layout/triage-table";
+import type { ScoredItem } from "../layout/table/kind-renderer";
 import type { TriageError } from "../ingest/source";
 import type { StoreStats } from "./store";
 

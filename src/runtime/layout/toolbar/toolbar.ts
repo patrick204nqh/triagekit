@@ -1,10 +1,10 @@
-import type { ScoredItem } from "./triage-table";
-import type { Artifact } from "../dataset/artifact";
-import { esc } from "./triage-table";
+import type { ScoredItem } from "../table/kind-renderer";
+import type { Artifact } from "../../dataset/artifact";
+import { esc } from "../util";
 import { type ListState } from "./filter-state";
 import { listFilterAxes, listSortKeys, type AxisCtx, type FilterAxis } from "./axis-registry";
-import { renderProviderSwitch, type SwitchProvider } from "./provider-switch";
-import { renderRepoTabs, type RepoOption } from "./repo-tabs";
+import { renderProviderSwitch, type SwitchProvider } from "../navigation/provider-switch";
+import { renderRepoTabs, type RepoOption } from "../navigation/repo-tabs";
 import { wirePopovers } from "./toolbar-popover";
 
 export interface ToolbarViewMode { id: string; label: string; }

@@ -1,11 +1,13 @@
-import { type ScoredItem, type KindRenderer, esc } from "../../layout/triage-table";
+import { type ScoredItem, type KindRenderer } from "../../layout/table/kind-renderer";
+import { esc } from "../../layout/util";
+import { detailHeaderHtml } from "../../layout/atoms/atoms";
 import { type CodeScanningDetails, CODE_SCANNING } from "../../dataset/kinds/code-scanning";
 import { registerView } from "../registry";
-import { type FilterAxis, registerSortKey } from "../../layout/axis-registry";
+import { type FilterAxis, registerSortKey } from "../../layout/toolbar/axis-registry";
 import { registerChart } from "../../layout/charts/registry";
 import "../../ingest/github/code-scanning-source";   // side-effect: register source
 import { detailsAs } from "../../dataset/details";
-import { uniqueValues } from "../../layout/axis-utils";
+import { uniqueValues } from "../../layout/toolbar/axis-utils";
 
 const cs = (r: ScoredItem) => detailsAs<CodeScanningDetails>(r)!;
 const SEV_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
@@ -20,8 +22,7 @@ export const codeScanningRenderer: KindRenderer = {
   detail: (host, r) => {
     const d = cs(r);
     host.innerHTML = `<div class="drawer-inner">
-    <h3>${esc(d.ruleName)} <span class="tier tier-${r.tier}">${r.tier}</span></h3>
-    <p class="muted">${esc(d.location.path)}:${d.location.line} · score ${r.score}</p>
+    ${detailHeaderHtml({ title: d.ruleName, tier: r.tier, sub: `${d.location.path}:${d.location.line} · score ${r.score}` })}
     <dl><dt>Severity</dt><dd>${esc(d.securitySeverity)}</dd>
     <dt>Rule</dt><dd>${esc(d.ruleId)}</dd>
     <dt>Tool</dt><dd>${esc(d.tool)}</dd>
@@ -69,8 +70,8 @@ export const renderOpenBySev = (rows: ScoredItem[], el: HTMLElement): void => {
   const open = csRows.filter(r => cs(r).state === "open");
   const counts = (["critical", "high", "medium", "low"] as const).map(s => ({ s, n: open.filter(r => cs(r).securitySeverity === s).length }));
   const max = Math.max(1, ...counts.map(c => c.n));
-  el.innerHTML = `<div class="barlist">${counts.map(c =>
-    `<div class="barrow"><span class="bl">${c.s}</span><span class="track"><span style="width:${(100 * c.n / max).toFixed(1)}%"></span></span><span class="n">${c.n}</span></div>`).join("")}</div>`;
+  el.innerHTML = `<div class="bars">${counts.map(c =>
+    `<div class="barrow"><span class="name">${c.s}</span><span class="track"><span style="width:${(100 * c.n / max).toFixed(1)}%"></span></span><span class="n">${c.n}</span></div>`).join("")}</div>`;
 };
 registerChart({
   id: "cs-open-by-sev", title: "Open by severity", kinds: [CODE_SCANNING],
@@ -81,9 +82,9 @@ export const renderByTool = (rows: ScoredItem[], el: HTMLElement): void => {
   const csRows = rows.filter(r => r.kind === CODE_SCANNING);
   const tools = [...new Set(csRows.map(r => cs(r).tool))].sort();
   const total = csRows.length || 1;
-  el.innerHTML = `<div class="barlist">${tools.map(t => {
+  el.innerHTML = `<div class="bars">${tools.map(t => {
     const n = csRows.filter(r => cs(r).tool === t).length;
-    return `<div class="barrow"><span class="bl">${esc(t)}</span><span class="track"><span style="width:${(100 * n / total).toFixed(1)}%"></span></span><span class="n">${n}</span></div>`;
+    return `<div class="barrow"><span class="name">${esc(t)}</span><span class="track"><span style="width:${(100 * n / total).toFixed(1)}%"></span></span><span class="n">${n}</span></div>`;
   }).join("")}</div>`;
 };
 registerChart({

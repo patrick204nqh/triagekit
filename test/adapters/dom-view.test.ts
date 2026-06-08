@@ -3,7 +3,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createDomView } from "../../src/runtime/adapters/dom-view";
 import type { ViewModel } from "../../src/runtime/core/view-model";
-import type { ScoredItem } from "../../src/runtime/layout/triage-table";
+import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 
 // Minimal manifest registration so the issue renderer exists.
 import { registerKinds } from "../../src/runtime/core/register-kinds";

@@ -1,7 +1,7 @@
 import type { Tier } from "../../scoring/tier";
-import type { ScoredItem } from "../triage-table";
+import type { ScoredItem } from "../table/kind-renderer";
 import { registerChart, type TriageChart } from "./registry";
-import { esc } from "../triage-table";
+import { esc } from "../util";
 
 const TIERS: Tier[] = ["P0", "P1", "P2", "P3"];
 const VAR: Record<Tier, string> = { P0: "--p0", P1: "--p1", P2: "--p2", P3: "--p3" };

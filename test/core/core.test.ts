@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { createCore } from "../../src/runtime/core/core";
 import { createStore } from "../../src/runtime/core/store";
-import { emptyListState } from "../../src/runtime/layout/filter-state";
+import { emptyListState } from "../../src/runtime/layout/toolbar/filter-state";
 import type { ViewModel } from "../../src/runtime/core/view-model";
 import type { ProviderPort } from "../../src/runtime/core/ports";
 import type { TriageItem } from "../../src/runtime/dataset/item";

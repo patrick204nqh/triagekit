@@ -1,8 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import {
-  renderTriageList, registerKindRenderer, type ScoredItem, type DetailCtx,
-} from "../../src/runtime/layout/triage-table";
+import { renderTriageList } from "../../src/runtime/layout/table/detail-panel";
+import { registerKindRenderer, type ScoredItem, type DetailCtx } from "../../src/runtime/layout/table/kind-renderer";
 
 function row(over: Partial<ScoredItem>): ScoredItem {
   return {

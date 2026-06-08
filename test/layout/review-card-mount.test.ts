@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { mountReviewCard } from "../../src/runtime/layout/review-card";
+import { mountReviewCard } from "../../src/runtime/layout/review-card/review-card";
 import type { ReviewActions, ReviewItem } from "../../src/runtime/dataset/shapes/review";
 
 function pr(over: Partial<ReviewItem["details"]> = {}, kind: ReviewItem["kind"] = "change-request"): ReviewItem {

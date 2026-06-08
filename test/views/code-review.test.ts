@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { renderTriageList, type ScoredItem } from "../../src/runtime/layout/triage-table";
+import { renderTriageList } from "../../src/runtime/layout/table/detail-panel";
+import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 import { registerKinds } from "../../src/runtime/core/register-kinds";
 import { changeRequestKind } from "../../src/runtime/kinds/change-request";
 import { issueKind } from "../../src/runtime/kinds/issue";
 registerKinds([changeRequestKind, issueKind]);   // registers change-request + issue kind renderers + axes
-import { getFilterAxis } from "../../src/runtime/layout/axis-registry";
+import { getFilterAxis } from "../../src/runtime/layout/toolbar/axis-registry";
 
 it("registers review label + assignee axes", () => {
   expect(getFilterAxis("label")).toBeDefined();
