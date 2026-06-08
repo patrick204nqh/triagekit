@@ -73,19 +73,22 @@ text only (no fill) to keep the grid quiet.
 
 Dashboard mandate: **sans pairing + monospace numerals.** No serifs anywhere.
 
-- **Display / Headings:** `Satoshi` — track-tight (`-0.02em`), weight-driven hierarchy
-  (600/700), controlled scale. Headings communicate by weight and color, not size.
-- **Body / UI:** `Satoshi` — 400/500, relaxed leading (1.5), secondary copy in Ash Gray,
-  prose capped at 65ch.
+- **Display / Headings:** `Space Grotesk` — track-tight, weight-driven hierarchy
+  (600/640/700), controlled scale. Headings communicate by weight and color, not size.
+  The brand wordmark runs 640 weight at `-0.035em` tracking.
+- **Body / UI:** `Space Grotesk` — 400/500, relaxed leading (1.5), secondary copy in Ash
+  Gray, prose capped at ~65ch. A `-0.005em` global letter-spacing tightens the body.
 - **Mono / Numerals & Metadata:** `JetBrains Mono` — **mandatory for every number**
-  (signal, score, CVSS, counts, percentages), plus IDs, timestamps, package versions, and
-  tier labels. Tabular figures so columns align.
+  (signal, score, CVSS, counts, percentages), plus IDs, timestamps, package versions,
+  tier labels, repo names, and most chips/badges. Tabular figures so columns align.
 - **Scale (clamp-driven):**
-  - App title / page H1: `clamp(1.25rem, 1rem + 1vw, 1.625rem)` (20–26px), weight 700
+  - Brand / app title: `clamp(1.3rem, 1rem + 1.1vw, 1.7rem)`, weight 640
   - Section / panel H2: `1.125rem` (18px), weight 600
-  - Body / table cell: `0.875rem` (14px)
+  - Body / table cell: `0.875rem` (14px); review-card body `13.5px`
   - Label / column header: `0.75rem` (12px), Ash Gray, `0.04em` tracking, uppercase
-  - Stat value: `1.5rem` (24px) JetBrains Mono, weight 600
+  - Chart / stat value: JetBrains Mono, weight 600
+- **Self-hosted:** both families ship as bundled OFL woff2 (no CDN, CSP-safe); the
+  `system-ui` chain is a fallback only.
 - **Banned:** `Inter`, system-default stacks for chrome, ALL serifs (`Times`, `Georgia`,
   `Garamond`), and any decorative display face.
 
@@ -96,11 +99,11 @@ Dashboard mandate: **sans pairing + monospace numerals.** No serifs anywhere.
 triagekit has no marketing hero. The first impression is the **command bar + an inviting,
 composed empty state** — these must feel intentional, never like an unstyled void.
 
-- **Command bar (appbar):** Left-aligned brand/title in Satoshi 700, then the runtime
+- **Command bar (appbar):** Left-aligned brand/title in Space Grotesk 640, then the runtime
   inputs (org, repos, token) as a tidy inline cluster, then a single primary action
   (`Load`). Asymmetric, left-weighted — never centered.
 - **Pre-load empty state:** A composed prompt, not a sentence. A muted outline glyph
-  (SVG, monochrome Ash) + one Satoshi line ("Enter an org and repos, paste a token, then
+  (SVG, monochrome Ash) + one Space Grotesk line ("Enter an org and repos, paste a token, then
   Load") + the accent CTA. Occupies its own centered spatial zone within the content field.
 - **Zero-results state:** Composed and affirmative — a calm checkmark glyph + "No open
   items for these targets." **No emoji.** (Kills the existing 🎉.)
@@ -111,13 +114,19 @@ composed empty state** — these must feel intentional, never like an unstyled v
 
 ## 5. Component Stylings
 
-- **Buttons:** Flat. Primary = Kelp Teal fill + On-Accent ink, weight 600. Secondary =
-  ghost (transparent fill, Graphite Line border, Bone text). Tactile feedback: `-1px`
-  translate-y on `:active`. Focus = 2px Kelp Teal ring (offset 2px). **No outer glow, no
-  gradient, no custom cursor.** Min 44px tap target.
-- **View switch (tabs):** Text tabs in Ash Gray; active tab = Bone text with a 2px Kelp
-  Teal underline. **Upcoming** sources render as a tab with a small mono `upcoming` chip
-  (Slate Panel fill, Ash text) and are visibly inert until activated.
+- **Buttons:** Flat. Primary = Kelp Teal fill + On-Accent ink, weight 600, carrying one
+  restrained accent-tinted shadow (`0 2px 14px`, accent ≈26%) that lifts on hover — a glow
+  tied to the accent hue, never neon. Secondary = ghost (transparent fill, Graphite
+  Line-strong border, Bone text). Tactile feedback: `+1px` translate-y on `:active`. Focus
+  = 2px Kelp Teal ring (box-shadow). **No gradient fill, no custom cursor.** ~38px control
+  height (40px inputs).
+- **Navigation (rail + toolbar):** A fixed **200px left domain rail** lists views in grouped
+  sections (Findings / Work); active = Bone text on a Carbon fill with a Graphite border,
+  inactive = Ash. Below the appbar, a horizontal **toolbar** carries view-mode pills (active
+  = Bone on accent-16% fill, *not* an underline), an inline result count, and Filter/Sort
+  popover buttons. A second row adds **repo-scope tabs** and, top-right, a **provider switch**
+  segmented control. **Upcoming** views/providers render dimmed (opacity ~.5) with a small
+  mono `soon` tag and are inert until activated.
 - **Tables (the core surface):** Borderless cells separated by Graphite Line `border-top`
   dividers — **no card grid, no zebra stripe.** Sticky header band in Slate Panel with
   uppercase Ash labels. Row hover = Carbon Panel fill, cursor pointer. Numeric columns
@@ -125,11 +134,16 @@ composed empty state** — these must feel intentional, never like an unstyled v
   opens the detail drawer.
 - **Tier & severity:** Tier = filled pill (ramp color, 999px radius, 12px mono, On-Accent
   ink). Severity = colored ramp text, no fill.
-- **Stat tiles:** A horizontal row of compact tiles (Carbon Panel, Graphite Line, 12px
-  radius). Mono value (24px) over an Ash uppercase label. Used sparingly — totals and
-  P0/P1 counts only. In the densest views, prefer a single inline summary line over tiles.
-- **Cards:** Avoid. Elevation is reserved for the **drawer** alone. Everywhere else use
-  border-top dividers + negative space (per high-density doctrine).
+- **Counts & insights:** The live result count sits inline in the toolbar (mono, tabular) —
+  there are no standalone stat tiles. Aggregate metrics (tier breakdown bar, age histogram,
+  per-repo bars, ratios) live on a separate **Insights** surface as chart cards (Carbon
+  Panel, Graphite Line, 14px radius), each with an uppercase Ash title + optional mono `k`
+  chip.
+- **Cards:** Never for tabular data — tables stay borderless with divider rows. Card
+  surfaces *are* used deliberately for the **Insights** charts, **review cards** (PR/issue
+  records), and the **connections accordion**: Carbon Panel, Graphite Line, 10–14px radius,
+  no drop shadow. Drop-shadow elevation stays reserved for the slide-over layers (drawer,
+  settings sheet, popovers).
 - **Detail drawer:** Right-anchored panel, `min(440px, 92vw)`, Carbon Panel fill, 1px
   Graphite left border. Shadow is **tinted to canvas** — `-8px 0 32px rgba(10,10,11,0.45)`
   (never pure black). Definition list: Ash `dt`, Bone `dd`, mono for versions/scores.
@@ -139,17 +153,36 @@ composed empty state** — these must feel intentional, never like an unstyled v
   The token input is `type=password`, visibly distinct, with a "stored in this tab only"
   helper.
 - **Loading:** **Skeleton shimmer** matching exact table dimensions — header band + 6–8
-  ghost rows with shimmering cell blocks. **No circular spinner, no "Loading…" text.**
+  ghost rows with shimmering cell blocks. **No "Loading…" text; no spinner for page/table
+  loads** (an inline per-action spinner is the only sanctioned ring — see §8).
 - **Warnings (partial failure):** Inline Amber-bordered block listing per-target failures;
   never blanks the table — degraded rows coexist with loaded data.
+- **Settings panel:** A full-screen slide-over (`.sheet.panel`) with a centered ~1100px
+  content column: a sticky header, a left category sidebar (active = accent-12% fill +
+  inset accent bar), a scrolling content pane, and a sticky footer. Unsaved state surfaces
+  as an Ember dot on the category and a footer summary. Hosts Appearance (a segmented
+  light/dark/system control), Connections (an accordion + searchable integrations catalog),
+  discovery checklists (mono repo chips), and the scoring editor.
+- **Scoring editor:** Per-kind score model. A wrap-safe head row (kind select + simple/
+  advanced segmented mode + reset + a Default/Custom badge pill — neutral by default, accent
+  on Custom). Simple mode = labelled weight sliders (accent thumb) with mono values;
+  advanced mode = a mono formula textarea, scale input, and signal rows. A live preview
+  list (title + mono score + tier pill) and inline Crimson error hints.
+- **Review card (PR/issue record):** Carbon Panel card — title row (Bone, mono number),
+  scrollable markdown body, a byline with avatar/initials (bot avatars tinted accent), mono
+  labels as bordered pills, CI/conflict/SLA status in ramp colors, and an actions row
+  (border-top) with ghost + primary action buttons. Used both inline and inside the drawer.
 
 ---
 
 ## 6. Layout Principles
 
-- **Shell:** Fixed top command bar; a left-aligned view switch; a wide, max-width-contained
-  content field (`max-width: 1400px`) with generous internal padding (24–32px). Asymmetric,
-  left-weighted — centered page layouts are banned at this variance.
+- **Shell:** A CSS Grid with three areas — a full-width top **command bar** (appbar), a
+  fixed **200px left domain rail**, and a **view + main** column beside it. The viewswitch
+  toolbar sits directly under the appbar; `main` takes the remaining height with 24–32px
+  padding (no fixed max-width). Asymmetric, left-weighted — centered page layouts are banned
+  at this variance. Settings opens as a full-screen slide-over with its own centered content
+  column.
 - **Grid over flex math:** CSS Grid for the shell and stat rows. Never `calc()` percentage
   hacks.
 - **No overlap:** Every element owns a clean spatial zone. The drawer overlays via its own
@@ -170,7 +203,9 @@ composed empty state** — these must feel intentional, never like an unstyled v
 - **Drawer on mobile:** Becomes a full-width bottom sheet (`max-h: 88dvh`), slide-up.
 - **Typography:** Headlines via `clamp()`; body min `0.875rem` (14px); mono numerals never
   shrink below 13px (legibility).
-- **Touch targets:** All controls ≥ 44px. Whole table rows remain tappable.
+- **Touch targets:** Controls run ~38–40px tall (the 44px ideal is not strictly enforced);
+  whole table rows remain tappable. The domain rail collapses to a horizontal wrap-bar above
+  the content on `<768px`, and the settings sidebar becomes a scrollable pill strip.
 - **Spacing:** Section gaps scale `clamp(1.5rem, 5vw, 2.5rem)`.
 
 ---
@@ -183,6 +218,9 @@ composed empty state** — these must feel intentional, never like an unstyled v
   instant dump. Cap the cascade so large lists don't feel slow.
 - **Load shimmer:** Skeleton blocks use a left-to-right shimmer sweep (opacity/transform
   only).
+- **Inline action state:** A small accent-topped ring spinner is allowed *only* on an
+  in-flight row/card action (e.g. merging a PR) — momentary, scoped to one control, and
+  disabled under `prefers-reduced-motion`. Page and table loads still use skeletons.
 - **Restraint:** No perpetual ambient loops on a data tool — motion serves state change
   (load, open, switch), then rests. The cockpit should feel still when you're reading.
 - **Performance:** Animate **only** `transform` and `opacity`. Never `top/left/width/
@@ -196,14 +234,16 @@ composed empty state** — these must feel intentional, never like an unstyled v
 - No `Inter`; no system-default font stack for app chrome.
 - No serif fonts of any kind (this is a dashboard).
 - No pure black (`#000000`) — Void Zinc `#0A0A0B` is the floor.
-- No blue or purple accent (avoids the GitHub/AI-neon default); no neon or outer-glow
-  shadows; shadows are always tinted to the canvas hue.
+- No blue or purple accent (avoids the GitHub/AI-neon default); no neon glow. Shadows are
+  tinted to the canvas hue — the lone exception is the restrained accent-tinted shadow and
+  focus ring on the primary CTA and active accents.
 - More than one accent color, or any accent above 80% saturation.
 - Gradient text on headings; gradient fills on buttons.
 - Custom mouse cursors.
 - Overlapping/absolutely-stacked content (the drawer is the only intentional overlay).
 - The generic "3 equal cards in a row" feature layout; card grids for tabular data.
-- Circular/spinner loaders, or bare "Loading…" text — skeletons only.
+- Circular/spinner loaders for page or table loads, or bare "Loading…" text — skeletons
+  only (a momentary inline action spinner on one in-flight control is the lone exception).
 - Centered page/hero layouts at this variance.
 - Generic placeholder identities ("John Doe", "Acme", "Nexus") and fake round numbers
   (`99.99%`, `50%`).
