@@ -25,8 +25,15 @@ describe("site/ Pages layout", () => {
 
   it("landing pulls in no external scripts or stylesheets (no-CDN ethos)", () => {
     const html = readFileSync(landing, "utf8");
-    expect(html).not.toMatch(/<script[^>]+src="https?:/i);
+    expect(html).not.toMatch(/<script[^>]+src=["'](?:https?:)?\/\//i);
     expect(html).not.toMatch(/<link[^>]+href="https?:[^"]*\.css/i);
+  });
+
+  it("landing carries the GoatCounter no-JS pixel (analytics on our hosting only)", () => {
+    const html = readFileSync(landing, "utf8");
+    expect(html).toMatch(/goatcounter\.com\/count/);
+    // Must be a no-JS pixel, not a script include.
+    expect(html).not.toMatch(/<script[^>]+goatcounter/i);
   });
 
   it("the app artifact is tracker-free (invariant: build output never phones home)", () => {
