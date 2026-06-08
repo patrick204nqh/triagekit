@@ -1,20 +1,47 @@
 {
   "name": "triagekit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Compile a config into a shareable, backend-free repo-triage dashboard — one self-contained HTML file.",
-  "keywords": ["triage", "dashboard", "github", "dependabot", "code-scanning", "security", "cli", "static", "single-file"],
+  "keywords": [
+    "triage",
+    "dashboard",
+    "github",
+    "dependabot",
+    "code-scanning",
+    "security",
+    "cli",
+    "static",
+    "single-file"
+  ],
   "homepage": "https://patrick204nqh.github.io/triagekit",
-  "repository": { "type": "git", "url": "git+https://github.com/patrick204nqh/triagekit.git" },
-  "bugs": { "url": "https://github.com/patrick204nqh/triagekit/issues" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/patrick204nqh/triagekit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/patrick204nqh/triagekit/issues"
+  },
   "author": "Patrick (@patrick204nqh)",
   "license": "MIT",
   "type": "module",
-  "engines": { "node": ">=20" },
-  "publishConfig": { "access": "public" },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "bin": {
     "triagekit": "./dist-cli/cli/index.js"
   },
-  "files": ["dist-cli/**", "src/runtime/**", "src/vite/**", "src/config/**", "assets/**", "README.md", "LICENSE"],
+  "files": [
+    "dist-cli/**",
+    "src/runtime/**",
+    "src/vite/**",
+    "src/config/**",
+    "assets/**",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build:cli": "tsc -p tsconfig.json",
     "build:pages": "npm run build:cli && node dist-cli/cli/index.js build --generic && mkdir -p site/app && cp dist/triage.html site/app/index.html && cp assets/og.png site/og.png && cp assets/og.png site/app/og.png",
