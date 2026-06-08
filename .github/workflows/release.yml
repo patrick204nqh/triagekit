@@ -1,0 +1,42 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write   # required for npm provenance (OIDC)
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org"
+          cache: npm
+      - run: npm ci
+      - name: Unit tests
+        run: npm test
+      - name: Anonymity lint
+        run: npm run lint:anon
+      - name: Build smoke test
+        run: |
+          npm run build:cli
+          node dist-cli/cli/index.js build -c triage.config.example.yml
+          test -f dist/triage.html
+          if grep -q 'src="http' dist/triage.html; then
+            echo "✗ built HTML references an external script — single-file invariant broken"
+            exit 1
+          fi
+          echo "✓ dist/triage.html is self-contained"
+      - name: Tarball smoke test
+        run: npm run pack:smoke
+      - name: Publish to npm (with provenance)
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
