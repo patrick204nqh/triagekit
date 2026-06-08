@@ -1,3 +1,12 @@
+// Vocabulary (see Phase 5c):
+//   provider  - user-facing identity (ProviderManifest, icons, switch). github, gitlab...
+//   source    - one adapter feeding specific kinds; a provider may expose several
+//               (github -> change-request-source + dependency-vuln-source + ...).
+//   signal    - raw 0-100 input from the adapter (TriageItem.signal below).
+//   score     - the computed rank after a scorer/model runs (NOT carried on TriageItem).
+//   scope     - fetch config (which repos a source pulls); see ingest/source.ts Scope.
+//   repoView  - the repo display filter you are currently viewing (NOT scope).
+
 export type Kind =
   | "dependency-vuln"   // code-security
   | "code-scanning"     // code-security
