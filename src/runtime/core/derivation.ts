@@ -10,7 +10,7 @@ export interface DeriveInput {
   activeKinds: readonly Kind[];
   botLogins: string[];
   score: ScoreContext;
-  repo: string;            // "" = all repos
+  repoView: string;        // "" = all repos (display-filter; not fetch-config Scope)
   filters: ListState;
 }
 export interface Derived {
@@ -28,8 +28,8 @@ export function derive(input: DeriveInput): Derived {
       return { ...it, score, tier } as ScoredItem;
     })
     .sort((a, b) => b.score - a.score);
-  const scoped = input.repo && scored.some(r => r.location === input.repo)
-    ? scored.filter(r => r.location === input.repo)
+  const scoped = input.repoView && scored.some(r => r.location === input.repoView)
+    ? scored.filter(r => r.location === input.repoView)
     : scored;
   const shown = applyFilters(scoped, input.filters);
   return { scored, shown };

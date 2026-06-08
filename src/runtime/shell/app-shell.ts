@@ -91,7 +91,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   let active: Artifact = artifacts.find(a => liveSourcesFor(a).length) ?? artifacts[0];
   let view: string = "list";
   let activeProvider: string = (liveSourcesFor(active)[0] ?? sourcesFor(active)[0])?.id ?? "";
-  let activeRepo = "";   // "" = All; sticky across artifact switches, reset on provider change
+  let repoView = "";   // "" = All; sticky across artifact switches, reset on provider change
   let lastRows: ScoredItem[] = [];
   let filterState: ListState = emptyListState();
   let lastFetchedAt: number | null = null;
@@ -129,7 +129,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
 
     // repo: applied optimistically (cannot validate pre-fetch; self-corrects via the
     // repo control + the "All" fallback when the repo isn't among the loaded rows)
-    if (u.repo) activeRepo = u.repo;
+    if (u.repoView) repoView = u.repoView;
 
     // view: list / insights (when available) / a registered extra tab applicable to
     // the artifact. applicableTabs needs rows to report a tab applicable, so pre-fetch
@@ -170,7 +170,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     const { sort, axes } = filterState;
     writeUrlState({
       provider: activeProvider || undefined,
-      repo: activeRepo || undefined,
+      repoView: repoView || undefined,
       artifact: active?.id,
       view,
       sort,
@@ -221,7 +221,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       override: env.scoreOverride,
     }),
     filters: () => filterState,
-    repo: () => activeRepo,
+    repoView: () => repoView,
   });
 
   // ── Command bar: brand + merged status chip + sync stamp + refresh + theme ──
@@ -320,7 +320,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       hasInsights, activeView: view,
       sources: sourcesFor(active).map(s => ({ id: s.id, provider: providerOf(s), status: s.status })),
       activeProvider,
-      activeRepo,
+      activeRepo: repoView,
       extraTabs: applicableTabs(active, lastRows).map(t => ({ id: t.id, label: t.label })),
     });
     renderToolbar(nav, {
@@ -329,13 +329,13 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       onViewChange: (id) => { view = id; syncUrl(); buildNav(); render(); },
       onProviderSelect: (id) => {
         activeProvider = id;
-        activeRepo = "";
+        repoView = "";
         lastRows = []; filterState = emptyListState(); lastFetchedAt = null;
         syncUrl();
         buildNav(); refreshBar(); render();
       },
       onRepoSelect: (id) => {
-        activeRepo = id;
+        repoView = id;
         syncUrl();
         core.rerender();      // client-side re-derive, no refetch
         buildNav();           // re-render tabs so the active one updates

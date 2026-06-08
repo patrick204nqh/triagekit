@@ -16,7 +16,7 @@ export interface CoreDeps {
   botLogins(): string[];
   scoreContext(): ScoreContext;
   filters(): ListState;
-  repo(): string;
+  repoView(): string;   // active repo display-filter ("" = all); not fetch-config Scope
 }
 
 export function createCore(deps: CoreDeps) {
@@ -28,7 +28,7 @@ export function createCore(deps: CoreDeps) {
       activeKinds: deps.activeKinds(),
       botLogins: deps.botLogins(),
       score: deps.scoreContext(),
-      repo: deps.repo(),
+      repoView: deps.repoView(),
       filters: deps.filters(),
     });
     deps.view.render({ scored, shown, errors: lastErrors, stats: deps.store.stats() });
