@@ -32,6 +32,6 @@ describe("site/ Pages layout", () => {
   it("the app artifact is tracker-free (invariant: build output never phones home)", () => {
     const html = readFileSync(app, "utf8");
     expect(html).not.toContain("goatcounter");
-    expect(html).not.toMatch(/src="http/);
+    expect(html).not.toMatch(/src=["']https?:/);
   });
 });
