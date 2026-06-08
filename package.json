@@ -21,6 +21,7 @@
     "test": "vitest run",
     "lint:anon": "node scripts/anon-lint.mjs",
     "pack:smoke": "node scripts/pack-smoke.mjs",
+    "screenshots": "python3 scripts/gen-screenshots.py",
     "prepublishOnly": "npm run build:cli"
   },
   "devDependencies": {
