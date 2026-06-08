@@ -4,8 +4,10 @@ import { registerView } from "../registry";
 import { type FilterAxis, registerSortKey } from "../../layout/axis-registry";
 import { registerChart } from "../../layout/charts/registry";
 import "../../ingest/github/code-scanning-source";   // side-effect: register source
+import { detailsAs } from "../../dataset/details";
+import { uniqueValues } from "../../layout/axis-utils";
 
-const cs = (r: ScoredItem) => r.details as CodeScanningDetails;
+const cs = (r: ScoredItem) => detailsAs<CodeScanningDetails>(r)!;
 const SEV_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
 
 export const codeScanningRenderer: KindRenderer = {
@@ -41,8 +43,7 @@ export const severityAxis: FilterAxis = {
 export const toolAxis: FilterAxis = {
   id: "cs-tool", label: "Tool", widget: "chips", quick: false,
   appliesTo: (rows) => rows.some(r => r.kind === CODE_SCANNING),
-  optionsFrom: (rows) => [...new Set(rows.filter(r => r.kind === CODE_SCANNING).map(r => cs(r).tool))]
-    .sort().map(t => ({ value: t, label: t })),
+  optionsFrom: (rows) => uniqueValues(rows, r => cs(r).tool, r => r.kind === CODE_SCANNING),
   test: (i, sel) => i.kind === CODE_SCANNING && sel.includes(cs(i).tool),
 };
 

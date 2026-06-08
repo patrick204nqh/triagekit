@@ -5,8 +5,10 @@ import { CHANGE_REQUEST, ISSUE } from "../../dataset/shapes/review";
 import { makeGithubActions } from "../../ingest/github/actions";
 import { enrichReview } from "../../ingest/github/change-request-source";   // also pins the source's registerSource() side-effect
 import { type FilterAxis } from "../../layout/axis-registry";
+import { detailsAs } from "../../dataset/details";
+import { uniqueValues } from "../../layout/axis-utils";
 
-const det = (r: ScoredItem) => r.details as ReviewDetails;
+const det = (r: ScoredItem) => detailsAs<ReviewDetails>(r)!;
 const reviewColumns = [
   { header: "#", cell: (r: ScoredItem) => `#${det(r).number}` },
   { header: "Author", cell: (r: ScoredItem) => esc(det(r).author.login) },
@@ -31,14 +33,12 @@ const isReview = (k: string) => k === CHANGE_REQUEST || k === ISSUE;
 export const labelAxis: FilterAxis = {
   id: "label", label: "Label", widget: "chips", quick: false,
   appliesTo: (rows) => rows.some(r => isReview(r.kind) && det(r).labels.length > 0),
-  optionsFrom: (rows) => [...new Set(rows.filter(r => isReview(r.kind)).flatMap(r => det(r).labels.map(l => l.name)))]
-    .sort().map(n => ({ value: n, label: n })),
+  optionsFrom: (rows) => uniqueValues(rows, r => det(r).labels.map(l => l.name), r => isReview(r.kind)),
   test: (i, sel) => isReview(i.kind) && det(i).labels.some(l => sel.includes(l.name)),
 };
 export const assigneeAxis: FilterAxis = {
   id: "assignee", label: "Assignee", widget: "chips", quick: false,
   appliesTo: (rows) => rows.some(r => isReview(r.kind) && det(r).assignees.length > 0),
-  optionsFrom: (rows) => [...new Set(rows.filter(r => isReview(r.kind)).flatMap(r => det(r).assignees.map(a => a.login)))]
-    .sort().map(l => ({ value: l, label: l })),
+  optionsFrom: (rows) => uniqueValues(rows, r => det(r).assignees.map(a => a.login), r => isReview(r.kind)),
   test: (i, sel) => isReview(i.kind) && det(i).assignees.some(a => sel.includes(a.login)),
 };

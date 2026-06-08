@@ -1,10 +1,7 @@
 import type { SignalSpec } from "../scoring/score-model";
 import type { Transform } from "../scoring/signal-transform";
 import type { FieldDef } from "../scoring/field-catalog";
-
-function esc(s: unknown): string {
-  return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
-}
+import { esc } from "../layout/util";
 
 export interface SignalEditorOpts {
   name: string;

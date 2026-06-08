@@ -1,16 +1,11 @@
 import type { ScoredItem } from "./triage-table";
 import { esc } from "./triage-table";
 import { registerTab } from "./tab-registry";
-
-// A deadline lives at details.dueAt (ISO). Read defensively — most kinds have none.
-export function deadlineOf(i: ScoredItem): string | null {
-  const d = (i.details as { dueAt?: string } | null | undefined)?.dueAt;
-  return typeof d === "string" && d ? d : null;
-}
+import { deadlineOf } from "../dataset/details";
 
 export function dueSoonRows(rows: ScoredItem[]): ScoredItem[] {
   return rows
-    .filter(r => deadlineOf(r) !== null)
+    .filter(r => deadlineOf(r) != null)
     .sort((a, b) => +new Date(deadlineOf(a)!) - +new Date(deadlineOf(b)!));
 }
 
@@ -35,6 +30,6 @@ registerTab({
   id: "due-soon",
   label: "Due soon",
   order: 10,
-  appliesTo: (_artifact, rows) => rows.some(r => deadlineOf(r) !== null),
+  appliesTo: (_artifact, rows) => rows.some(r => deadlineOf(r) != null),
   render: (root, rows) => renderDueSoon(root, rows),
 });

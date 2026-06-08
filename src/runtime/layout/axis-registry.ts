@@ -1,6 +1,8 @@
 import type { ScoredItem } from "./triage-table";
 import type { Artifact } from "../dataset/artifact";
 import type { Tier } from "../scoring/tier";
+import { authorKindOf, labelNamesOf } from "../dataset/details";
+import { uniqueValues } from "./axis-utils";
 
 export interface AxisCtx { artifact: Artifact; }
 export interface AxisOption { value: string; label: string; }
@@ -33,17 +35,6 @@ export function getSortKey(id: string): SortKey | undefined { return sorts.get(i
 export function listFilterAxes(): FilterAxis[] { return [...axes.values()]; }
 export function listSortKeys(): SortKey[] { return [...sorts.values()]; }
 
-// author.kind lives only on review items; read it defensively.
-function authorKind(i: ScoredItem): string | undefined {
-  return (i.details as { author?: { kind?: string } } | null | undefined)?.author?.kind;
-}
-
-// labels live on review items; read defensively.
-function labelsOf(i: ScoredItem): string[] {
-  const ls = (i.details as { labels?: { name: string }[] } | null | undefined)?.labels;
-  return Array.isArray(ls) ? ls.map(l => l.name) : [];
-}
-
 const TIERS: Tier[] = ["P0", "P1", "P2", "P3"];
 
 // ── Built-in axes ──
@@ -55,16 +46,16 @@ registerFilterAxis({
 });
 registerFilterAxis({
   id: "author", label: "Author", widget: "chips", quick: true,
-  appliesTo: (rows) => rows.length > 0 && rows.every(r => authorKind(r) !== undefined),
+  appliesTo: (rows) => rows.length > 0 && rows.every(r => authorKindOf(r) !== undefined),
   optionsFrom: () => [{ value: "human", label: "Human" }, { value: "bot", label: "Bot" }],
-  test: (i, sel) => { const k = authorKind(i); return k !== undefined && sel.includes(k); },
+  test: (i, sel) => { const k = authorKindOf(i); return k !== undefined && sel.includes(k); },
 });
 
 registerFilterAxis({
   id: "labels", label: "Labels", widget: "chips", quick: false,
-  appliesTo: (rows) => rows.some(r => labelsOf(r).length > 0),
-  optionsFrom: (rows) => [...new Set(rows.flatMap(labelsOf))].sort().map(v => ({ value: v, label: v })),
-  test: (i, sel) => labelsOf(i).some(n => sel.includes(n)),
+  appliesTo: (rows) => rows.some(r => labelNamesOf(r).length > 0),
+  optionsFrom: (rows) => uniqueValues(rows, labelNamesOf),
+  test: (i, sel) => labelNamesOf(i).some(n => sel.includes(n)),
 });
 
 // ── Built-in sorts ──
