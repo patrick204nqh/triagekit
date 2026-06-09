@@ -64,7 +64,8 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
     const search = long
       ? `<div class="pop-search"><input type="search" class="pop-filter" data-filter-axis="${esc(a.id)}" placeholder="Filter ${esc(a.label.toLowerCase())}…" aria-label="Filter ${esc(a.label)}"/></div>`
       : "";
-    const list = opts.map(o => optHtml(a.id, o, selected.includes(o.value))).join("");
+    const items = opts.map(o => optHtml(a.id, o, selected.includes(o.value))).join("");
+    const list = long ? `<div class="opt-scroll">${items}</div>` : items;
     return `<div class="pop-axis"><div class="pop-axis-label">${esc(a.label)}</div>${search}${list}</div>`;
   };
 

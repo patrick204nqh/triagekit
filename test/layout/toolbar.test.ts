@@ -81,6 +81,16 @@ describe("renderToolbar", () => {
     expect(visible("bug")).toBe(false);        // hidden
   });
 
+  it("wraps a long option list in .opt-scroll, short ones not", () => {
+    const many = document.createElement("div");
+    renderToolbar(many, props({ rows: manyLabels(9) }));
+    expect(many.querySelector(".opt-scroll")).not.toBeNull();
+
+    const few = document.createElement("div");
+    renderToolbar(few, props({ rows: manyLabels(3) }));
+    expect(few.querySelector(".opt-scroll")).toBeNull();
+  });
+
   it("renders view-mode tabs on the left with the active one marked", () => {
     const host = document.createElement("div");
     renderToolbar(host, props());
