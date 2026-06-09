@@ -23,7 +23,31 @@ function props(over: Partial<ToolbarProps> = {}): ToolbarProps {
   };
 }
 
+const labelledRows = (...labels: { name: string; color: string }[]): ScoredItem[] => [{
+  ...rows[0], id: "L",
+  details: { author: { login: "x", avatarUrl: "", kind: "human" }, labels } as any,
+} as ScoredItem];
+
 describe("renderToolbar", () => {
+  it("renders label options as colored chips, keeping the data-axis/data-val input", () => {
+    const host = document.createElement("div");
+    renderToolbar(host, props({ rows: labelledRows({ name: "bug", color: "d73a4a" }) }));
+    const input = host.querySelector<HTMLInputElement>("[data-axis='labels'][data-val='bug']");
+    expect(input).not.toBeNull();                                   // state-driving input still present
+    const opt = input!.closest(".pop-opt")!;
+    expect(opt.querySelector(".lbl")?.getAttribute("style")).toContain("--lbl:#d73a4a");
+    expect(opt.querySelector(".ck")).not.toBeNull();                // custom checkbox visual
+  });
+
+  it("toggling a label checkbox marks its row .on", () => {
+    const host = document.createElement("div");
+    renderToolbar(host, props({ rows: labelledRows({ name: "bug", color: "d73a4a" }), onFilterChange: () => {} }));
+    const input = host.querySelector<HTMLInputElement>("[data-axis='labels'][data-val='bug']")!;
+    input.checked = true;
+    input.dispatchEvent(new Event("change"));
+    expect(input.closest(".pop-opt")!.classList.contains("on")).toBe(true);
+  });
+
   it("renders view-mode tabs on the left with the active one marked", () => {
     const host = document.createElement("div");
     renderToolbar(host, props());

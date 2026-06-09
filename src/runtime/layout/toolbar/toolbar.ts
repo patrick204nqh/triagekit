@@ -2,9 +2,10 @@ import type { ScoredItem } from "../table/kind-renderer";
 import type { Artifact } from "../../dataset/artifact";
 import { esc } from "../util";
 import { applyFilters, type ListState } from "./filter-state";
-import { listFilterAxes, listSortKeys, type AxisCtx, type FilterAxis } from "./axis-registry";
+import { listFilterAxes, listSortKeys, type AxisCtx, type FilterAxis, type AxisOption } from "./axis-registry";
 import { renderProviderSwitch, type SwitchProvider } from "../navigation/provider-switch";
 import { renderRepoTabs, type RepoOption } from "../navigation/repo-tabs";
+import { chipHtml } from "../atoms/atoms";
 import { wirePopovers } from "./toolbar-popover";
 
 export interface ToolbarViewMode { id: string; label: string; }
@@ -29,6 +30,16 @@ function activeFilterCount(state: ListState): number {
   return Object.values(state.axes).reduce((n, v) => n + (v?.length ?? 0), 0);
 }
 
+const SEARCH_THRESHOLD = 8;
+const CHECK_SVG = `<svg class="ck-tick" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 5l3 3 5-7"/></svg>`;
+
+function optHtml(axisId: string, o: AxisOption, checked: boolean): string {
+  const body = o.chip ? chipHtml(o.label, o.chip.color) : `<span>${esc(o.label)}</span>`;
+  return `<label class="pop-opt${checked ? " on" : ""}">`
+    + `<input type="checkbox" class="pop-ck" data-axis="${esc(axisId)}" data-val="${esc(o.value)}"${checked ? " checked" : ""}/>`
+    + `<span class="ck">${CHECK_SVG}</span>${body}</label>`;
+}
+
 export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
   const ctx: AxisCtx = { artifact: p.artifact };
   const axes = listFilterAxes().filter(a => a.appliesTo(p.rows, ctx));
@@ -46,11 +57,11 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
   const views = p.viewModes.map(v =>
     `<button class="tb-view${v.id === p.activeView ? " active" : ""}" data-view="${esc(v.id)}">${esc(v.label)}</button>`).join("");
 
-  const axisGroup = (a: FilterAxis) =>
-    `<div class="pop-axis"><div class="pop-axis-label">${esc(a.label)}</div>`
-    + a.optionsFrom(p.rows, ctx).map(o =>
-        `<label class="pop-opt"><input type="checkbox" data-axis="${esc(a.id)}" data-val="${esc(o.value)}"${sel(a.id).includes(o.value) ? " checked" : ""}/> ${esc(o.label)}</label>`).join("")
-    + `</div>`;
+  const axisGroup = (a: FilterAxis) => {
+    const selected = sel(a.id);
+    const list = a.optionsFrom(p.rows, ctx).map(o => optHtml(a.id, o, selected.includes(o.value))).join("");
+    return `<div class="pop-axis"><div class="pop-axis-label">${esc(a.label)}</div>${list}</div>`;
+  };
 
   const filterPop = `<div class="tb-pop" data-pop="filter" hidden>${axes.map(axisGroup).join("") || `<div class="muted pop-empty">No filters for this list.</div>`}</div>`;
   const sortPop = `<div class="tb-pop" data-pop="sort" hidden>`
@@ -89,11 +100,14 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
     mut(clone); p.onFilterChange(clone);
   };
   host.querySelectorAll<HTMLInputElement>("[data-axis]").forEach(cb =>
-    cb.addEventListener("change", () => emit(s => {
-      const id = cb.dataset.axis!, val = cb.dataset.val!;
-      const cur = s.axes[id] ?? [];
-      s.axes[id] = cur.includes(val) ? cur.filter(v => v !== val) : [...cur, val];
-    })));
+    cb.addEventListener("change", () => {
+      cb.closest(".pop-opt")?.classList.toggle("on", cb.checked);
+      emit(s => {
+        const id = cb.dataset.axis!, val = cb.dataset.val!;
+        const cur = s.axes[id] ?? [];
+        s.axes[id] = cur.includes(val) ? cur.filter(v => v !== val) : [...cur, val];
+      });
+    }));
   host.querySelectorAll<HTMLElement>("[data-sort]").forEach(b =>
     b.addEventListener("click", () => emit(s => { s.sort = b.dataset.sort!; })));
 
