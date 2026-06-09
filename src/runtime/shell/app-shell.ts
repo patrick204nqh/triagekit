@@ -23,6 +23,7 @@ import { getThemeChoice, cycleTheme } from "./theme";
 import { writeUrlState, readUrlState } from "./url-state";
 import { getRefreshInterval, relativeSince } from "./refresh";
 import { scopeKey } from "../core/scope-key";
+import { adapterBotLogins } from "../core/author-policy";
 import type { DatasetStore } from "../core/store";
 import type { TimerPort, ViewPort } from "../core/ports";
 import type { CoreDeps, Core } from "../core/core";
@@ -248,6 +249,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     onThemeChange: () => syncTheme(),
     onRefreshChange: () => applyRefreshTimer(),
     getRows: () => lastRows,
+    getAutoBots: () => adapterBotLogins(env.store.snapshot(), active.kinds),
   });
   const openSettings = () => settings.open(providerOf(primarySource(active)));
   status.addEventListener("click", openSettings);
