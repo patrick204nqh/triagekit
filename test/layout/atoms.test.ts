@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  tierBadgeHtml, slaTagHtml, actorChipHtml, labelChipHtml,
+  tierBadgeHtml, slaTagHtml, actorChipHtml, chipHtml, labelChipHtml,
   checkIndicatorHtml, permalinkLinkHtml, relationStripHtml,
   detailHeadHtml,
 } from "../../src/runtime/layout/atoms/atoms";
@@ -40,6 +40,11 @@ describe("atoms", () => {
     const out = labelChipHtml({ name: "security", color: "d6504a" });
     expect(out).toContain("--lbl:#d6504a");
     expect(out).toContain(">security<");
+  });
+
+  it("chipHtml renders the same pill as labelChipHtml for a (name,color) pair", () => {
+    expect(chipHtml("security", "d6504a")).toBe(labelChipHtml({ name: "security", color: "d6504a" }));
+    expect(chipHtml("<x>", "fff")).toContain("&lt;x&gt;");   // escapes the name
   });
 
   it("checkIndicatorHtml renders nothing for issues (null checks)", () => {

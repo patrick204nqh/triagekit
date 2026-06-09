@@ -41,8 +41,11 @@ export function actorChipHtml(a: Actor, role?: string, opts: { showName?: boolea
   return `<span class="actor" title="${esc(a.login)}">${av}${name}${r}</span>`;
 }
 
+export function chipHtml(name: string, color: string): string {
+  return `<span class="lbl" style="--lbl:#${esc(color)}">${esc(name)}</span>`;
+}
 export function labelChipHtml(l: Label): string {
-  return `<span class="lbl" style="--lbl:#${esc(l.color)}">${esc(l.name)}</span>`;
+  return chipHtml(l.name, l.color);
 }
 
 export function checkIndicatorHtml(c: CheckStatus | null): string {
