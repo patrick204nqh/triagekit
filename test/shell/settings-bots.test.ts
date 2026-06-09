@@ -23,6 +23,19 @@ function addBot(host: HTMLElement, value: string, key = "Enter") {
   inp.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
 }
 
+function setupAuto(autoBots: string[]) {
+  const host = document.createElement("div"); document.body.appendChild(host);
+  const policy = new PolicyStore();
+  const api = mountSettings(host, {
+    sources: [] as Source[], creds: { get: () => "", set: () => {} } as any,
+    scopes: { get: () => ({}), set: () => {} } as any,
+    policy, onChange: () => {}, getAutoBots: () => autoBots,
+  });
+  api.open();
+  host.querySelector<HTMLButtonElement>('[data-category="filters"]')!.click();
+  return { host, policy };
+}
+
 describe("Settings → Bot accounts", () => {
   beforeEach(() => { localStorage.clear(); document.body.innerHTML = ""; });
 
@@ -57,6 +70,31 @@ describe("Settings → Bot accounts", () => {
     const { host, policy } = setup();
     addBot(host, "dependabot");
     host.querySelector<HTMLButtonElement>("[data-cancel]")!.click();
+    expect(policy.getBotLogins()).toEqual(["renovate"]);
+  });
+});
+
+describe("Settings → Auto-detected bots", () => {
+  beforeEach(() => { localStorage.clear(); document.body.innerHTML = ""; });
+
+  it("renders auto-detected bots as read-only chips (no remove button)", () => {
+    const { host } = setupAuto(["dependabot[bot]", "github-actions[bot]"]);
+    const wrap = host.querySelector("[data-auto-bots]")!;
+    expect(wrap.textContent).toContain("dependabot[bot]");
+    expect(wrap.textContent).toContain("github-actions[bot]");
+    expect(wrap.querySelector(".x")).toBeNull();          // not removable
+    expect(wrap.querySelector("[data-rm-bot]")).toBeNull();
+  });
+
+  it("shows an empty state when there are no auto-detected bots", () => {
+    const { host } = setupAuto([]);
+    expect(host.querySelector("[data-auto-bots]")!.textContent).toContain("No provider-flagged bots");
+  });
+
+  it("keeps the manual list working alongside the auto group", () => {
+    const { host, policy } = setupAuto(["dependabot[bot]"]);
+    addBot(host, "renovate");
+    host.querySelector<HTMLButtonElement>("[data-save]")!.click();
     expect(policy.getBotLogins()).toEqual(["renovate"]);
   });
 });
