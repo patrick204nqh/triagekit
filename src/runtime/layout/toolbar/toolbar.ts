@@ -58,9 +58,14 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
     `<button class="tb-view${v.id === p.activeView ? " active" : ""}" data-view="${esc(v.id)}">${esc(v.label)}</button>`).join("");
 
   const axisGroup = (a: FilterAxis) => {
+    const opts = a.optionsFrom(p.rows, ctx);
     const selected = sel(a.id);
-    const list = a.optionsFrom(p.rows, ctx).map(o => optHtml(a.id, o, selected.includes(o.value))).join("");
-    return `<div class="pop-axis"><div class="pop-axis-label">${esc(a.label)}</div>${list}</div>`;
+    const long = opts.length > SEARCH_THRESHOLD;
+    const search = long
+      ? `<div class="pop-search"><input type="search" class="pop-filter" data-filter-axis="${esc(a.id)}" placeholder="Filter ${esc(a.label.toLowerCase())}…" aria-label="Filter ${esc(a.label)}"/></div>`
+      : "";
+    const list = opts.map(o => optHtml(a.id, o, selected.includes(o.value))).join("");
+    return `<div class="pop-axis"><div class="pop-axis-label">${esc(a.label)}</div>${search}${list}</div>`;
   };
 
   const filterPop = `<div class="tb-pop" data-pop="filter" hidden>${axes.map(axisGroup).join("") || `<div class="muted pop-empty">No filters for this list.</div>`}</div>`;
@@ -110,6 +115,15 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
     }));
   host.querySelectorAll<HTMLElement>("[data-sort]").forEach(b =>
     b.addEventListener("click", () => emit(s => { s.sort = b.dataset.sort!; })));
+
+  host.querySelectorAll<HTMLInputElement>("[data-filter-axis]").forEach(inp =>
+    inp.addEventListener("input", () => {
+      const group = inp.closest(".pop-axis")!;
+      const q = inp.value.trim().toLowerCase();
+      group.querySelectorAll<HTMLElement>(".pop-opt").forEach(opt => {
+        opt.style.display = (opt.textContent ?? "").toLowerCase().includes(q) ? "" : "none";
+      });
+    }));
 
   wirePopovers(host);
 }
