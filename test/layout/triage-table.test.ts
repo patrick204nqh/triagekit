@@ -25,7 +25,13 @@ describe("renderTriageList + DetailPanel", () => {
     const seen: { title?: string; token?: string } = {};
     registerKindRenderer({
       kind: "secret-scanning",
-      detail: (host, i, ctx: DetailCtx) => { seen.title = i.title; seen.token = ctx.token; host.innerHTML = `<p class="probe">${i.title}</p>`; },
+      detail: (i, ctx: DetailCtx) => {
+        seen.title = i.title; seen.token = ctx.token;
+        return {
+          header: { title: i.title, tier: i.tier, provider: i.source },
+          body: (host) => { host.innerHTML = `<p class="probe">${i.title}</p>`; },
+        };
+      },
     });
     const root = document.createElement("div");
     renderTriageList(root, [row({ kind: "secret-scanning", title: "leaked key" })], [], { token: "tok" });

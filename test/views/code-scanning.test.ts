@@ -21,13 +21,19 @@ describe("code-scanning renderer", () => {
     expect(cells.join(" ")).toContain("SQL injection");
     expect(cells.join(" ")).toContain("high");
   });
-  it("renders a detail panel with location and tool", () => {
-    const host = document.createElement("div");
-    codeScanningRenderer.detail!(host, row({}), {} as any);
-    // shared detailHeaderHtml: rule name in <h3> + tier chip, location:line · score in .muted
-    expect(host.innerHTML).toContain('<h3>SQL injection <span class="tier tier-P0">P0</span></h3>');
-    expect(host.innerHTML).toContain('<p class="muted">src/db.ts:42 · score 80</p>');
-    expect(host.innerHTML).toContain("CodeQL");   // <dl> body preserved
+  it("returns a DetailView: rule name + provider in the header, tool/severity in the body", () => {
+    const v = codeScanningRenderer.detail!(row({}), {} as any);
+    // identity lives in the shared header the frame renders
+    expect(v.header.title).toBe("SQL injection");
+    expect(v.header.tier).toBe("P0");
+    expect(v.header.provider).toBe("github");
+    // the <dl> body is mounted into the scroll region
+    const host = document.createElement("div"); v.body(host);
+    expect(host.querySelector("dl")).toBeTruthy();
+    expect(host.innerHTML).toContain("CodeQL");
+    // footer opens the finding
+    const foot = document.createElement("div"); v.actions!(foot);
+    expect(foot.querySelector("[data-action='open']")).toBeTruthy();
   });
   it("derives tool options from data", () => {
     const opts = toolAxis.optionsFrom([row({ tool: "CodeQL" }), row({ tool: "ESLint" })], {} as any);

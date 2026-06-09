@@ -1,6 +1,5 @@
 import { type ScoredItem, type KindRenderer } from "../../layout/table/kind-renderer";
 import { esc } from "../../layout/util";
-import { detailHeaderHtml } from "../../layout/atoms/atoms";
 import { type DependencyVulnDetails, DEPENDENCY_VULN } from "../../dataset/kinds/dependency-vuln";
 import { registerView } from "../registry";
 import "../../ingest/github/dependency-vuln-source";          // side-effect: register source
@@ -40,12 +39,7 @@ export const dependencyVulnRenderer: KindRenderer = {
     { header: "Package", cell: (r) => esc(det(r).package) },
     { header: "Severity", cell: (r) => { const s = det(r).severity; return `<span class="sev sev-${esc(s)}">${esc(s)}</span>`; } },
   ],
-  detail: (host, r) => { const d = det(r); host.innerHTML = `<div class="drawer-inner">
-    ${detailHeaderHtml({ title: d.package, tier: r.tier, sub: `${r.location} · score ${r.score}` })}
-    <dl><dt>Severity</dt><dd>${esc(d.severity)} (CVSS ${d.cvss})</dd>
-    <dt>Scope</dt><dd>${esc(d.scope ?? "unknown")}</dd>
-    <dt>Fix</dt><dd>${d.fixAvailable ? (d.fixVersion ? "available: " + esc(d.fixVersion) : "available") : "none yet"}</dd>
-    <dt>Advisory</dt><dd>${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noreferrer">${esc(r.url)}</a>` : "—"}</dd></dl></div>`; },
+  detail: (r) => dependencyVulnDetailView(r),
 };
 registerView({ id: "code-security", kind: DEPENDENCY_VULN });
 
