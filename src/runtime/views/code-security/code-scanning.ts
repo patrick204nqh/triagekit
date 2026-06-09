@@ -8,9 +8,27 @@ import { registerChart } from "../../layout/charts/registry";
 import "../../ingest/github/code-scanning-source";   // side-effect: register source
 import { detailsAs } from "../../dataset/details";
 import { uniqueValues } from "../../layout/toolbar/axis-utils";
+import type { DetailView } from "../../layout/table/detail-view";
+import { openLink } from "./view";
 
 const cs = (r: ScoredItem) => detailsAs<CodeScanningDetails>(r)!;
 const SEV_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
+
+export function codeScanningDetailView(r: ScoredItem): DetailView {
+  const d = cs(r);
+  return {
+    header: { title: d.ruleName, tier: r.tier, provider: r.source },
+    body: (host) => {
+      host.innerHTML = `<dl>
+        <dt>Severity</dt><dd>${esc(d.securitySeverity)}</dd>
+        <dt>Rule</dt><dd>${esc(d.ruleId)}</dd>
+        <dt>Tool</dt><dd>${esc(d.tool)}</dd>
+        <dt>State</dt><dd>${esc(d.state)}</dd>
+        <dt>Alert</dt><dd>${d.permalink ? `<a href="${esc(d.permalink)}" target="_blank" rel="noreferrer">${esc(d.permalink)}</a>` : "—"}</dd></dl>`;
+    },
+    actions: openLink(d.permalink ?? r.url, "Open finding"),
+  };
+}
 
 export const codeScanningRenderer: KindRenderer = {
   kind: CODE_SCANNING,
