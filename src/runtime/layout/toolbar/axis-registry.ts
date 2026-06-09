@@ -1,11 +1,10 @@
 import type { ScoredItem } from "../table/kind-renderer";
 import type { Artifact } from "../../dataset/artifact";
 import type { Tier } from "../../scoring/tier";
-import { authorKindOf, labelNamesOf } from "../../dataset/details";
-import { uniqueValues } from "./axis-utils";
+import { authorKindOf, labelNamesOf, labelsOf } from "../../dataset/details";
 
 export interface AxisCtx { artifact: Artifact; }
-export interface AxisOption { value: string; label: string; }
+export interface AxisOption { value: string; label: string; chip?: { color: string }; }
 
 // A declarative filter dimension. `quick` axes render inline in the bar; the rest
 // live behind the "+ Filter" overflow. `widget` picks the inline control.
@@ -54,7 +53,11 @@ registerFilterAxis({
 registerFilterAxis({
   id: "labels", label: "Labels", widget: "chips", quick: false,
   appliesTo: (rows) => rows.some(r => labelNamesOf(r).length > 0),
-  optionsFrom: (rows) => uniqueValues(rows, labelNamesOf),
+  optionsFrom: (rows) => {
+    const firstColor = new Map<string, string>();   // name -> first-seen color
+    for (const r of rows) for (const l of labelsOf(r)) if (!firstColor.has(l.name)) firstColor.set(l.name, l.color);
+    return [...firstColor.keys()].sort().map(name => ({ value: name, label: name, chip: { color: firstColor.get(name)! } }));
+  },
   test: (i, sel) => labelNamesOf(i).some(n => sel.includes(n)),
 });
 
