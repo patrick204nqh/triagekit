@@ -220,7 +220,6 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 .drawer-foot { flex:0 0 auto; border-top:1px solid var(--line); background:var(--carbon);
   padding:12px 18px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .drawer-foot:empty { display:none; }
-.drawer-foot .rc-actions { border:0; padding:0; }
 
 @media (max-width:768px) { .drawer { left:0; right:0; width:auto; } }
 
@@ -426,24 +425,12 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 }
 
 /* Review card */
-.review-card { background: var(--carbon); border: 1px solid var(--line); border-radius: 10px;
-  padding: 12px 14px; color: var(--fg); font-size: 13.5px; line-height: 1.45;
-  display: flex; flex-direction: column; gap: 10px; height: 100%; }
-.review-card + .review-card { margin-top: 8px; }
-.rc-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.rc-title-row { display: flex; align-items: center; }
-.rc-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 48ch; }
-.rc-num { font-family: var(--mono); color: var(--muted); }
 .rc-body { flex: 1; overflow-y: auto; line-height: 1.55; }
 .rc-body img { max-width: 100%; border-radius: 6px; }
 .rc-body pre { overflow-x: auto; }
 .rc-byline { display: flex; align-items: center; gap: 10px; }
 .rc-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
 .rc-comments { font-family: var(--mono); color: var(--muted); }
-.rc-actions { border-top: 1px solid var(--line); padding-top: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.rc-prov { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-.rc-link { color: var(--accent); text-decoration: none; }
-.rc-link:hover { text-decoration: underline; }
 .rc-state { padding: 1px 8px; border-radius: 10px; font-size: .8em; }
 .rc-state-open { background: color-mix(in srgb, var(--p2) 22%, transparent); color: var(--p2); }
 .rc-state-merged { background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--accent); }
@@ -479,7 +466,6 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 .rc-field { width: 100%; background: var(--canvas); color: var(--fg); border: 1px solid var(--line);
   border-radius: 6px; padding: 6px 8px; font: inherit; }
 .rc-error { color: var(--p0); font-size: 12px; flex-basis: 100%; margin-top: 6px; }
-.rc-expand { margin-left: auto; background: transparent; border: 0; color: var(--muted); cursor: pointer; }
 
 .spin { display: inline-block; width: 11px; height: 11px; vertical-align: -1px;
   border: 2px solid var(--muted); border-top-color: var(--accent); border-radius: 999px;

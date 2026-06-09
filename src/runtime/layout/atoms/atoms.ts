@@ -10,14 +10,6 @@ export function tierBadgeHtml(tier: Tier): string {
   return `<span class="tier tier-${tier}">${tier}</span>`;
 }
 
-// Shared detail-panel header for plain (non-review) kinds: title + tier chip
-// inline, then a muted sub-line. Reuses the existing `.drawer h3` / `.drawer .muted`
-// styles, so no new CSS is needed. Escapes title and sub internally — pass raw strings.
-export function detailHeaderHtml(opts: { title: string; tier: Tier; sub: string }): string {
-  return `<h3>${esc(opts.title)} ${tierBadgeHtml(opts.tier)}</h3>`
-    + `<p class="muted">${esc(opts.sub)}</p>`;
-}
-
 // The single detail-drawer header used by every kind: title + tier inline, then
 // a sub-row with the provider mark and an optional linked ref (e.g. "#482").
 // Replaces per-kind headers and the literal provider text. Escapes title/ref.
