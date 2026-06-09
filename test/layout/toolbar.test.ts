@@ -91,6 +91,26 @@ describe("renderToolbar", () => {
     expect(few.querySelector(".opt-scroll")).toBeNull();
   });
 
+  it("renders a Clear-all footer only when filters are active", () => {
+    const none = document.createElement("div");
+    renderToolbar(none, props());                                          // no filters
+    expect(none.querySelector("[data-clear-all]")).toBeNull();
+
+    const some = document.createElement("div");
+    renderToolbar(some, props({ filters: { axes: { tier: ["P0"] }, sort: "priority" } }));
+    expect(some.querySelector("[data-clear-all]")).not.toBeNull();
+    expect(some.querySelector(".pop-foot")!.textContent).toContain("1");   // active count
+  });
+
+  it("Clear-all emits an empty axes state, preserving sort", () => {
+    const host = document.createElement("div");
+    const onFilterChange = vi.fn();
+    renderToolbar(host, props({ filters: { axes: { tier: ["P0", "P1"] }, sort: "recent" }, onFilterChange }));
+    host.querySelector<HTMLElement>("[data-clear-all]")!.click();
+    expect(onFilterChange).toHaveBeenCalledOnce();
+    expect(onFilterChange.mock.calls[0][0]).toEqual({ axes: {}, sort: "recent" });
+  });
+
   it("renders view-mode tabs on the left with the active one marked", () => {
     const host = document.createElement("div");
     renderToolbar(host, props());

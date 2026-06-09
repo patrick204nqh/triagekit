@@ -69,7 +69,11 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
     return `<div class="pop-axis"><div class="pop-axis-label">${esc(a.label)}</div>${search}${list}</div>`;
   };
 
-  const filterPop = `<div class="tb-pop" data-pop="filter" hidden>${axes.map(axisGroup).join("") || `<div class="muted pop-empty">No filters for this list.</div>`}</div>`;
+  const filterBody = axes.map(axisGroup).join("") || `<div class="muted pop-empty">No filters for this list.</div>`;
+  const filterFoot = fcount
+    ? `<div class="pop-foot"><span class="count">${fcount} active</span><button class="clear" data-clear-all>Clear all</button></div>`
+    : "";
+  const filterPop = `<div class="tb-pop" data-pop="filter" hidden><div class="pop-scroll">${filterBody}</div>${filterFoot}</div>`;
   const sortPop = `<div class="tb-pop" data-pop="sort" hidden>`
     + sorts.map(s => `<button class="pop-sort${s.id === p.filters.sort ? " on" : ""}" data-sort="${esc(s.id)}">${esc(s.label)}</button>`).join("")
     + `</div>`;
@@ -125,6 +129,9 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
         opt.style.display = (opt.textContent ?? "").toLowerCase().includes(q) ? "" : "none";
       });
     }));
+
+  host.querySelector<HTMLElement>("[data-clear-all]")
+    ?.addEventListener("click", () => p.onFilterChange({ axes: {}, sort: p.filters.sort }));
 
   wirePopovers(host);
 }
