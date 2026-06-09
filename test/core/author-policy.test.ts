@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { classifyAuthor, withBotPolicy } from "../../src/runtime/core/author-policy";
+import { classifyAuthor, withBotPolicy, adapterBotLogins } from "../../src/runtime/core/author-policy";
 import type { Actor } from "../../src/runtime/dataset/shared";
-import type { TriageItem } from "../../src/runtime/dataset/item";
+import type { TriageItem, Kind } from "../../src/runtime/dataset/item";
 
 const actor = (login: string, kind: Actor["kind"]): Actor => ({ login, avatarUrl: "", kind });
 
@@ -34,5 +34,32 @@ describe("withBotPolicy", () => {
     expect(withBotPolicy(base, [])).toBe(base);
     const noAuthor: TriageItem = { ...base, details: {} };
     expect(withBotPolicy(noAuthor, ["x"])).toBe(noAuthor);
+  });
+});
+
+describe("adapterBotLogins", () => {
+  const mk = (kind: Kind, login: string, akind: Actor["kind"]): TriageItem => ({
+    id: login + kind, source: "github", kind, title: "", location: "", signal: 0, createdAt: "", url: "",
+    details: { author: { login, avatarUrl: "", kind: akind } },
+  });
+
+  it("returns distinct, sorted adapter-flagged bot logins for active kinds", () => {
+    const items = [
+      mk("change-request", "dependabot[bot]", "bot"),
+      mk("issue", "github-actions[bot]", "bot"),
+      mk("change-request", "dependabot[bot]", "bot"),   // duplicate login
+      mk("change-request", "alice", "human"),           // human excluded
+    ];
+    expect(adapterBotLogins(items, ["change-request", "issue"]))
+      .toEqual(["dependabot[bot]", "github-actions[bot]"]);
+  });
+
+  it("omits adapter bots whose kind is not active", () => {
+    const items = [mk("issue", "github-actions[bot]", "bot")];
+    expect(adapterBotLogins(items, ["change-request"])).toEqual([]);
+  });
+
+  it("returns [] for empty input", () => {
+    expect(adapterBotLogins([], ["change-request"])).toEqual([]);
   });
 });
