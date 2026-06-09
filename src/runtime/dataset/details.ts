@@ -1,6 +1,6 @@
 // src/runtime/dataset/details.ts
 import type { TriageItem } from "./item";
-import type { Actor } from "./shared";
+import type { Actor, Label } from "./shared";
 
 // Generic null-safe detail accessor; caller supplies the shape.
 export function detailsAs<T>(item: TriageItem): T | null {
@@ -14,6 +14,9 @@ export function authorKindOf(item: TriageItem): Actor["kind"] | undefined {
 }
 export function labelNamesOf(item: TriageItem): string[] {
   return detailsAs<{ labels?: { name: string }[] }>(item)?.labels?.map(l => l.name) ?? [];
+}
+export function labelsOf(item: TriageItem): Label[] {
+  return detailsAs<{ labels?: Label[] }>(item)?.labels ?? [];
 }
 export function deadlineOf(item: TriageItem): string | undefined {
   return detailsAs<{ dueAt?: string }>(item)?.dueAt;
