@@ -1,6 +1,8 @@
 import { esc } from "../util";
 import type { Tier } from "../../scoring/tier";
 import type { Actor, Label, CheckStatus, Permalink, Relation } from "../../dataset/shared";
+import { providerIcon } from "../../shell/provider-icons";
+import type { DetailView } from "../table/detail-view";
 
 export interface Sla { label: string; state: "ok" | "warn" | "breach"; }
 
@@ -14,6 +16,19 @@ export function tierBadgeHtml(tier: Tier): string {
 export function detailHeaderHtml(opts: { title: string; tier: Tier; sub: string }): string {
   return `<h3>${esc(opts.title)} ${tierBadgeHtml(opts.tier)}</h3>`
     + `<p class="muted">${esc(opts.sub)}</p>`;
+}
+
+// The single detail-drawer header used by every kind: title + tier inline, then
+// a sub-row with the provider mark and an optional linked ref (e.g. "#482").
+// Replaces per-kind headers and the literal provider text. Escapes title/ref.
+export function detailHeadHtml(header: DetailView["header"]): string {
+  const ref = header.ref
+    ? (header.ref.href
+        ? `<a class="dh-ref-link" href="${esc(header.ref.href)}" target="_blank" rel="noreferrer">${esc(header.ref.text)} ↗</a>`
+        : `<span>${esc(header.ref.text)}</span>`)
+    : "";
+  return `<div class="dh-title"><h3>${esc(header.title)} ${tierBadgeHtml(header.tier)}</h3></div>`
+    + `<div class="dh-ref">${providerIcon(header.provider)}${ref}</div>`;
 }
 
 export function slaTagHtml(sla: Sla): string {
