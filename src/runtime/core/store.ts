@@ -37,6 +37,10 @@ export function createStore(fingerprint: Fingerprint = defaultFingerprint) {
     for (const fp of fingerprints) entries.delete(fp);
   }
 
+  function updateItems(fn: (item: TriageItem) => void): void {
+    for (const entry of entries.values()) fn(entry.item);
+  }
+
   function snapshot(): readonly TriageItem[] {
     return [...entries.values()].map(e => e.item);
   }
@@ -51,7 +55,7 @@ export function createStore(fingerprint: Fingerprint = defaultFingerprint) {
     return { byProvider, byKind };
   }
 
-  return { upsert, replaceScope, remove, snapshot, stats };
+  return { upsert, replaceScope, remove, updateItems, snapshot, stats };
 }
 
 export type DatasetStore = ReturnType<typeof createStore>;
