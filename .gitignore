@@ -12,3 +12,6 @@ docs/superpowers/
 
 # brainstorming visual companion
 .superpowers/
+
+# local scratch (handoffs, notes)
+tmp/
