@@ -7,7 +7,9 @@ triage.config.yml
 triage.hooks.ts
 *.local.yml
 scripts/anon-denylist.txt
-.claude/
+.claude/settings.local.json
+.claude/skills/
+.claude/worktrees/
 docs/superpowers/
 
 # brainstorming visual companion

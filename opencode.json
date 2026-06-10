@@ -1,0 +1,15 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": [
+    "superpowers@git+https://github.com/obra/superpowers.git",
+    "ecc-universal@git+https://github.com/affaan-m/ECC.git"
+  ],
+  "permission": {
+    "skill": {
+      "*": "allow"
+    }
+  },
+  "instructions": [
+    "AGENTS.md"
+  ]
+}
