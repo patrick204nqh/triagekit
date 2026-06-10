@@ -9,7 +9,7 @@ scope:
     - acme-corp/billing-service
 views:
   - code-security        # security findings: Dependabot + code scanning
-  # - insights           # add to enable the Insights (charts) tab
+  - insights           # add to enable the Insights (charts) tab
 branding:
   title: "Acme Triage"
 # Optional: path to a JS/TS module exporting scoring/correlation overrides.
