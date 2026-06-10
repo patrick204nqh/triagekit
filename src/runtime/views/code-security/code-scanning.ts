@@ -1,6 +1,5 @@
 import { type ScoredItem, type KindRenderer } from "../../layout/table/kind-renderer";
 import { esc } from "../../layout/util";
-import { detailHeaderHtml } from "../../layout/atoms/atoms";
 import { type CodeScanningDetails, CODE_SCANNING } from "../../dataset/kinds/code-scanning";
 import { registerView } from "../registry";
 import { type FilterAxis, registerSortKey } from "../../layout/toolbar/axis-registry";
@@ -8,9 +7,27 @@ import { registerChart } from "../../layout/charts/registry";
 import "../../ingest/github/code-scanning-source";   // side-effect: register source
 import { detailsAs } from "../../dataset/details";
 import { uniqueValues } from "../../layout/toolbar/axis-utils";
+import type { DetailView } from "../../layout/table/detail-view";
+import { openLink } from "./view";
 
 const cs = (r: ScoredItem) => detailsAs<CodeScanningDetails>(r)!;
 const SEV_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
+
+export function codeScanningDetailView(r: ScoredItem): DetailView {
+  const d = cs(r);
+  return {
+    header: { title: d.ruleName, tier: r.tier, provider: r.source },
+    body: (host) => {
+      host.innerHTML = `<dl>
+        <dt>Severity</dt><dd>${esc(d.securitySeverity)}</dd>
+        <dt>Rule</dt><dd>${esc(d.ruleId)}</dd>
+        <dt>Tool</dt><dd>${esc(d.tool)}</dd>
+        <dt>State</dt><dd>${esc(d.state)}</dd>
+        <dt>Alert</dt><dd>${d.permalink ? `<a href="${esc(d.permalink)}" target="_blank" rel="noreferrer">${esc(d.permalink)}</a>` : "—"}</dd></dl>`;
+    },
+    actions: openLink(d.permalink ?? r.url, "Open finding"),
+  };
+}
 
 export const codeScanningRenderer: KindRenderer = {
   kind: CODE_SCANNING,
@@ -19,16 +36,7 @@ export const codeScanningRenderer: KindRenderer = {
     { header: "Severity", cell: (r) => { const s = cs(r).securitySeverity; return `<span class="sev sev-${esc(s)}">${esc(s)}</span>`; } },
     { header: "Location", cell: (r) => `${esc(cs(r).location.path)}:${cs(r).location.line}` },
   ],
-  detail: (host, r) => {
-    const d = cs(r);
-    host.innerHTML = `<div class="drawer-inner">
-    ${detailHeaderHtml({ title: d.ruleName, tier: r.tier, sub: `${d.location.path}:${d.location.line} · score ${r.score}` })}
-    <dl><dt>Severity</dt><dd>${esc(d.securitySeverity)}</dd>
-    <dt>Rule</dt><dd>${esc(d.ruleId)}</dd>
-    <dt>Tool</dt><dd>${esc(d.tool)}</dd>
-    <dt>State</dt><dd>${esc(d.state)}</dd>
-    <dt>Alert</dt><dd>${d.permalink ? `<a href="${esc(d.permalink)}" target="_blank" rel="noreferrer">${esc(d.permalink)}</a>` : "—"}</dd></dl></div>`;
-  },
+  detail: (r) => codeScanningDetailView(r),
 };
 registerView({ id: "code-scanning", kind: CODE_SCANNING });
 

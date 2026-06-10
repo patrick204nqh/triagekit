@@ -2,6 +2,7 @@ import type { Kind, TriageItem } from "../../dataset/item";
 import type { TriageError } from "../../ingest/source";
 import type { Tier } from "../../scoring/tier";
 import type { ScoreExplanation } from "../../scoring/score-model";
+import type { DetailView } from "./detail-view";
 import { esc } from "../util";
 
 export interface ScoredItem extends TriageItem { score: number; tier: Tier; }
@@ -13,7 +14,7 @@ export interface DetailCtx {
 export interface KindRenderer {
   kind: Kind;
   columns?: { header: string; cell: (i: ScoredItem) => string }[];
-  detail?: (host: HTMLElement, i: ScoredItem, ctx: DetailCtx) => void;
+  detail?: (i: ScoredItem, ctx: DetailCtx) => DetailView;
 }
 export const renderers = new Map<Kind, KindRenderer>();
 export function registerKindRenderer(r: KindRenderer) { renderers.set(r.kind, r); }

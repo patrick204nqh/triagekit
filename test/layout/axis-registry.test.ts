@@ -77,6 +77,19 @@ describe("axis-registry built-ins", () => {
     expect(labels!.test(withLabels[0], ["security"])).toBe(true);
     expect(labels!.test(withLabels[1], ["security"])).toBe(false);
   });
+
+  it("labels axis: option carries the label's color (first-seen wins); value stays the name", () => {
+    const labels = getFilterAxis("labels")!;
+    const withColors = [
+      row({ id: "a", details: { labels: [{ name: "bug", color: "d73a4a" }] } }),
+      row({ id: "b", details: { labels: [{ name: "bug", color: "999999" }] } }),   // dup name; later color ignored
+      row({ id: "c", details: { labels: [{ name: "api", color: "0075ca" }] } }),
+    ];
+    expect(labels.optionsFrom(withColors, rctx)).toEqual([
+      { value: "api", label: "api", chip: { color: "0075ca" } },   // sorted by name
+      { value: "bug", label: "bug", chip: { color: "d73a4a" } },
+    ]);
+  });
 });
 
 describe("filter axes", () => {

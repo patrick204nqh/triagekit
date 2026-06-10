@@ -187,27 +187,40 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 .sheet.open { transform:none; }
 
 /* table drawer — overlay slide-over toggled by [hidden]; a scrim (.scrim.open) dims
-   the list behind it. Wider than the old 440px so PR/issue bodies breathe. */
-.drawer { position:fixed; top:0; right:0; height:100dvh; width:min(520px,92vw); background:var(--carbon); border-left:1px solid var(--line); box-shadow:-8px 0 32px var(--drawer-shadow), -1px 0 0 color-mix(in srgb,var(--accent) 22%,transparent); overflow-y:auto; z-index:12; }
+   the list behind it. Flex column: non-scrolling head, scrolling body, bottom
+   footer — so footer actions stay visible on long PR/issue bodies. */
+.drawer { position:fixed; top:0; right:0; height:100dvh; width:min(520px,92vw);
+  display:flex; flex-direction:column;
+  background:var(--carbon); border-left:1px solid var(--line);
+  box-shadow:-8px 0 32px var(--drawer-shadow), -1px 0 0 color-mix(in srgb,var(--accent) 22%,transparent); z-index:12; }
 .drawer[hidden] { display:none; }
-.drawer h3 { margin:0 0 4px; padding-right:34px; font-size:1.125rem; font-weight:600; font-family:var(--mono); display:flex; align-items:center; gap:10px; }
-/* Subtitle paragraph spacing only — scoped to <p> so it can't bleed onto inline
-   .muted spans (e.g. the byline's "no conflicts"), where a bottom margin would
-   knock the flex item out of vertical centre. */
-.drawer p.muted { margin:0 0 20px; font-size:13px; }
-.drawer dl { display:grid; grid-template-columns:max-content 1fr; gap:10px 18px; margin:0 0 24px; }
-.drawer dt { color:var(--muted); font-size:13px; } .drawer dd { margin:0; }
-.drawer dd a, .drawer a { color:var(--accent); word-break:break-all; }
-/* Close floats top-right in a sticky, zero-height bar — no wasted header row, and it
-   stays reachable while the body scrolls. The first content block reserves right
-   padding (see .drawer h3 / .rc-head) so a long title never slides under it. */
-.drawer-head { position:sticky; top:0; z-index:3; height:0; padding:0; display:flex; justify-content:flex-end; pointer-events:none; }
-.drawer-close { pointer-events:auto; margin:12px 14px 0 0; width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; background:var(--carbon); border:1px solid var(--line-strong); color:var(--muted); font-size:16px; line-height:1; cursor:pointer; padding:0; border-radius:7px; }
+
+/* Header — shared identity row built by detailHeadHtml(): title + tier, then a
+   sub-row with the provider mark and an optional linked ref. Close sits inline. */
+.drawer-head { flex:0 0 auto; display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+  padding:16px 18px 12px; border-bottom:1px solid var(--line); }
+.drawer-head h3 { margin:0; font-size:1.125rem; font-weight:600; font-family:var(--mono);
+  display:flex; align-items:center; gap:10px; }
+.dh-ref { display:flex; align-items:center; gap:8px; margin-top:6px; font-family:var(--mono); font-size:13px; color:var(--muted); }
+.dh-ref .prov-icon { color:var(--muted); }
+.dh-ref-link { color:var(--accent); text-decoration:none; }
+.dh-ref-link:hover { text-decoration:underline; }
+.drawer-close { flex:0 0 auto; width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center;
+  background:var(--carbon); border:1px solid var(--line-strong); color:var(--muted); font-size:16px; line-height:1; cursor:pointer; padding:0; border-radius:7px; }
 .drawer-close:hover { color:var(--fg); background:var(--slate); }
-.drawer-content { padding:14px 18px 22px; }
-.drawer-content .review-card { border:0; padding:0; }
-.drawer-content .rc-head { padding-right:34px; }
-.drawer-inner { padding:0; }
+
+/* Body — the only scroller. */
+.drawer-content { flex:1; overflow-y:auto; padding:14px 18px 18px; }
+.drawer-content dl { display:grid; grid-template-columns:max-content 1fr; gap:10px 18px; margin:0 0 8px; }
+.drawer-content dt { color:var(--muted); font-size:13px; } .drawer-content dd { margin:0; }
+.drawer-content dd a, .drawer-content a { color:var(--accent); word-break:break-all; }
+.rc-substate { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+
+/* Footer — kind actions + "Open ↗", pinned below the scrolling body. */
+.drawer-foot { flex:0 0 auto; border-top:1px solid var(--line); background:var(--carbon);
+  padding:12px 18px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.drawer-foot:empty { display:none; }
+
 @media (max-width:768px) { .drawer { left:0; right:0; width:auto; } }
 
 /* ── Score breakdown (drawer detail block) ─────────────────────────── */
@@ -412,24 +425,12 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 }
 
 /* Review card */
-.review-card { background: var(--carbon); border: 1px solid var(--line); border-radius: 10px;
-  padding: 12px 14px; color: var(--fg); font-size: 13.5px; line-height: 1.45;
-  display: flex; flex-direction: column; gap: 10px; height: 100%; }
-.review-card + .review-card { margin-top: 8px; }
-.rc-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.rc-title-row { display: flex; align-items: center; }
-.rc-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 48ch; }
-.rc-num { font-family: var(--mono); color: var(--muted); }
 .rc-body { flex: 1; overflow-y: auto; line-height: 1.55; }
 .rc-body img { max-width: 100%; border-radius: 6px; }
 .rc-body pre { overflow-x: auto; }
 .rc-byline { display: flex; align-items: center; gap: 10px; }
 .rc-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
 .rc-comments { font-family: var(--mono); color: var(--muted); }
-.rc-actions { border-top: 1px solid var(--line); padding-top: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.rc-prov { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-.rc-link { color: var(--accent); text-decoration: none; }
-.rc-link:hover { text-decoration: underline; }
 .rc-state { padding: 1px 8px; border-radius: 10px; font-size: .8em; }
 .rc-state-open { background: color-mix(in srgb, var(--p2) 22%, transparent); color: var(--p2); }
 .rc-state-merged { background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--accent); }
@@ -465,7 +466,6 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 .rc-field { width: 100%; background: var(--canvas); color: var(--fg); border: 1px solid var(--line);
   border-radius: 6px; padding: 6px 8px; font: inherit; }
 .rc-error { color: var(--p0); font-size: 12px; flex-basis: 100%; margin-top: 6px; }
-.rc-expand { margin-left: auto; background: transparent; border: 0; color: var(--muted); cursor: pointer; }
 
 .spin { display: inline-block; width: 11px; height: 11px; vertical-align: -1px;
   border: 2px solid var(--muted); border-top-color: var(--accent); border-radius: 999px;
@@ -476,7 +476,8 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 /* Shared popover axis groups — used by the toolbar Filter/Sort popovers */
 .pop-axis + .pop-axis { margin-top:8px; border-top:1px solid var(--line); padding-top:8px; }
 .pop-axis-label { font-size:11px; color:var(--muted); margin-bottom:4px; }
-.pop-opt { display:flex; align-items:center; gap:6px; padding:3px 2px; font-size:13px; color:var(--fg); cursor:pointer; }
+.pop-opt { display:flex; align-items:center; gap:8px; padding:5px 4px; font-size:13px; color:var(--fg); cursor:pointer; border-radius:7px; }
+.pop-opt:hover { background:rgba(255,255,255,.045); }
 
 /* Unified toolbar — view modes + Filter/Sort popovers, mounted in #viewswitch */
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
@@ -494,6 +495,30 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 .tb-pop[hidden] { display: none; }   /* author display:flex above beats the UA [hidden] rule — re-assert it */
 .pop-sort { text-align: left; background: none; border: 0; color: var(--fg); padding: 4px 6px; border-radius: 6px; cursor: pointer; }
 .pop-sort.on, .pop-sort:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+
+/* custom checkbox — native input is visually hidden but still drives state/events */
+.pop-ck { position:absolute; opacity:0; width:0; height:0; }
+.ck { width:15px; height:15px; border-radius:5px; border:1.5px solid var(--line-strong); flex:0 0 auto;
+  display:grid; place-items:center; transition:background .12s, border-color .12s; }
+.pop-opt.on .ck { background:var(--accent); border-color:var(--accent); }
+.ck-tick { width:9px; height:9px; opacity:0; }
+.pop-opt.on .ck-tick { opacity:1; }
+.ck-tick path { stroke:var(--on-accent); stroke-width:2; fill:none; }
+
+/* per-axis search + scroll for long option lists */
+.pop-search { margin-bottom:6px; }
+.pop-filter { width:100%; box-sizing:border-box; background:var(--slate); border:1px solid var(--line); color:var(--fg);
+  font-size:12px; padding:5px 9px; border-radius:8px; outline:none; font-family:inherit; }
+.pop-filter:focus { border-color:color-mix(in srgb, var(--accent) 55%, var(--line-strong)); }
+.opt-scroll { max-height:172px; overflow-y:auto; margin:0 -2px; padding:0 2px; }
+
+/* the filter popover's scroll region (safety cap) + clear-all footer */
+.pop-scroll { max-height:60vh; overflow-y:auto; }
+.pop-foot { display:flex; align-items:center; justify-content:space-between;
+  border-top:1px solid var(--line-strong); padding-top:8px; }
+.pop-foot .count { font-size:11px; color:var(--muted); }
+.clear { background:none; border:0; color:var(--accent); font-size:12px; font-weight:600; cursor:pointer; padding:2px 4px; font-family:inherit; }
+.clear:hover { text-decoration:underline; }
 
 /* Row 2: repo tabs (left) + Filter/Sort controls (right) directly above the table */
 .fbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; }

@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 // test/layout/review-card-body.test.ts
 import { describe, it, expect } from "vitest";
-import { reviewCardHtml } from "../../src/runtime/layout/review-card/review-card";
-import type { ReviewItem } from "../../src/runtime/dataset/shapes/review";
+import { reviewDetailView } from "../../src/runtime/layout/review-card/review-card";
+import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 
-const item: ReviewItem = {
+const item = {
   id: "github:acme/api:7", source: "github", kind: "change-request",
   title: "Fix token refresh", location: "acme/api", signal: 0,
-  createdAt: "2026-06-01T00:00:00Z", url: "https://github.com/acme/api/pull/7", tier: "P1",
+  createdAt: "2026-06-01T00:00:00Z", url: "https://github.com/acme/api/pull/7", score: 90, tier: "P1",
   details: {
     number: 7, state: "open",
     body: "Fixes the **race**.\n\n- adds a mutex\n- `refresh_test`",
@@ -17,18 +17,20 @@ const item: ReviewItem = {
     permalinks: [{ provider: "github", href: "https://github.com/acme/api/pull/7", kind: "pr", label: "#7" }],
     relations: [],
   },
-};
+} as unknown as ScoredItem;
 
-describe("review card body", () => {
+describe("review card body (via reviewDetailView)", () => {
   it("renders the body as Markdown, not a truncated snippet", () => {
-    const html = reviewCardHtml(item);
-    expect(html).toContain("<strong>race</strong>");
-    expect(html).toContain("<li");
-    expect(html).toContain("<code");
+    const host = document.createElement("div");
+    reviewDetailView(item, {}).body(host);
+    expect(host.innerHTML).toContain("<strong>race</strong>");
+    expect(host.innerHTML).toContain("<li");
+    expect(host.innerHTML).toContain("<code");
   });
   it("renders a state badge and the author avatar image", () => {
-    const html = reviewCardHtml(item);
-    expect(html).toContain("rc-state");        // state badge present
-    expect(html).toContain("<img");            // author avatar
+    const host = document.createElement("div");
+    reviewDetailView(item, {}).body(host);
+    expect(host.innerHTML).toContain("rc-state");        // state badge present (in substate)
+    expect(host.innerHTML).toContain("<img");            // author avatar
   });
 });

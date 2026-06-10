@@ -38,6 +38,7 @@ describe("review kind renderer", () => {
     (root.querySelector(".alert-row") as HTMLElement).click();
     const drawer = root.querySelector<HTMLElement>(".drawer")!;
     expect(drawer.hidden).toBe(false);
-    expect(drawer.querySelector(".review-card")).toBeTruthy();
+    expect(drawer.querySelector(".drawer-content .rc-byline")).toBeTruthy();   // body mounted
+    expect(drawer.querySelector(".drawer-foot [data-action='open']")).toBeTruthy();   // footer actions
   });
 });

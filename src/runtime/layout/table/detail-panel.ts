@@ -5,15 +5,25 @@ import { tableHtml } from "./triage-table";
 import { renderScoreBreakdown } from "./score-breakdown";
 import { dismissible } from "../../shell/dismissible";
 import { esc } from "../util";
-import { detailHeaderHtml } from "../atoms/atoms";
+import { detailHeadHtml } from "../atoms/atoms";
+import type { DetailView } from "./detail-view";
 
-function defaultDetail(host: HTMLElement, r: ScoredItem): void {
-  host.innerHTML = `<div class="drawer-inner">${detailHeaderHtml({ title: r.title, tier: r.tier, sub: `${r.location} · score ${r.score}` })}
-    ${r.url ? `<p><a href="${esc(r.url)}" target="_blank" rel="noreferrer">${esc(r.url)}</a></p>` : ""}</div>`;
+// Fallback detail for kinds without a renderer: identity header + a bare link.
+function defaultDetailView(r: ScoredItem): DetailView {
+  return {
+    header: { title: r.title, tier: r.tier, provider: r.source, ref: undefined },
+    body: (host) => {
+      host.innerHTML = r.url
+        ? `<p><a href="${esc(r.url)}" target="_blank" rel="noreferrer">${esc(r.url)}</a></p>`
+        : `<p class="muted">No further detail.</p>`;
+    },
+  };
 }
 
 // Pure layout: render pre-scored rows + non-fatal errors; open a shared right-side
-// DetailPanel per row, populated by the row's kind renderer. No fetch/score.
+// drawer per row. The drawer is a flex column — non-scrolling header, scrolling
+// body, bottom action footer — so footer actions stay visible on long content.
+// Each row's kind renderer returns a DetailView the frame mounts into the slots.
 export function renderTriageList(root: HTMLElement, rows: ScoredItem[], errors: TriageError[], ctx: DetailCtx = {}): void {
   const warnings = warningsHtml(errors);
   if (!rows.length) {
@@ -27,24 +37,35 @@ export function renderTriageList(root: HTMLElement, rows: ScoredItem[], errors: 
   const r0 = renderers.get(rows[0].kind);
   root.innerHTML = warnings + tableHtml(rows, r0?.columns)
     + `<div class="scrim" data-drawer-scrim></div>`
-    + `<aside class="drawer" hidden><div class="drawer-head"><button class="drawer-close" aria-label="Close">×</button></div><div class="drawer-content"></div></aside>`;
+    + `<aside class="drawer" hidden>
+         <div class="drawer-head"><div data-head></div><button class="drawer-close" aria-label="Close">×</button></div>
+         <div class="drawer-content" data-body></div>
+         <div class="drawer-foot" data-foot></div>
+       </aside>`;
   const drawer = root.querySelector<HTMLElement>(".drawer")!;
   const scrim = root.querySelector<HTMLElement>("[data-drawer-scrim]")!;
-  const content = drawer.querySelector<HTMLElement>(".drawer-content")!;
-  // The drawer overlays the list; a scrim dims it (and closes on click) so the table
-  // behind reads as backgrounded rather than awkwardly cropped. Escape also closes,
-  // returning focus to the row.
+  const head = drawer.querySelector<HTMLElement>("[data-head]")!;
+  const body = drawer.querySelector<HTMLElement>("[data-body]")!;
+  const foot = drawer.querySelector<HTMLElement>("[data-foot]")!;
+
+  // The drawer overlays the list; a scrim dims it (and closes on click). Escape also
+  // closes, returning focus to the row.
   const dismiss = dismissible(drawer, { onDismiss: () => closeDrawer() });
   function closeDrawer() { drawer.hidden = true; scrim.classList.remove("open"); dismiss.release(); }
   drawer.querySelector<HTMLElement>(".drawer-close")!.addEventListener("click", closeDrawer);
   scrim.addEventListener("click", closeDrawer);
+
   root.querySelectorAll<HTMLElement>(".alert-row").forEach(tr => {
     tr.addEventListener("click", () => {
       const r = rows[Number(tr.dataset.i)];
-      content.innerHTML = "";
       const kr = renderers.get(r.kind);
-      if (kr?.detail) kr.detail(content, r, ctx); else defaultDetail(content, r);
-      if (ctx.scoreExplain) renderScoreBreakdown(content, r, ctx.scoreExplain(r));
+      const view: DetailView = kr?.detail ? kr.detail(r, ctx) : defaultDetailView(r);
+      head.innerHTML = detailHeadHtml(view.header);
+      body.innerHTML = "";
+      view.body(body);
+      if (ctx.scoreExplain) renderScoreBreakdown(body, r, ctx.scoreExplain(r));
+      foot.innerHTML = "";
+      view.actions?.(foot);
       drawer.hidden = false;
       scrim.classList.add("open");
       dismiss.activate();

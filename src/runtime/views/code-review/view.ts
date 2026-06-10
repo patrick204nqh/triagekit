@@ -1,10 +1,9 @@
-import { type ScoredItem, type KindRenderer, type DetailCtx } from "../../layout/table/kind-renderer";
+import { type ScoredItem, type KindRenderer } from "../../layout/table/kind-renderer";
 import { esc } from "../../layout/util";
-import { mountReviewCard } from "../../layout/review-card/review-card";
-import type { ReviewItem, ReviewDetails } from "../../dataset/shapes/review";
+import { reviewDetailView } from "../../layout/review-card/review-card";
+import type { ReviewDetails } from "../../dataset/shapes/review";
 import { CHANGE_REQUEST, ISSUE } from "../../dataset/shapes/review";
-import { makeGithubActions } from "../../ingest/github/actions";
-import { enrichReview } from "../../ingest/github/change-request-source";   // also pins the source's registerSource() side-effect
+import "../../ingest/github/change-request-source";   // pins the source's registerSource() side-effect
 import { type FilterAxis } from "../../layout/toolbar/axis-registry";
 import { detailsAs } from "../../dataset/details";
 import { uniqueValues } from "../../layout/toolbar/axis-utils";
@@ -15,20 +14,11 @@ const reviewColumns = [
   { header: "Author", cell: (r: ScoredItem) => esc(det(r).author.login) },
 ];
 
-// Detail = the full, interactive ReviewCard mounted in the shared panel. CI loads
-// on mount (review-card fires onExpand when shown non-collapsed).
-function detail(host: HTMLElement, r: ScoredItem, ctx: DetailCtx): void {
-  const item = r as unknown as ReviewItem;
-  mountReviewCard(host, item, {
-    actions: ctx.token ? makeGithubActions(ctx.token) : undefined,
-    onExpand: ctx.token ? (it) => enrichReview(it, ctx.token!) : undefined,
-    onChange: () => ctx.onChange?.(r),
-  });
-}
-
-// Change requests and issues share columns + detail; they differ only by kind tag.
-export const changeRequestRenderer: KindRenderer = { kind: CHANGE_REQUEST, columns: reviewColumns, detail };
-export const issueRenderer: KindRenderer = { kind: ISSUE, columns: reviewColumns, detail };
+// Detail = the interactive review DetailView mounted by the DetailFrame. CI loads
+// on body-mount. Change requests and issues share columns + detail; they differ
+// only by kind tag.
+export const changeRequestRenderer: KindRenderer = { kind: CHANGE_REQUEST, columns: reviewColumns, detail: (r, ctx) => reviewDetailView(r, ctx) };
+export const issueRenderer: KindRenderer = { kind: ISSUE, columns: reviewColumns, detail: (r, ctx) => reviewDetailView(r, ctx) };
 
 const isReview = (k: string) => k === CHANGE_REQUEST || k === ISSUE;
 // NOTE: there is no review-specific "label" axis — the built-in generic `labels` axis

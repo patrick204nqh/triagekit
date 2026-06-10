@@ -1,24 +1,45 @@
 import { type ScoredItem, type KindRenderer } from "../../layout/table/kind-renderer";
 import { esc } from "../../layout/util";
-import { detailHeaderHtml } from "../../layout/atoms/atoms";
 import { type DependencyVulnDetails, DEPENDENCY_VULN } from "../../dataset/kinds/dependency-vuln";
 import { registerView } from "../registry";
 import "../../ingest/github/dependency-vuln-source";          // side-effect: register source
 import { detailsAs } from "../../dataset/details";
+import type { DetailView } from "../../layout/table/detail-view";
 
 const det = (r: ScoredItem) => detailsAs<DependencyVulnDetails>(r)!;
+
+// Footer "Open in provider" link — the shared shape for security kinds that
+// have no write actions, so every detail still has a footer.
+export function openLink(url: string, label: string): (host: HTMLElement) => void {
+  return (host) => {
+    host.innerHTML = url
+      ? `<a class="act" data-action="open" href="${esc(url)}" target="_blank" rel="noreferrer">${esc(label)} ↗</a>`
+      : "";
+  };
+}
+
+export function dependencyVulnDetailView(r: ScoredItem): DetailView {
+  const d = det(r);
+  return {
+    header: { title: d.package, tier: r.tier, provider: r.source },
+    body: (host) => {
+      host.innerHTML = `<dl>
+        <dt>Severity</dt><dd>${esc(d.severity)} (CVSS ${d.cvss})</dd>
+        <dt>Scope</dt><dd>${esc(d.scope ?? "unknown")}</dd>
+        <dt>Fix</dt><dd>${d.fixAvailable ? (d.fixVersion ? "available: " + esc(d.fixVersion) : "available") : "none yet"}</dd>
+        <dt>Advisory</dt><dd>${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noreferrer">${esc(r.url)}</a>` : "—"}</dd></dl>`;
+    },
+    actions: openLink(r.url, "Open advisory"),
+  };
+}
+
 export const dependencyVulnRenderer: KindRenderer = {
   kind: DEPENDENCY_VULN,
   columns: [
     { header: "Package", cell: (r) => esc(det(r).package) },
     { header: "Severity", cell: (r) => { const s = det(r).severity; return `<span class="sev sev-${esc(s)}">${esc(s)}</span>`; } },
   ],
-  detail: (host, r) => { const d = det(r); host.innerHTML = `<div class="drawer-inner">
-    ${detailHeaderHtml({ title: d.package, tier: r.tier, sub: `${r.location} · score ${r.score}` })}
-    <dl><dt>Severity</dt><dd>${esc(d.severity)} (CVSS ${d.cvss})</dd>
-    <dt>Scope</dt><dd>${esc(d.scope ?? "unknown")}</dd>
-    <dt>Fix</dt><dd>${d.fixAvailable ? (d.fixVersion ? "available: " + esc(d.fixVersion) : "available") : "none yet"}</dd>
-    <dt>Advisory</dt><dd>${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noreferrer">${esc(r.url)}</a>` : "—"}</dd></dl></div>`; },
+  detail: (r) => dependencyVulnDetailView(r),
 };
 registerView({ id: "code-security", kind: DEPENDENCY_VULN });
 

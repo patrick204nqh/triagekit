@@ -26,11 +26,12 @@ describe("vuln detail in shared panel", () => {
     renderTriageList(root, [r], []);
     (root.querySelector(".alert-row") as HTMLElement).click();
     const html = root.querySelector(".drawer")!.innerHTML;
-    // shared detailHeaderHtml: package in <h3> + tier chip, location · score in .muted
+    // shared detailHeadHtml: package in <h3> + tier chip, provider icon in the ref row
     expect(html).toContain('<h3>log4j <span class="tier tier-P0">P0</span></h3>');
-    expect(html).toContain('<p class="muted">acme/web · score 140</p>');
-    const txt = root.querySelector(".drawer")!.textContent!;
+    expect(root.querySelector(".drawer-head .prov-icon")).toBeTruthy();
+    const txt = root.querySelector(".drawer-content")!.textContent!;
     expect(txt).toContain("critical");   // <dl> body preserved
     expect(txt).toContain("2.17.1");
+    expect(root.querySelector(".drawer-foot [data-action='open']")).toBeTruthy();
   });
 });

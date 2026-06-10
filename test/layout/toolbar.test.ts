@@ -23,7 +23,94 @@ function props(over: Partial<ToolbarProps> = {}): ToolbarProps {
   };
 }
 
+const labelledRows = (...labels: { name: string; color: string }[]): ScoredItem[] => [{
+  ...rows[0], id: "L",
+  details: { author: { login: "x", avatarUrl: "", kind: "human" }, labels } as any,
+} as ScoredItem];
+
 describe("renderToolbar", () => {
+  it("renders label options as colored chips, keeping the data-axis/data-val input", () => {
+    const host = document.createElement("div");
+    renderToolbar(host, props({ rows: labelledRows({ name: "bug", color: "d73a4a" }) }));
+    const input = host.querySelector<HTMLInputElement>("[data-axis='labels'][data-val='bug']");
+    expect(input).not.toBeNull();                                   // state-driving input still present
+    const opt = input!.closest(".pop-opt")!;
+    expect(opt.querySelector(".lbl")?.getAttribute("style")).toContain("--lbl:#d73a4a");
+    expect(opt.querySelector(".ck")).not.toBeNull();                // custom checkbox visual
+  });
+
+  it("toggling a label checkbox marks its row .on", () => {
+    const host = document.createElement("div");
+    renderToolbar(host, props({ rows: labelledRows({ name: "bug", color: "d73a4a" }), onFilterChange: () => {} }));
+    const input = host.querySelector<HTMLInputElement>("[data-axis='labels'][data-val='bug']")!;
+    input.checked = true;
+    input.dispatchEvent(new Event("change"));
+    expect(input.closest(".pop-opt")!.classList.contains("on")).toBe(true);
+  });
+
+  const manyLabels = (n: number): ScoredItem[] => labelledRows(
+    ...Array.from({ length: n }, (_, i) => ({ name: `lbl-${i}`, color: "888888" })));
+
+  it("shows a search box only for axes past the threshold", () => {
+    const few = document.createElement("div");
+    renderToolbar(few, props({ rows: manyLabels(4) }));
+    expect(few.querySelector("[data-filter-axis='labels']")).toBeNull();          // 4 <= 8
+
+    const many = document.createElement("div");
+    renderToolbar(many, props({ rows: manyLabels(9) }));
+    expect(many.querySelector("[data-filter-axis='labels']")).not.toBeNull();     // 9 > 8
+    expect(many.querySelector("[data-filter-axis='tier']")).toBeNull();           // tier has 4 fixed options
+  });
+
+  it("typing in the search box hides non-matching options", () => {
+    const host = document.createElement("div");
+    renderToolbar(host, props({ rows: labelledRows(
+      { name: "bug", color: "d73a4a" }, { name: "security", color: "b60205" },
+      { name: "docs", color: "0075ca" }, { name: "epic", color: "5319e7" },
+      { name: "perf", color: "0e8a16" }, { name: "ci", color: "fbca04" },
+      { name: "ux", color: "a2eeef" }, { name: "api", color: "cfd3d7" },
+      { name: "auth", color: "8957e5" }) }));   // 9 labels -> search shown
+    const search = host.querySelector<HTMLInputElement>("[data-filter-axis='labels']")!;
+    search.value = "se";
+    search.dispatchEvent(new Event("input"));
+    const visible = (val: string) => {
+      const opt = host.querySelector<HTMLElement>(`[data-axis='labels'][data-val='${val}']`)!.closest(".pop-opt") as HTMLElement;
+      return opt.style.display !== "none";
+    };
+    expect(visible("security")).toBe(true);   // matches "se"
+    expect(visible("bug")).toBe(false);        // hidden
+  });
+
+  it("wraps a long option list in .opt-scroll, short ones not", () => {
+    const many = document.createElement("div");
+    renderToolbar(many, props({ rows: manyLabels(9) }));
+    expect(many.querySelector(".opt-scroll")).not.toBeNull();
+
+    const few = document.createElement("div");
+    renderToolbar(few, props({ rows: manyLabels(3) }));
+    expect(few.querySelector(".opt-scroll")).toBeNull();
+  });
+
+  it("renders a Clear-all footer only when filters are active", () => {
+    const none = document.createElement("div");
+    renderToolbar(none, props());                                          // no filters
+    expect(none.querySelector("[data-clear-all]")).toBeNull();
+
+    const some = document.createElement("div");
+    renderToolbar(some, props({ filters: { axes: { tier: ["P0"] }, sort: "priority" } }));
+    expect(some.querySelector("[data-clear-all]")).not.toBeNull();
+    expect(some.querySelector(".pop-foot")!.textContent).toContain("1");   // active count
+  });
+
+  it("Clear-all emits an empty axes state, preserving sort", () => {
+    const host = document.createElement("div");
+    const onFilterChange = vi.fn();
+    renderToolbar(host, props({ filters: { axes: { tier: ["P0", "P1"] }, sort: "recent" }, onFilterChange }));
+    host.querySelector<HTMLElement>("[data-clear-all]")!.click();
+    expect(onFilterChange).toHaveBeenCalledOnce();
+    expect(onFilterChange.mock.calls[0][0]).toEqual({ axes: {}, sort: "recent" });
+  });
+
   it("renders view-mode tabs on the left with the active one marked", () => {
     const host = document.createElement("div");
     renderToolbar(host, props());

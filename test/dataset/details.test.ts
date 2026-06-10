@@ -1,6 +1,6 @@
 // test/dataset/details.test.ts
 import { describe, it, expect } from "vitest";
-import { detailsAs, authorKindOf, labelNamesOf, deadlineOf } from "../../src/runtime/dataset/details";
+import { detailsAs, authorKindOf, labelNamesOf, labelsOf, deadlineOf } from "../../src/runtime/dataset/details";
 import type { TriageItem } from "../../src/runtime/dataset/item";
 
 const item = (details: unknown): TriageItem =>
@@ -22,6 +22,11 @@ describe("field readers", () => {
   it("labelNamesOf", () => {
     expect(labelNamesOf(item({ labels: [{ name: "p0" }, { name: "cve" }] }))).toEqual(["p0", "cve"]);
     expect(labelNamesOf(item({}))).toEqual([]);
+  });
+  it("labelsOf returns full Label objects (name + color), [] when absent", () => {
+    expect(labelsOf(item({ labels: [{ name: "bug", color: "d73a4a" }] })))
+      .toEqual([{ name: "bug", color: "d73a4a" }]);
+    expect(labelsOf(item({}))).toEqual([]);
   });
   it("deadlineOf", () => {
     expect(deadlineOf(item({ dueAt: "2026-01-01" }))).toBe("2026-01-01");

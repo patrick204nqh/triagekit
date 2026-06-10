@@ -1,21 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
-  tierBadgeHtml, slaTagHtml, actorChipHtml, labelChipHtml,
-  checkIndicatorHtml, permalinkLinkHtml, relationStripHtml, detailHeaderHtml,
+  tierBadgeHtml, slaTagHtml, actorChipHtml, chipHtml, labelChipHtml,
+  checkIndicatorHtml, permalinkLinkHtml, relationStripHtml,
+  detailHeadHtml,
 } from "../../src/runtime/layout/atoms/atoms";
 
 describe("atoms", () => {
   it("tierBadgeHtml uses the existing tier classes", () => {
     expect(tierBadgeHtml("P1")).toBe('<span class="tier tier-P1">P1</span>');
-  });
-
-  it("detailHeaderHtml escapes title, carries the tier chip, and shows the sub-line", () => {
-    const out = detailHeaderHtml({ title: "<script>x", tier: "P0", sub: "acme/api · score 80" });
-    expect(out).toContain("&lt;script&gt;x");          // title escaped
-    expect(out).not.toContain("<script>");
-    expect(out).toContain('<span class="tier tier-P0">P0</span>');  // tier chip class
-    expect(out).toContain('<p class="muted">acme/api · score 80</p>');  // sub-line text
-    expect(out.startsWith("<h3>")).toBe(true);
   });
 
   it("slaTagHtml carries the state class and escapes the label", () => {
@@ -50,6 +42,11 @@ describe("atoms", () => {
     expect(out).toContain(">security<");
   });
 
+  it("chipHtml renders the same pill as labelChipHtml for a (name,color) pair", () => {
+    expect(chipHtml("security", "d6504a")).toBe(labelChipHtml({ name: "security", color: "d6504a" }));
+    expect(chipHtml("<x>", "fff")).toContain("&lt;x&gt;");   // escapes the name
+  });
+
   it("checkIndicatorHtml renders nothing for issues (null checks)", () => {
     expect(checkIndicatorHtml(null)).toBe("");
   });
@@ -71,5 +68,31 @@ describe("atoms", () => {
     const links = [{ provider: "github", href: "https://x/ghsa", kind: "advisory" as const, label: "GHSA-8h" }];
     expect(relationStripHtml(rels, links)).toContain("Fixes GHSA-8h");
     expect(relationStripHtml([], links)).toBe("");
+  });
+});
+
+describe("detailHeadHtml", () => {
+  it("renders the provider icon, never the literal provider text", () => {
+    const html = detailHeadHtml({
+      title: "Bump axios", tier: "P1", provider: "github",
+      ref: { text: "#482", href: "https://github.com/x/y/pull/482" },
+    });
+    expect(html).toContain("prov-icon");          // providerIcon() svg
+    expect(html).not.toMatch(/>\s*github\s*</i);   // no bare "github" text node
+    expect(html).toContain("tier-P1");
+    expect(html).toContain("#482");
+    expect(html).toContain('href="https://github.com/x/y/pull/482"');
+  });
+
+  it("omits the ref link when ref is absent", () => {
+    const html = detailHeadHtml({ title: "lodash", tier: "P0", provider: "github" });
+    expect(html).toContain("lodash");
+    expect(html).toContain("prov-icon");
+    expect(html).not.toContain("dh-ref-link");
+  });
+
+  it("escapes the title", () => {
+    expect(detailHeadHtml({ title: "<script>", tier: "P2", provider: "github" }))
+      .toContain("&lt;script&gt;");
   });
 });

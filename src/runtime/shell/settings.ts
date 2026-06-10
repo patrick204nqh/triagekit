@@ -31,6 +31,7 @@ interface Opts {
   onThemeChange?: () => void;      // theme applied (resync the top-right toggle)
   onRefreshChange?: () => void;    // auto-refresh cadence changed (reset the timer)
   getRows?: () => ScoredItem[];    // loaded scored rows — for the scoring editor's live preview
+  getAutoBots?: () => string[];    // provider-flagged bot logins in current data (read-only display)
 }
 
 // Discovery results cached per source+credential so re-opening Settings or
@@ -42,7 +43,7 @@ function fingerprint(token: string): string {
 }
 
 export function mountSettings(host: HTMLElement, opts: Opts) {
-  const { sources, creds, scopes, policy, onChange, onThemeChange, onRefreshChange, getRows } = opts;
+  const { sources, creds, scopes, policy, onChange, onThemeChange, onRefreshChange, getRows, getAutoBots } = opts;
   // One connection per provider: pick a representative (prefer a ready source), and
   // key credentials/scope by provider so sources that share a provider share a token.
   const providerReps: Source[] = (() => {
@@ -83,8 +84,12 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
               <div data-scoring-editor></div></section>
           </div>
           <div class="cat-pane" data-cat-pane="filters" hidden>
-            <section class="set-section wide"><label class="set-label">Bot accounts</label>
-              <p class="set-helper">Logins to treat as bots, in addition to provider-flagged bots. Affects the Author filter. Saved in this browser.</p>
+            <section class="set-section wide">
+              <label class="set-label">Auto-detected bots</label>
+              <p class="set-helper">Accounts the provider flags as bots in the current data — always treated as bots.</p>
+              <div class="bot-chips" data-auto-bots></div>
+              <label class="set-label">Manual bots</label>
+              <p class="set-helper">Extra logins to treat as bots, in addition to the above. Affects the Author filter. Saved in this browser.</p>
               <div class="bot-chips" data-bot-chips></div>
               <input class="bot-add" data-bot-add type="text" placeholder="Add a login — Enter or comma" aria-label="Add bot login"></section>
           </div>
@@ -183,6 +188,14 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       : `<span class="muted">No bots hidden — add a login to filter it out</span>`;
     wrap.querySelectorAll<HTMLElement>("[data-rm-bot]").forEach(btn =>
       btn.addEventListener("click", () => { draftBots = getBots().filter(b => b !== btn.dataset.rmBot); renderBots(); updateSaveGate(); }));
+  }
+  function renderAutoBots() {
+    const wrap = host.querySelector<HTMLElement>("[data-auto-bots]");
+    if (!wrap) return;
+    const logins = getAutoBots?.() ?? [];
+    wrap.innerHTML = logins.length
+      ? logins.map(l => `<span class="ms-chip"><span class="repo">${esc(l)}</span></span>`).join("")
+      : `<span class="muted">No provider-flagged bots in the current data.</span>`;
   }
   // Inline mirror of the tier "strictly decrease" rule for the GLOBAL cutoffs
   // (equivalent of scoring-editor's per-kind renderTierBands hint — that closure
@@ -505,7 +518,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       showCategory("connections");
       // Theme/refresh/bots live in other panes but their elements exist in the
       // DOM regardless of visibility, so render them up front like before.
-      renderTheme(); renderRefresh(); renderBots(); renderConns(); setHidden(false);
+      renderTheme(); renderRefresh(); renderAutoBots(); renderBots(); renderConns(); setHidden(false);
     },
   };
 }
