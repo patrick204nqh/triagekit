@@ -1,7 +1,7 @@
 // src/runtime/core/derivation.ts
 import type { Kind, TriageItem } from "../dataset/item";
 import { scoreAndTier, type ScoreContext } from "../scoring/configured";
-import { withBotPolicy } from "./author-policy";
+import { applyDecorators } from "./decorators";
 import { applyFilters, type ListState } from "../layout/toolbar/filter-state";
 import type { ScoredItem } from "../layout/table/kind-renderer";
 
@@ -22,7 +22,7 @@ export interface Derived {
 export function derive(input: DeriveInput): Derived {
   const scored = input.items
     .filter(it => input.activeKinds.includes(it.kind))
-    .map(it => withBotPolicy(it, input.botLogins))
+    .map(it => applyDecorators(it, { botLogins: input.botLogins }))
     .map(it => {
       const { score, tier } = scoreAndTier(it, input.score);
       return { ...it, score, tier } as ScoredItem;
