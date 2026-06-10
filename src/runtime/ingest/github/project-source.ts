@@ -2,6 +2,7 @@ import type { DatasetStore } from "../../core/store";
 import { registerEnricher, type PostFetchEnricher } from "../../core/enrichment";
 import type { TriageItem } from "../../dataset/item";
 import { CHANGE_REQUEST, ISSUE, type ReviewDetails } from "../../dataset/shapes/review";
+import { registerFilterAxis, type FilterAxis } from "../../layout/toolbar/axis-registry";
 import { ghGraphQL } from "./graphql";
 
 export function parseProjectRef(raw: unknown): { owner: string; number: number } | null {
@@ -64,3 +65,20 @@ export const projectStatusEnricher: PostFetchEnricher = {
 };
 
 registerEnricher(projectStatusEnricher);
+
+export const projectStatusAxis: FilterAxis = {
+  id: "project-status",
+  label: "Status",
+  widget: "chips",
+  quick: false,
+  appliesTo: (rows) => rows.some((row) => projectStatusOf(row) !== undefined),
+  optionsFrom: (rows) => [...new Set(rows.map(projectStatusOf).filter((status): status is string => !!status))]
+    .sort()
+    .map((value) => ({ value, label: value })),
+  test: (item, selected) => {
+    const status = projectStatusOf(item);
+    return status !== undefined && selected.includes(status);
+  },
+};
+
+registerFilterAxis(projectStatusAxis);
