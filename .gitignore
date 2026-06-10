@@ -17,3 +17,4 @@ docs/superpowers/
 
 # local scratch (handoffs, notes)
 tmp/
+.worktrees/
