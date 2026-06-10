@@ -10,6 +10,7 @@ import { reviewBodyHtml } from "./body";
 import { actionBarHtml } from "./actions";
 import type { DetailView } from "../table/detail-view";
 import type { ScoredItem, DetailCtx } from "../table/kind-renderer";
+import { esc } from "../util";
 import { makeGithubActions } from "../../ingest/github/actions";
 import { enrichReview } from "../../ingest/github/change-request-source";
 
@@ -62,7 +63,11 @@ export function reviewDetailView(scored: ScoredItem, ctx: DetailCtx, opts: Revie
   function renderBody(): void {
     if (!bodyHost) return;
     const byline = `<div class="rc-byline">${actorChipHtml(cur.details.author, undefined, { showName: true })}${checksHtml(cur)}</div>`;
+    const status = cur.details.projectStatus
+      ? `<span class="rc-status">${esc(cur.details.projectStatus)}</span>`
+      : "";
     const meta = `<div class="rc-meta">`
+      + status
       + cur.details.assignees.map(a => actorChipHtml(a, "assignee")).join("")
       + cur.details.reviewers.map(r => actorChipHtml(r, "review")).join("")
       + `<span class="rc-comments">\u{1F4AC} ${cur.details.comments}</span>`

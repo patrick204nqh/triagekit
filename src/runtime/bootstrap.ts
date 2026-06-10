@@ -2,6 +2,7 @@ import "./views/code-security/view";        // register dependency-vuln view + s
 import "./views/code-review/view";          // register review surface + github-review source
 import "./views/code-security/code-scanning"; // register code-scanning view + source + charts
 import "./ingest/upcoming";              // register roadmap sources
+import "./ingest/github/project-source";
 import "./layout/due-soon";              // register the Due soon tab
 import type { TriageConfigT } from "../config/schema";
 import type { Scorer } from "./scoring/registry";

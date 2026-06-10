@@ -104,11 +104,12 @@ export const githubReviewSource: Source = {
   kinds: [CHANGE_REQUEST, ISSUE],
   connectSrc: ["https://api.github.com"], status: "ready",
   setup: {
-    hint: "Use a fine-grained personal access token with read access to pull requests and issues on the repositories you triage (write access to merge/comment/label).",
+    hint: "Use a fine-grained personal access token with read access to pull requests and issues (write to merge/comment/label). For Project status, also grant read:project.",
     url: "https://github.com/settings/personal-access-tokens",
   },
   scopeSchema: [
     { key: "repos", label: "Repositories", type: "multiselect", discoverable: true, required: true },
+    { key: "project", label: "Project board (owner/number - adds Status)", type: "text" },
   ],
   async fetch(scope, token) {
     const repos = (scope.repos as string[]) ?? [];
