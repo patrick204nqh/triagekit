@@ -40,20 +40,26 @@ issues), each scored, tiered, and sortable.
   commits or PRs (also enforced via `includeCoAuthoredBy: false` in `.claude/settings.json`).
 - Keep PRs scoped; note verification (e.g. `npm test` result) in the description.
 
+## Design context
+
+`PRODUCT.md` (register, users, brand personality, design principles) and `DESIGN.md`
+(visual system: Void Zinc palette, Kelp Teal accent, Space Grotesk + JetBrains Mono,
+P0–P3 priority ramp, component specs) live at the project root. Read both before any
+UI or design work. `DESIGN.md` wins on visual decisions; `PRODUCT.md` wins on
+strategic and voice decisions.
+
 ## Skills
 
 `.claude/skills/` is **git-ignored** — skills are installed locally per developer, not
 committed. OpenCode discovers this same directory, so one local install serves both tools.
 
-Recommended base skill set (install with `npx skills add https://github.com/leonxlnx/taste-skill`):
-
-- `design-taste-frontend` — anti-slop frontend skill for landing pages, portfolios, redesigns.
-- `redesign-existing-projects` — audit-first redesign workflow.
-- `stitch-design-taste` — design-system / `DESIGN.md` companion.
-- `brandkit` — brand and visual identity helpers.
+The primary design workflow skill is **`impeccable`** (install:
+`npx skills add https://github.com/impeccable-software/impeccable`). Use it for any UI
+work — `/impeccable craft`, `/impeccable polish`, `/impeccable audit`, etc. It reads
+`PRODUCT.md` and `DESIGN.md` automatically and keeps output on-brand.
 
 OpenCode also loads these plugins (`opencode.json` → `plugin`): `superpowers`
-(github.com/obra/superpowers) and `ecc-universal` (github.com/affaan-m/ECC).
+(github.com/obra/superpowers).
 
 ## Config layout
 
