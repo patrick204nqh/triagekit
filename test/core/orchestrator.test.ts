@@ -41,4 +41,21 @@ describe("refresh orchestration", () => {
     expect(store.snapshot().map(i => i.id)).toEqual(["github:1"]);
     expect(r.errors).toEqual([{ target: "github:repoX", message: "404" }]);
   });
+
+  it("runs registered post-fetch enrichers after fetch and surfaces their errors", async () => {
+    const { registerEnricher } = await import("../../src/runtime/core/enrichment");
+    const seen: string[] = [];
+    registerEnricher({ id: "probe", async enrich() { seen.push("ran"); return [{ target: "probe", message: "note" }]; } });
+    const store = createStore();
+    const probeJob = {
+      provider: "github",
+      scopeKey: "k",
+      scope: {},
+      token: "t",
+      port: { fetch: async () => ({ items: [], errors: [] }) },
+    };
+    const { errors } = await refresh([probeJob as any], store);
+    expect(seen).toContain("ran");
+    expect(errors).toEqual(expect.arrayContaining([{ target: "probe", message: "note" }]));
+  });
 });

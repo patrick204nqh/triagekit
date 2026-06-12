@@ -2,6 +2,7 @@
 import type { Scope, TriageError } from "../ingest/source";
 import type { ProviderPort } from "./ports";
 import type { DatasetStore } from "./store";
+import { runEnrichers } from "./enrichment";
 
 export interface ProviderJob {
   provider: string;   // providerOf(source)
@@ -30,5 +31,6 @@ export async function refresh(
       errors.push({ target: job.provider, message: reason?.message ?? String(res.reason) });
     }
   });
+  errors.push(...await runEnrichers(store, { jobs }));
   return { errors };
 }

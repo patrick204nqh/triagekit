@@ -431,6 +431,7 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 .rc-byline { display: flex; align-items: center; gap: 10px; }
 .rc-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
 .rc-comments { font-family: var(--mono); color: var(--muted); }
+.rc-status { font-size: 11px; padding: 2px 8px; border-radius: 6px; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--fg); }
 .rc-state { padding: 1px 8px; border-radius: 10px; font-size: .8em; }
 .rc-state-open { background: color-mix(in srgb, var(--p2) 22%, transparent); color: var(--p2); }
 .rc-state-merged { background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--accent); }

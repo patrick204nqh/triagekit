@@ -19,6 +19,7 @@ export interface ReviewDetails {
   checks: CheckStatus | null;  // PR only; null for issues
   permalinks: Permalink[];
   relations: Relation[];
+  projectStatus?: string;
 }
 
 // A scored review item, as the list/drawer hand it to the card.

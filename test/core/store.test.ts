@@ -52,4 +52,15 @@ describe("dataset store", () => {
     s.upsert([{ ...item("snyk:5"), title: "CVE-1" }], { provider: "snyk", scopeKey: "s1", fetchedAt: 1 });
     expect(s.snapshot()).toHaveLength(1);
   });
+
+  it("updateItems mutates stored items in place, visible via snapshot", () => {
+    const store = createStore();
+    store.replaceScope("github", "k1", [
+      { id: "github:a/b:1", source: "github", kind: "issue", title: "t", location: "a/b", signal: 0, createdAt: "", url: "", details: { number: 1 } },
+    ], 0);
+    store.updateItems((it) => {
+      (it.details as { tag?: string }).tag = "x";
+    });
+    expect((store.snapshot()[0].details as { tag?: string }).tag).toBe("x");
+  });
 });
