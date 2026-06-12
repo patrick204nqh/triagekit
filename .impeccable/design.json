@@ -1,0 +1,168 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-12T00:00:00Z",
+  "title": "Design System: triagekit",
+  "extensions": {
+    "colorMeta": {
+      "void":         { "role": "neutral",   "displayName": "Void Zinc",    "canonical": "#0A0A0B", "tonalRamp": ["#0A0A0B","#141417","#1C1C21","#2B2B32","#3A3A43","#555560","#8A8A92","#ECECEE"] },
+      "carbon":       { "role": "neutral",   "displayName": "Near-Black",   "canonical": "#141417", "tonalRamp": ["#0A0A0B","#141417","#1C1C21","#2B2B32","#3A3A43","#555560","#8A8A92","#ECECEE"] },
+      "slate":        { "role": "neutral",   "displayName": "Raised Zinc",  "canonical": "#1C1C21", "tonalRamp": ["#0A0A0B","#141417","#1C1C21","#2B2B32","#3A3A43","#555560","#8A8A92","#ECECEE"] },
+      "bone":         { "role": "neutral",   "displayName": "Bone",         "canonical": "#ECECEE", "tonalRamp": ["#0A0A0B","#3A3A43","#555560","#8A8A92","#AFAFB8","#CACAD0","#E0E0E4","#ECECEE"] },
+      "ash":          { "role": "neutral",   "displayName": "Ash",          "canonical": "#8A8A92", "tonalRamp": ["#1C1C21","#2B2B32","#3A3A43","#555560","#8A8A92","#AFAFB8","#CACAD0","#ECECEE"] },
+      "kelp-teal":    { "role": "primary",   "displayName": "Kelp Teal",    "canonical": "#2E9E96", "tonalRamp": ["#062320","#0D3F3C","#166058","#1F7E77","#2E9E96","#48B8B1","#7ECFCA","#B8E7E4"] },
+      "kelp-teal-light": { "role": "primary","displayName": "Kelp Teal (light)", "canonical": "#1F7E77", "tonalRamp": ["#062320","#0D3F3C","#166058","#1F7E77","#2E9E96","#48B8B1","#7ECFCA","#B8E7E4"] },
+      "on-accent":    { "role": "neutral",   "displayName": "On-Accent Void","canonical": "#0A0A0B", "tonalRamp": ["#0A0A0B","#141417","#1C1C21","#2B2B32","#3A3A43","#555560","#8A8A92","#ECECEE"] },
+      "p0-critical":  { "role": "tertiary",  "displayName": "Critical Red",  "canonical": "#D6504A", "tonalRamp": ["#2A0907","#4E1310","#7A2320","#A93530","#D6504A","#E37A75","#EFA5A2","#F8D6D4"] },
+      "p1-high":      { "role": "tertiary",  "displayName": "High Orange",   "canonical": "#C9783F", "tonalRamp": ["#271406","#4A2C10","#7A4A1E","#A3652C","#C9783F","#DFA071","#EFC0A0","#F8DFD0"] },
+      "p2-medium":    { "role": "tertiary",  "displayName": "Medium Amber",  "canonical": "#C2A23E", "tonalRamp": ["#241B06","#42340C","#6E5617","#9A7C20","#C2A23E","#D6BC6E","#E7D49E","#F5EECE"] },
+      "p3-low":       { "role": "secondary", "displayName": "Low Green",     "canonical": "#5E9E6A", "tonalRamp": ["#0B1E0E","#173823","#24553A","#3E7E4C","#5E9E6A","#85B890","#AECFB4","#D8EBD9"] },
+      "inert":        { "role": "neutral",   "displayName": "Inert",         "canonical": "#6E7681", "tonalRamp": ["#14181C","#23282E","#363C44","#505762","#6E7681","#949CA4","#BABFC5","#DDDFE2"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Brand Display", "purpose": "Brand mark / logo type only. The triagekit wordmark in the command bar." },
+      "headline": { "displayName": "Headline", "purpose": "Drawer titles, panel headings, section names." },
+      "body":    { "displayName": "Body", "purpose": "All interface prose — table cells, metadata, helper text. 14px density is intentional." },
+      "label":   { "displayName": "Label / Tag", "purpose": "Column headers, group labels, SOON badges. Uppercase monospace must carry structural meaning." },
+      "mono":    { "displayName": "Mono / Data", "purpose": "Repository names, usernames, scores, tier labels, timestamps. Tabular numerals active." }
+    },
+    "shadows": [
+      {
+        "name": "drawer-float",
+        "value": "-8px 0 32px rgba(10,10,11,0.45), -1px 0 0 color-mix(in srgb,#2E9E96 22%,transparent)",
+        "purpose": "Right-edge drawers and settings panel. The 1px accent-tinted left border is the 'open' signal."
+      },
+      {
+        "name": "accent-glow",
+        "value": "0 2px 14px color-mix(in srgb,#2E9E96 26%,transparent)",
+        "purpose": "Primary button default state. Expands to 32% opacity and 18px spread on hover."
+      },
+      {
+        "name": "accent-glow-hover",
+        "value": "0 4px 18px color-mix(in srgb,#2E9E96 32%,transparent)",
+        "purpose": "Primary button hover state."
+      }
+    ],
+    "motion": [
+      {
+        "name": "spring",
+        "value": "cubic-bezier(.22,1,.36,1)",
+        "purpose": "Default easing for interactive transforms — buttons, drawers, toggle states."
+      },
+      {
+        "name": "ease-standard",
+        "value": "linear",
+        "purpose": "Skeleton shimmer and spinner only."
+      }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "768px", "purpose": "Single-column layout; domain rail collapses to horizontal; settings panel goes full-width." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single call-to-action button. Kelp Teal fill, responsive spring press.",
+      "html": "<button class=\"ds-btn-primary\">Load Data</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; font: 600 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; cursor: pointer; border-radius: 8px; background: #2E9E96; color: #0A0A0B; border: 1px solid #2E9E96; padding: 8px 18px; min-height: 38px; box-shadow: 0 2px 14px color-mix(in srgb,#2E9E96 26%,transparent); transition: transform .08s cubic-bezier(.22,1,.36,1), filter .15s, box-shadow .15s; } .ds-btn-primary:hover { filter: brightness(1.06); box-shadow: 0 4px 18px color-mix(in srgb,#2E9E96 32%,transparent); } .ds-btn-primary:active { transform: translateY(1px); box-shadow: 0 2px 14px color-mix(in srgb,#2E9E96 26%,transparent); } .ds-btn-primary:focus-visible { outline: 2px solid #2E9E96; outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary action. Transparent fill, line-strong border.",
+      "html": "<button class=\"ds-btn-ghost\">Refresh</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; font: 600 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; cursor: pointer; border-radius: 8px; background: transparent; color: #ECECEE; border: 1px solid rgba(255,255,255,0.14); padding: 8px 14px; min-height: 38px; transition: transform .08s cubic-bezier(.22,1,.36,1), background .15s; } .ds-btn-ghost:hover { background: #141417; } .ds-btn-ghost:active { transform: translateY(1px); } .ds-btn-ghost:focus-visible { outline: 2px solid #2E9E96; outline-offset: 2px; }"
+    },
+    {
+      "name": "Icon Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "38×38px square icon button. Theme toggle, refresh, settings trigger.",
+      "html": "<button class=\"ds-icon-btn\" aria-label=\"Settings\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z\"/></svg></button>",
+      "css": ".ds-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; padding: 0; font-size: 1rem; background: transparent; color: #8A8A92; border: 1px solid rgba(255,255,255,0.14); border-radius: 8px; cursor: pointer; transition: color .15s, background .15s; } .ds-icon-btn:hover { color: #ECECEE; background: #141417; } .ds-icon-btn:focus-visible { outline: 2px solid #2E9E96; outline-offset: 2px; }"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "refersTo": "status-chip",
+      "description": "Command-bar health indicator — provider + repo ID + leading health dot.",
+      "html": "<div class=\"ds-status-chip ds-status-ok\"><span class=\"ds-sc-id\">acme-corp/web-app</span><span class=\"ds-sc-sep\">·</span><span class=\"ds-sc-state\">247 items</span></div>",
+      "css": ".ds-status-chip { display: inline-flex; align-items: center; gap: 7px; background: #1C1C21; border: 1px solid rgba(255,255,255,0.08); color: #ECECEE; border-radius: 999px; padding: 6px 12px 6px 11px; font: 500 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; transition: border-color .15s; } .ds-status-chip:hover { border-color: rgba(255,255,255,0.14); } .ds-status-chip::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #6E7681; flex: none; } .ds-status-chip.ds-status-ok::before { background: #2E9E96; box-shadow: 0 0 0 3px color-mix(in srgb,#2E9E96 22%,transparent); } .ds-status-chip.ds-status-warn::before { background: #C2A23E; } .ds-sc-sep { color: #8A8A92; } .ds-sc-id { font-family: ui-monospace, 'SF Mono', Menlo, monospace; } .ds-sc-state { color: #8A8A92; }"
+    },
+    {
+      "name": "Tier Badge P0",
+      "kind": "chip",
+      "refersTo": "tier-p0",
+      "description": "P0 critical priority badge. The most-scanned element in the triage table.",
+      "html": "<span class=\"ds-tier ds-tier-p0\">P0</span>",
+      "css": ".ds-tier { display: inline-block; font: 600 12px ui-monospace, 'SF Mono', Menlo, monospace; color: #0A0A0B; border-radius: 999px; padding: 2px 9px; letter-spacing: .02em; } .ds-tier-p0 { background: #D6504A; } .ds-tier-p1 { background: #C9783F; } .ds-tier-p2 { background: #C2A23E; } .ds-tier-p3 { background: #5E9E6A; }"
+    },
+    {
+      "name": "Tier Badge Set",
+      "kind": "custom",
+      "refersTo": "tier-p0",
+      "description": "All four tier badges P0–P3 shown as a reference set.",
+      "html": "<div class=\"ds-tier-set\"><span class=\"ds-tier ds-tier-p0\">P0</span><span class=\"ds-tier ds-tier-p1\">P1</span><span class=\"ds-tier ds-tier-p2\">P2</span><span class=\"ds-tier ds-tier-p3\">P3</span></div>",
+      "css": ".ds-tier-set { display: flex; gap: 6px; align-items: center; } .ds-tier { display: inline-block; font: 600 12px ui-monospace, 'SF Mono', Menlo, monospace; color: #0A0A0B; border-radius: 999px; padding: 2px 9px; letter-spacing: .02em; } .ds-tier-p0 { background: #D6504A; } .ds-tier-p1 { background: #C9783F; } .ds-tier-p2 { background: #C2A23E; } .ds-tier-p3 { background: #5E9E6A; }"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Standard text input. Raised Zinc bg, Kelp Teal focus ring.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Search repositories...\" />",
+      "css": ".ds-input { background: #1C1C21; color: #ECECEE; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 9px 11px; font: 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 40px; width: 100%; transition: border-color .15s, box-shadow .15s; box-sizing: border-box; } .ds-input:focus { outline: none; border-color: #2E9E96; box-shadow: 0 0 0 2px color-mix(in srgb,#2E9E96 45%,transparent); } .ds-input::placeholder { color: #8A8A92; } .ds-input[aria-invalid='true'] { border-color: #D6504A; } .ds-input[aria-invalid='true']:focus { border-color: #D6504A; box-shadow: 0 0 0 2px color-mix(in srgb,#D6504A 40%,transparent); }"
+    },
+    {
+      "name": "Domain Rail Navigation",
+      "kind": "nav",
+      "refersTo": "nav-rail-item",
+      "description": "The 200px left sidebar with grouped Findings/Work navigation items.",
+      "html": "<nav class=\"ds-rail\"><div class=\"ds-rail-group\"><p class=\"ds-rail-label\">Findings</p><button class=\"ds-rail-item ds-rail-item-active\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"><circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.35-4.35\"/></svg>Dependabot</button><button class=\"ds-rail-item\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"><path d=\"M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z\"/></svg>Code Scanning</button></div></nav>",
+      "css": ".ds-rail { display: flex; flex-direction: column; gap: 2px; padding: 16px 12px; } .ds-rail-group { display: flex; flex-direction: column; gap: 2px; } .ds-rail-label { font: 600 10.5px ui-monospace, 'SF Mono', Menlo, monospace; letter-spacing: .09em; text-transform: uppercase; color: #8A8A92; padding: 4px 10px 2px; margin: 0; user-select: none; } .ds-rail-item { width: 100%; display: flex; align-items: center; gap: 8px; text-align: left; background: none; border: 1px solid transparent; color: #8A8A92; padding: 8px 10px; border-radius: 8px; font: 600 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; cursor: pointer; transition: color .15s, background .15s, border-color .15s; } .ds-rail-item:hover { color: #ECECEE; } .ds-rail-item.ds-rail-item-active { color: #ECECEE; background: #141417; border-color: rgba(255,255,255,0.08); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Operator's Cockpit",
+    "overview": "triagekit's visual system is built around the premise that a triage session is an act of focused, high-stakes decision-making. The interface is a flight deck: every element on screen exists to help the operator locate, assess, and act. Ambient decoration is not a design choice — it's an error.\n\nThe palette is dark-native by design, not by convention. Void Zinc (#0A0A0B) is the canvas because it forces every piece of information to be the thing that provides its own light. The single accent — Kelp Teal (#2E9E96) — is reserved for interactive affordances and the 'healthy' state. It is rare on-screen. Its rarity is the signal.\n\nTypography is dual-register. Space Grotesk carries the interface's navigation, labels, and body copy. JetBrains Mono carries all numeric and identifier content: scores, handles, repository names, tier labels. The distinction is functional, not decorative.",
+    "keyCharacteristics": [
+      "Dark-first, light-capable: [data-theme='light'] rebalances the full token ramp",
+      "Dual-register typography: Space Grotesk for interface language, JetBrains Mono for data identity",
+      "Single accent: Kelp Teal used only for affordances and success state; rarity is the signal",
+      "Purposeful priority ramp: P0–P3 colors calibrated for glanceability, not brand aesthetics",
+      "Grain over glass: one texture layer; no blur, no glassmorphism, no gradient overlays",
+      "Responsive and precise: spring easing on interactive elements; reduced motion always handled"
+    ],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "Kelp Teal appears on interactive affordances (primary buttons, focus rings, active nav, links) and on positive-state indicators. It does not appear on decorative borders, section headings, or anything that isn't actionable or explicitly 'OK'. Its rarity is the brand signal.", "section": "colors" },
+      { "name": "The Ramp Is Data Rule", "body": "The P0–P3 colors are semantic, not stylistic. They must never be used outside their tier context. P0 red is not 'an error color' — it is specifically 'a P0-priority item.'", "section": "colors" },
+      { "name": "The Ash Floor Rule", "body": "Never use Ash (#8A8A92) for body text that must be read, only for text that is genuinely secondary. Against Raised Zinc (#1C1C21), Ash achieves ~4.7:1 — it passes but has no margin.", "section": "colors" },
+      { "name": "The Two-Register Rule", "body": "Every rendering context is either 'interface' (Space Grotesk) or 'data identity' (JetBrains Mono). Never use Space Grotesk for scores, handles, or repo names. Never use JetBrains Mono for prose explanations or navigation labels.", "section": "typography" },
+      { "name": "The No-Upcase-Prose Rule", "body": "Uppercase letter-spacing is reserved for label/category contexts (column headers, group labels, badge text). Never applied to sentence-case text or anything over 13px.", "section": "typography" },
+      { "name": "The Float-Only Rule", "body": "Shadows signal physical elevation above the canvas. A card in a list is not elevated; it is adjacent. Never add box-shadow to cards, table rows, section containers, or nav items. The tonal ramp is the depth system; shadows are the exception.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use Kelp Teal only for interactive affordances and positive-state indicators",
+      "Do use JetBrains Mono for all numeric, identifier, and code-like content",
+      "Do use spring easing (cubic-bezier(.22,1,.36,1)) for interactive transforms",
+      "Do handle prefers-reduced-motion for every animation",
+      "Do use the Void → Carbon → Slate tonal ramp to convey surface layering",
+      "Do verify contrast ≥ 4.5:1 for body text, ≥ 3:1 for large/bold text",
+      "Do include both tier label text (P0/P1/P2/P3) and color when displaying priority"
+    ],
+    "donts": [
+      "Don't make the interface look like a GitHub reskin",
+      "Don't use the generic dev-tool dark mode palette — #1e1e1e / VSCode-grey surfaces, blue accents",
+      "Don't use security vendor dashboard patterns — badge-heavy layouts, chart-per-metric grids",
+      "Don't use SaaS-slick patterns — gradient cards, generous whitespace, marketing-grade animations in the app",
+      "Don't add box-shadow to cards, table rows, or nav items at rest (Float-Only Rule)",
+      "Don't use border-left greater than 1px as a colored accent stripe on cards or list items",
+      "Don't use gradient text (background-clip: text)",
+      "Don't use P0–P3 colors outside their priority tier context",
+      "Don't apply text-transform: uppercase to text over 13px or to sentence-case prose",
+      "Don't nest cards"
+    ]
+  }
+}

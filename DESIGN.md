@@ -1,253 +1,310 @@
+---
+name: triagekit
+description: Backend-free repo triage dashboard. One HTML file.
+colors:
+  void: "#0A0A0B"
+  carbon: "#141417"
+  slate: "#1C1C21"
+  bone: "#ECECEE"
+  ash: "#8A8A92"
+  kelp-teal: "#2E9E96"
+  kelp-teal-light: "#1F7E77"
+  on-accent: "#0A0A0B"
+  p0-critical: "#D6504A"
+  p1-high: "#C9783F"
+  p2-medium: "#C2A23E"
+  p3-low: "#5E9E6A"
+  inert: "#6E7681"
+  line: "rgba(255,255,255,0.08)"
+  line-strong: "rgba(255,255,255,0.14)"
+typography:
+  display:
+    fontFamily: "'Space Grotesk', ui-sans-serif, system-ui, sans-serif"
+    fontSize: "clamp(1.3rem, 1rem + 1.1vw, 1.7rem)"
+    fontWeight: 640
+    lineHeight: 1.2
+    letterSpacing: "-0.035em"
+  headline:
+    fontFamily: "'Space Grotesk', ui-sans-serif, system-ui, sans-serif"
+    fontSize: "1.125rem"
+    fontWeight: 600
+    lineHeight: 1.4
+    letterSpacing: "-0.01em"
+  body:
+    fontFamily: "'Space Grotesk', ui-sans-serif, system-ui, sans-serif"
+    fontSize: "14px"
+    fontWeight: 400
+    lineHeight: 1.5
+    letterSpacing: "-0.005em"
+  label:
+    fontFamily: "'JetBrains Mono', ui-monospace, 'SF Mono', monospace"
+    fontSize: "12px"
+    fontWeight: 600
+    lineHeight: 1
+    letterSpacing: "0.04em"
+  mono:
+    fontFamily: "'JetBrains Mono', ui-monospace, 'SF Mono', monospace"
+    fontSize: "13px"
+    fontWeight: 400
+    lineHeight: 1.5
+    letterSpacing: "0"
+rounded:
+  sm: "6px"
+  md: "8px"
+  lg: "12px"
+  xl: "14px"
+  pill: "999px"
+spacing:
+  xs: "6px"
+  sm: "8px"
+  md: "14px"
+  lg: "18px"
+  xl: "24px"
+  xxl: "32px"
+components:
+  button-primary:
+    backgroundColor: "{colors.kelp-teal}"
+    textColor: "{colors.on-accent}"
+    rounded: "{rounded.md}"
+    padding: "8px 18px"
+  button-primary-hover:
+    backgroundColor: "{colors.kelp-teal}"
+    textColor: "{colors.on-accent}"
+    rounded: "{rounded.md}"
+    padding: "8px 18px"
+  button-ghost:
+    backgroundColor: "transparent"
+    textColor: "{colors.bone}"
+    rounded: "{rounded.md}"
+    padding: "8px 14px"
+  button-ghost-hover:
+    backgroundColor: "{colors.carbon}"
+    textColor: "{colors.bone}"
+    rounded: "{rounded.md}"
+    padding: "8px 14px"
+  status-chip:
+    backgroundColor: "{colors.slate}"
+    textColor: "{colors.bone}"
+    rounded: "{rounded.pill}"
+    padding: "6px 12px 6px 11px"
+  tier-p0:
+    backgroundColor: "{colors.p0-critical}"
+    textColor: "{colors.on-accent}"
+    rounded: "{rounded.pill}"
+    padding: "2px 9px"
+  tier-p1:
+    backgroundColor: "{colors.p1-high}"
+    textColor: "{colors.on-accent}"
+    rounded: "{rounded.pill}"
+    padding: "2px 9px"
+  tier-p2:
+    backgroundColor: "{colors.p2-medium}"
+    textColor: "{colors.on-accent}"
+    rounded: "{rounded.pill}"
+    padding: "2px 9px"
+  tier-p3:
+    backgroundColor: "{colors.p3-low}"
+    textColor: "{colors.on-accent}"
+    rounded: "{rounded.pill}"
+    padding: "2px 9px"
+  input-field:
+    backgroundColor: "{colors.slate}"
+    textColor: "{colors.bone}"
+    rounded: "{rounded.md}"
+    padding: "9px 11px"
+  nav-rail-item:
+    backgroundColor: "transparent"
+    textColor: "{colors.ash}"
+    rounded: "{rounded.md}"
+    padding: "8px 10px"
+  nav-rail-item-active:
+    backgroundColor: "{colors.carbon}"
+    textColor: "{colors.bone}"
+    rounded: "{rounded.md}"
+    padding: "8px 10px"
+---
+
 # Design System: triagekit
 
-> Single source of truth for generating triagekit screens (in Stitch or by hand).
-> triagekit is a **dense, backend-free triage cockpit** — a tool operators stare at to
-> decide what to fix first. It is software, not a landing page. Every rule below favors
-> legibility-under-density and calm authority over decoration.
+## 1. Overview
 
----
+**Creative North Star: "The Operator's Cockpit"**
 
-## 1. Visual Theme & Atmosphere
+triagekit's visual system is built around the premise that a triage session is an act of focused, high-stakes decision-making. The interface is a flight deck: every element on screen exists to help the operator locate, assess, and act. Ambient decoration — gradients that don't carry information, cards that add hierarchy without adding meaning, transitions that animate for their own sake — is not a design choice. It's an error.
 
-A **dark-first operations cockpit** — quiet, high-contrast, and information-dense without
-feeling cramped. The mood is a well-run NOC at 2am: matte charcoal surfaces, a single cool
-accent that only appears where action lives, and a disciplined semantic color ramp that
-lets you read priority at a glance. Restraint is the aesthetic — the data is the
-decoration. Layouts are confidently asymmetric (a fixed command rail beside a wide content
-field), motion is present but weighty and brief, never theatrical.
+The palette is dark-native by design, not by convention. Void Zinc (#0A0A0B) is the canvas because it forces every piece of information to be the thing that provides its own light. The single accent — Kelp Teal (#2E9E96) — is reserved for interactive affordances and the "healthy" state. It is rare on-screen. Its rarity is the signal. The P0–P3 priority ramp (Critical Red → High Orange → Medium Amber → Low Green) is the other half of the chromatic vocabulary: purposeful, unsentimental, calibrated so severity is legible at a glance even in peripheral vision.
 
-- **Density:** 8 / 10 — Cockpit Dense. Tables, stat rows, and detail panels pack tightly;
-  whitespace is earned, not sprayed. Per the high-density override, **all numerals render
-  in monospace.**
-- **Variance:** 5 / 10 — Offset Asymmetric. Structure comes from an off-center rail +
-  content split, not from chaotic placement. Dashboards reward predictability inside an
-  asymmetric frame.
-- **Motion:** 5 / 10 — Fluid, weighty, restrained. Spring physics on interaction, shimmer
-  on load, staggered row reveals. No looping spectacle.
+Typography is dual-register. Space Grotesk carries the interface's navigation, labels, and body copy — its variable weight axis allows tight tonal control from 300 (explanatory prose) to 640 (brand mark) without switching families. JetBrains Mono carries all numeric and identifier content: scores, handles, repository names, tier labels. The distinction is functional, not decorative. Monospace tabular numerals prevent reflow when scanning ranked lists. The brain reads one register as "UI" and the other as "data", without being told.
 
-Light mode exists as a first-class peer (operators in bright rooms), but dark is primary.
+The grain overlay (fractal SVG noise at 3.5% opacity, overlay blend) breaks the flat-dark sterility that makes dense dark-mode interfaces feel depthless. It is the single texture in the system. Everything else earns its visual weight through color and spacing, not texture.
 
----
+**Key Characteristics:**
+- Dark-first, light-capable: `[data-theme="light"]` rebalances the full token ramp; the architecture never assumes dark
+- Dual-register typography: Space Grotesk for interface language, JetBrains Mono for data identity
+- Single accent: Kelp Teal used only for affordances and success state; rarity is the signal
+- Purposeful priority ramp: P0–P3 colors calibrated for glanceability, not brand aesthetics
+- Grain over glass: one texture layer; no blur, no glassmorphism, no gradient overlays
+- Responsive and precise: spring easing (cubic-bezier(.22,1,.36,1)) on interactive elements; reduced motion always handled
 
-## 2. Color Palette & Roles
+## 2. Colors: The Void–Kelp Palette
 
-**One accent only. Saturation < 80%. The accent (Kelp Teal) deliberately sits outside the
-red→green priority ramp so "actionable" never reads as "severe."** No blue (avoids the
-GitHub/AI-neon default), no purple, no neon glow, no pure black.
+A controlled, dark-native palette with one accent and a four-step priority ramp. Every color earns its place by carrying information.
 
-### Dark (primary)
-- **Void Zinc** (`#0A0A0B`) — Primary canvas. Off-black, never `#000000`.
-- **Carbon Panel** (`#141417`) — Raised surfaces: rails, drawer, stat tiles, row hover.
-- **Slate Panel** (`#1C1C21`) — Secondary fill: inputs, inset blocks, table header band.
-- **Graphite Line** (`rgba(255,255,255,0.08)`) — Hairline borders & row dividers (1px).
-- **Bone White** (`#ECECEE`) — Primary text and key numerals.
-- **Ash Gray** (`#8A8A92`) — Secondary text, labels, metadata, column headers.
-- **Kelp Teal** (`#2E9E96`) — THE accent. Primary CTA fill, focus rings, active tab
-  underline, links. Saturation ~60%.
-- **On-Accent Ink** (`#0A0A0B`) — Text/icons on a Kelp Teal fill.
+### Primary
 
-### Light (peer)
-- **Paper** (`#FAFAF9`) — Primary canvas.
-- **Pure Surface** (`#FFFFFF`) — Raised surfaces.
-- **Mist Panel** (`#F1F1EF`) — Secondary fill.
-- **Ink Line** (`rgba(9,9,11,0.10)`) — Hairline borders & dividers.
-- **Charcoal Ink** (`#1A1A1E`) — Primary text.
-- **Stone Gray** (`#6B6B73`) — Secondary text/metadata.
-- **Deep Kelp** (`#1F7E77`) — Accent (darkened for AA contrast on light).
-- **On-Accent** (`#FFFFFF`) — Text on accent fill.
+- **Kelp Teal** (#2E9E96 dark / #1F7E77 light): The single interactive accent. Used for primary buttons, focus rings, active nav states, success chips, and the healthy status indicator. Appears on ≤10% of any given screen. In light mode the value darkens to maintain contrast — the same hue, not a tint substitution.
 
-### Semantic priority ramp (both themes — functional, NOT brand)
-Muted, premium, distinct from the teal accent. Used for tier pills and severity text.
-- **P0 / Critical — Crimson** (`#D6504A`)
-- **P1 / High — Ember** (`#C9783F`)
-- **P2 / Medium — Amber** (`#C2A23E`)
-- **P3 / Low — Sage** (`#5E9E6A`)
-- **Inert / Unknown — Ash** (`#6E7681`)
+### Neutral
 
-Tier pills fill with the ramp color + On-Accent-dark text. Severity in tables is colored
-text only (no fill) to keep the grid quiet.
+- **Void Zinc** (#0A0A0B): The canvas. Background of the body and the entire app shell. The darkest surface — nothing sits below it.
+- **Near-Black** (#141417 `carbon`): The primary card/panel surface. Drawers, settings panel, table-row hover, sticky table headers.
+- **Raised Zinc** (#1C1C21 `slate`): Secondary surface. Input backgrounds, sidebar active states, section backgrounds within panels. Also the `[data-theme="light"]` canvas equivalent (#FAFAF9) swaps in here.
+- **Bone** (#ECECEE `fg`): Primary text. All readable interface copy. Against Void Zinc (#0A0A0B), this achieves ~18:1 contrast.
+- **Ash** (#8A8A92 `muted`): Secondary text, labels, metadata, placeholder text. Used only where the content is genuinely secondary — not where space or visual quietness is desired.
+- **Inert** (#6E7681): Disabled states and the "no status" dot in status chips. Distinct from Ash so disabled and secondary don't read the same.
 
----
+### Priority Ramp (Semantic)
 
-## 3. Typography Rules
+- **Critical Red** (#D6504A `--p0`): P0 tier — CVE critical, severity critical. Never used decoratively.
+- **High Orange** (#C9783F `--p1`): P1 tier — high severity, age-breached items.
+- **Medium Amber** (#C2A23E `--p2`): P2 tier — medium severity, unsaved-changes indicator dot.
+- **Low Green** (#5E9E6A `--p3`): P3 tier — low severity, CI pass state.
 
-Dashboard mandate: **sans pairing + monospace numerals.** No serifs anywhere.
+### Named Rules
 
-- **Display / Headings:** `Space Grotesk` — track-tight, weight-driven hierarchy
-  (600/640/700), controlled scale. Headings communicate by weight and color, not size.
-  The brand wordmark runs 640 weight at `-0.035em` tracking.
-- **Body / UI:** `Space Grotesk` — 400/500, relaxed leading (1.5), secondary copy in Ash
-  Gray, prose capped at ~65ch. A `-0.005em` global letter-spacing tightens the body.
-- **Mono / Numerals & Metadata:** `JetBrains Mono` — **mandatory for every number**
-  (signal, score, CVSS, counts, percentages), plus IDs, timestamps, package versions,
-  tier labels, repo names, and most chips/badges. Tabular figures so columns align.
-- **Scale (clamp-driven):**
-  - Brand / app title: `clamp(1.3rem, 1rem + 1.1vw, 1.7rem)`, weight 640
-  - Section / panel H2: `1.125rem` (18px), weight 600
-  - Body / table cell: `0.875rem` (14px); review-card body `13.5px`
-  - Label / column header: `0.75rem` (12px), Ash Gray, `0.04em` tracking, uppercase
-  - Chart / stat value: JetBrains Mono, weight 600
-- **Self-hosted:** both families ship as bundled OFL woff2 (no CDN, CSP-safe); the
-  `system-ui` chain is a fallback only.
-- **Banned:** `Inter`, system-default stacks for chrome, ALL serifs (`Times`, `Georgia`,
-  `Garamond`), and any decorative display face.
+**The One Accent Rule.** Kelp Teal appears on interactive affordances (primary buttons, focus rings, active nav, links) and on positive-state indicators (healthy status chip, selected chips). It does not appear on decorative borders, section headings, or anything that isn't actionable or explicitly "OK". Its rarity is the brand signal.
 
----
+**The Ramp Is Data Rule.** The P0–P3 colors are semantic, not stylistic. They must never be used outside their tier context. P0 red is not "an error color" — it is specifically "a P0-priority item." Using it for a generic form error blurs the system's meaning.
 
-## 4. Entry & Empty States (the "first screen")
+**The Ash Floor Rule.** Never use Ash (#8A8A92) for body text that must be read, only for text that is genuinely secondary. Verify contrast ≥ 4.5:1 against the surface it sits on. Against Raised Zinc (#1C1C21), Ash achieves ~4.7:1 — it passes but has no margin; prefer Bone (#ECECEE) for anything the user needs to read.
 
-triagekit has no marketing hero. The first impression is the **command bar + an inviting,
-composed empty state** — these must feel intentional, never like an unstyled void.
+## 3. Typography: Space Grotesk + JetBrains Mono
 
-- **Command bar (appbar):** Left-aligned brand/title in Space Grotesk 640, then the runtime
-  inputs (org, repos, token) as a tidy inline cluster, then a single primary action
-  (`Load`). Asymmetric, left-weighted — never centered.
-- **Pre-load empty state:** A composed prompt, not a sentence. A muted outline glyph
-  (SVG, monochrome Ash) + one Space Grotesk line ("Enter an org and repos, paste a token, then
-  Load") + the accent CTA. Occupies its own centered spatial zone within the content field.
-- **Zero-results state:** Composed and affirmative — a calm checkmark glyph + "No open
-  items for these targets." **No emoji.** (Kills the existing 🎉.)
-- **CTA restraint:** Exactly one primary action visible at a time. No secondary "learn
-  more" links. No "scroll to explore", chevrons, or filler.
+**Display Font:** Space Grotesk (variable, 300–700 weight axis, Latin subset, self-hosted)
+**Data/Code Font:** JetBrains Mono (400 and 600 static weights, self-hosted)
 
----
+**Character:** Space Grotesk's variable axis gives the interface the ability to signal hierarchy through weight alone — no font-family switch needed for navigation, body, or display contexts. JetBrains Mono's tabular numerals keep score columns scannable at any width. The pairing is functional first: the brain reads "interface" and "data" as distinct registers without conscious parsing.
 
-## 5. Component Stylings
+Both fonts are inlined as base64 woff2 at build time. The `data:` font-src CSP allowance is the only non-none font source. System fallbacks (`ui-sans-serif`, `ui-monospace`) exist but are never the intended experience.
 
-- **Buttons:** Flat. Primary = Kelp Teal fill + On-Accent ink, weight 600, carrying one
-  restrained accent-tinted shadow (`0 2px 14px`, accent ≈26%) that lifts on hover — a glow
-  tied to the accent hue, never neon. Secondary = ghost (transparent fill, Graphite
-  Line-strong border, Bone text). Tactile feedback: `+1px` translate-y on `:active`. Focus
-  = 2px Kelp Teal ring (box-shadow). **No gradient fill, no custom cursor.** ~38px control
-  height (40px inputs).
-- **Navigation (rail + toolbar):** A fixed **200px left domain rail** lists views in grouped
-  sections (Findings / Work); active = Bone text on a Carbon fill with a Graphite border,
-  inactive = Ash. Below the appbar, a horizontal **toolbar** carries view-mode pills (active
-  = Bone on accent-16% fill, *not* an underline), an inline result count, and Filter/Sort
-  popover buttons. A second row adds **repo-scope tabs** and, top-right, a **provider switch**
-  segmented control. **Upcoming** views/providers render dimmed (opacity ~.5) with a small
-  mono `soon` tag and are inert until activated.
-- **Tables (the core surface):** Borderless cells separated by Graphite Line `border-top`
-  dividers — **no card grid, no zebra stripe.** Sticky header band in Slate Panel with
-  uppercase Ash labels. Row hover = Carbon Panel fill, cursor pointer. Numeric columns
-  (signal/score) right-adjusted, JetBrains Mono, tabular. Whole row is the click target →
-  opens the detail drawer.
-- **Tier & severity:** Tier = filled pill (ramp color, 999px radius, 12px mono, On-Accent
-  ink). Severity = colored ramp text, no fill.
-- **Counts & insights:** The live result count sits inline in the toolbar (mono, tabular) —
-  there are no standalone stat tiles. Aggregate metrics (tier breakdown bar, age histogram,
-  per-repo bars, ratios) live on a separate **Insights** surface as chart cards (Carbon
-  Panel, Graphite Line, 14px radius), each with an uppercase Ash title + optional mono `k`
-  chip.
-- **Cards:** Never for tabular data — tables stay borderless with divider rows. Card
-  surfaces *are* used deliberately for the **Insights** charts, **review cards** (PR/issue
-  records), and the **connections accordion**: Carbon Panel, Graphite Line, 10–14px radius,
-  no drop shadow. Drop-shadow elevation stays reserved for the slide-over layers (drawer,
-  settings sheet, popovers).
-- **Detail drawer:** Right-anchored panel, `min(440px, 92vw)`, Carbon Panel fill, 1px
-  Graphite left border. Shadow is **tinted to canvas** — `-8px 0 32px rgba(10,10,11,0.45)`
-  (never pure black). Definition list: Ash `dt`, Bone `dd`, mono for versions/scores.
-  Single `Close` action.
-- **Inputs:** Slate Panel fill, Graphite Line border, 8px radius, label above (Ash, 12px),
-  helper/error below. Error text in Crimson. Focus = Kelp Teal ring. No floating labels.
-  The token input is `type=password`, visibly distinct, with a "stored in this tab only"
-  helper.
-- **Loading:** **Skeleton shimmer** matching exact table dimensions — header band + 6–8
-  ghost rows with shimmering cell blocks. **No "Loading…" text; no spinner for page/table
-  loads** (an inline per-action spinner is the only sanctioned ring — see §8).
-- **Warnings (partial failure):** Inline Amber-bordered block listing per-target failures;
-  never blanks the table — degraded rows coexist with loaded data.
-- **Settings panel:** A full-screen slide-over (`.sheet.panel`) with a centered ~1100px
-  content column: a sticky header, a left category sidebar (active = accent-12% fill +
-  inset accent bar), a scrolling content pane, and a sticky footer. Unsaved state surfaces
-  as an Ember dot on the category and a footer summary. Hosts Appearance (a segmented
-  light/dark/system control), Connections (an accordion + searchable integrations catalog),
-  discovery checklists (mono repo chips), and the scoring editor.
-- **Scoring editor:** Per-kind score model. A wrap-safe head row (kind select + simple/
-  advanced segmented mode + reset + a Default/Custom badge pill — neutral by default, accent
-  on Custom). Simple mode = labelled weight sliders (accent thumb) with mono values;
-  advanced mode = a mono formula textarea, scale input, and signal rows. A live preview
-  list (title + mono score + tier pill) and inline Crimson error hints.
-- **Review card (PR/issue record):** Carbon Panel card — title row (Bone, mono number),
-  scrollable markdown body, a byline with avatar/initials (bot avatars tinted accent), mono
-  labels as bordered pills, CI/conflict/SLA status in ramp colors, and an actions row
-  (border-top) with ghost + primary action buttons. Used both inline and inside the drawer.
+### Hierarchy
 
----
+- **Display** (640 weight, clamp(1.3rem, 1rem + 1.1vw, 1.7rem), lh 1.2, ls -0.035em): Brand mark / logo type only. The `triagekit` wordmark in the command bar. Not reused for page headings.
+- **Headline** (600 weight, 1.125rem / 18px, lh 1.4, ls -0.01em): Drawer titles, panel headings, section names. Space Grotesk.
+- **Body** (400 weight, 14px, lh 1.5, ls -0.005em): All interface prose — table cells, metadata, helper text, panel body copy. The base font-size is 14px, not 16px; the density is intentional.
+- **Label** (600 weight, 11–12px, ls 0.04em, uppercase): Column headers, group labels, category kickers, `SOON` badges. JetBrains Mono. Used sparingly — uppercase monospace at this scale is high-contrast and must carry genuine structural meaning.
+- **Mono** (400/600 weight, 13px, tabular-nums): Repository names, usernames, scores, tier labels, timestamps. JetBrains Mono. `font-variant-numeric: tabular-nums` is active on all numeric columns.
 
-## 6. Layout Principles
+### Named Rules
 
-- **Shell:** A CSS Grid with three areas — a full-width top **command bar** (appbar), a
-  fixed **200px left domain rail**, and a **view + main** column beside it. The viewswitch
-  toolbar sits directly under the appbar; `main` takes the remaining height with 24–32px
-  padding (no fixed max-width). Asymmetric, left-weighted — centered page layouts are banned
-  at this variance. Settings opens as a full-screen slide-over with its own centered content
-  column.
-- **Grid over flex math:** CSS Grid for the shell and stat rows. Never `calc()` percentage
-  hacks.
-- **No overlap:** Every element owns a clean spatial zone. The drawer overlays via its own
-  fixed layer with a scrim — content beneath does not visually collide.
-- **Full-height:** Use `min-h-[100dvh]` for the shell. **Never `h-screen`** (iOS Safari
-  jump).
-- **Density discipline:** Tables breathe via row padding (8–10px vertical) and dividers,
-  not via cards or shadows.
+**The Two-Register Rule.** Every rendering context is either "interface" (Space Grotesk) or "data identity" (JetBrains Mono). Never use Space Grotesk for scores, handles, or repo names. Never use JetBrains Mono for prose explanations or navigation labels. The distinction is load-bearing.
 
----
+**The No-Upcase-Prose Rule.** Uppercase letter-spacing (`text-transform: uppercase` + `letter-spacing`) is reserved for label/category contexts (column headers, rail group labels, badge text). It is never applied to sentence-case text or anything over 13px. Upcase at body size reads as shouting; upcase in labels reads as structure.
 
-## 7. Responsive Rules
+## 4. Elevation
 
-- **< 768px collapse:** The org/repos/token cluster stacks vertically; stat tiles become a
-  2-up grid then 1-up; the table switches to stacked record rows (label: value pairs in
-  mono) rather than a horizontally scrolling grid.
-- **No horizontal scroll, ever** — overflow on mobile is a critical failure.
-- **Drawer on mobile:** Becomes a full-width bottom sheet (`max-h: 88dvh`), slide-up.
-- **Typography:** Headlines via `clamp()`; body min `0.875rem` (14px); mono numerals never
-  shrink below 13px (legibility).
-- **Touch targets:** Controls run ~38–40px tall (the 44px ideal is not strictly enforced);
-  whole table rows remain tappable. The domain rail collapses to a horizontal wrap-bar above
-  the content on `<768px`, and the settings sidebar becomes a scrollable pill strip.
-- **Spacing:** Section gaps scale `clamp(1.5rem, 5vw, 2.5rem)`.
+The system is flat by default. Background surfaces use the Void → Carbon → Slate tonal ramp to express layering; no shadow is needed to convey "this is a different surface." Shadows appear only when an element is physically floating above the canvas in a modal sense: drawers, popovers, dropdown panels. Never on cards, table rows, or navigation items at rest.
 
----
+The single accent glow (`0 2px 14px color-mix(in srgb, var(--accent) 26%, transparent)`) is reserved for the primary button — a affordance cue, not a depth cue.
 
-## 8. Motion & Interaction
+### Shadow Vocabulary
 
-- **Spring physics default:** `stiffness: 100, damping: 20` for drawer slide, tab
-  underline, and hover lifts. **No linear easing.**
-- **Staggered reveals:** Table rows cascade in on load (≈24ms stagger, brief) — never an
-  instant dump. Cap the cascade so large lists don't feel slow.
-- **Load shimmer:** Skeleton blocks use a left-to-right shimmer sweep (opacity/transform
-  only).
-- **Inline action state:** A small accent-topped ring spinner is allowed *only* on an
-  in-flight row/card action (e.g. merging a PR) — momentary, scoped to one control, and
-  disabled under `prefers-reduced-motion`. Page and table loads still use skeletons.
-- **Restraint:** No perpetual ambient loops on a data tool — motion serves state change
-  (load, open, switch), then rests. The cockpit should feel still when you're reading.
-- **Performance:** Animate **only** `transform` and `opacity`. Never `top/left/width/
-  height`. Any grain/scrim on a fixed pseudo-element only.
+- **Float Shadow** (`-8px 0 32px rgba(10,10,11,0.45)` + `–1px 0 0 color-mix(in srgb, kelp-teal 22%, transparent)`): Right-edge drawers and the settings panel. The 1px accent-tinted left border is the "open" signal; the shadow grounds it in space.
+- **Scrim** (`rgba(10,10,11,0.55)` at full viewport coverage): Behind open drawers and panels only. Not used for tooltips or inline popovers.
+- **Accent Glow** (`0 2px 14px color-mix(in srgb, kelp-teal 26%, transparent)`, expands to 32% on hover): Primary button only. Hover state expands the spread.
 
----
+### Named Rules
 
-## 9. Anti-Patterns (NEVER DO)
+**The Float-Only Rule.** Shadows signal physical elevation above the canvas — something the user can reach out and grab. A card in a list is not elevated; it is adjacent. Never add `box-shadow` to cards, table rows, section containers, or nav items. The tonal ramp is the depth system; shadows are the exception.
 
-- **No emojis anywhere** (remove the existing 🎉 zero-state).
-- No `Inter`; no system-default font stack for app chrome.
-- No serif fonts of any kind (this is a dashboard).
-- No pure black (`#000000`) — Void Zinc `#0A0A0B` is the floor.
-- No blue or purple accent (avoids the GitHub/AI-neon default); no neon glow. Shadows are
-  tinted to the canvas hue — the lone exception is the restrained accent-tinted shadow and
-  focus ring on the primary CTA and active accents.
-- More than one accent color, or any accent above 80% saturation.
-- Gradient text on headings; gradient fills on buttons.
-- Custom mouse cursors.
-- Overlapping/absolutely-stacked content (the drawer is the only intentional overlay).
-- The generic "3 equal cards in a row" feature layout; card grids for tabular data.
-- Circular/spinner loaders for page or table loads, or bare "Loading…" text — skeletons
-  only (a momentary inline action spinner on one in-flight control is the lone exception).
-- Centered page/hero layouts at this variance.
-- Generic placeholder identities ("John Doe", "Acme", "Nexus") and fake round numbers
-  (`99.99%`, `50%`).
-- AI copywriting clichés ("Elevate", "Seamless", "Unleash", "Next-Gen").
-- Filler UI text: "Scroll to explore", "Swipe down", scroll arrows, bouncing chevrons.
-- Broken Unsplash links — use `picsum.photos` or inline SVG for any placeholder imagery.
-```
+## 5. Components
+
+### Buttons
+
+**Character:** Responsive and precise — small Y-axis transforms on press, spring easing on transitions. They behave like physical controls without theatrical animation.
+
+- **Shape:** Gently rounded edges (8px radius)
+- **Primary:** Kelp Teal fill (`#2E9E96`), Void text (`#0A0A0B`), accent glow shadow. Padding 8px 18px, min-height 38px. Hover: `brightness(1.06)` + expanded glow. Active: `translateY(1px)` + collapsed glow. Transition: 0.08s spring transform, 0.15s linear filter/shadow.
+- **Ghost:** Transparent fill, Bone text, `line-strong` border. Hover: Carbon background fill. Same active transform. Used for secondary actions alongside a Primary.
+- **Icon:** 38×38px square, `line-strong` border, Ash icon color. Hover: Bone icon + Carbon bg. Used for the theme toggle, refresh, settings trigger.
+- **Disabled:** 40% opacity via `.act[disabled]` pattern. Cursor `not-allowed`. Never change the color to gray — preserve the shape so disabled is identifiable, not invisible.
+
+### Status Chip
+
+The merged health indicator in the command bar — provider mark + repository ID + a leading dot that carries the health state.
+
+- **Default:** Raised Zinc bg, `line` border, pill radius, Ash dot (inert state)
+- **Healthy (ok):** Kelp Teal dot with `0 0 0 3px` teal halo at 22% opacity
+- **Warning:** Medium Amber dot
+
+### Tier Badges
+
+The P0–P3 tier indicators — the most frequently scanned element in the triage table.
+
+- **Shape:** Pill (999px radius), mono 12px 600 weight, 0.02em letter-spacing, 2px 9px padding
+- **P0:** Critical Red fill (`#D6504A`), Void text. **P1:** High Orange (`#C9783F`). **P2:** Medium Amber (`#C2A23E`). **P3:** Low Green (`#5E9E6A`).
+- These are the only full-fill colored elements in the table. Everything else is text or icon.
+
+### Inputs / Fields
+
+- **Style:** Raised Zinc bg (`#1C1C21`), `line` border (1px, rgba(255,255,255,0.08)), 8px radius, Bone text, Ash placeholder
+- **Focus:** Kelp Teal border + `0 0 0 2px color-mix(in srgb, teal 45%, transparent)` focus ring. No box-shadow on focus — only the ring.
+- **Error:** P0 red border + P0 red ring at 40% opacity. `aria-invalid="true"` drives this.
+- **Checkboxes/Radios:** Reset to native control sized to glyph, tinted to Kelp Teal via `accent-color`. Not full-width — they must never inherit the 40px min-height text-field treatment.
+
+### Domain Rail Navigation
+
+The 200px left sidebar — vertical Findings/Work group structure.
+
+- **Default item:** Full-width, transparent bg, Ash text, 8px radius, 1px transparent border. Hover: Bone text.
+- **Active item:** Carbon bg, Bone text, `line` border — one step above the void, just enough to be "selected."
+- **Group labels:** JetBrains Mono, 10.5px, 0.09em tracking, uppercase, Ash. Non-interactive. Separated by a `line`-colored top border + 14px margin gap.
+- **Upcoming items:** 60% opacity; `rail-soon` badge (mono 9.5px uppercase, pill).
+
+### Drawer (Detail Panel)
+
+The right-edge slide-over for PR/issue/alert detail.
+
+- **Width:** `min(520px, 92vw)`. Full-viewport height. Spring-animated transform: `translateX(100%)` → `translateX(0)` in 0.32s.
+- **Structure:** Fixed header (title + tier + provider ref + close), scrollable body, sticky footer (action buttons).
+- **Close button:** 30×30px, 7px radius, `line-strong` border, Ash icon. Hover: Bone + Slate bg.
+- **On mobile (≤768px):** Left and right inset both 0 — full-width panel.
+
+### Settings Panel
+
+Full-viewport surface with a two-column layout (190px fixed sidebar + flexible content, capped at 1440px centered).
+
+- **Sidebar:** Vertical category list. Active category: Kelp Teal 12% bg tint + `inset 3px 0 0 var(--accent)` left-edge indicator. The inset box-shadow is the only box-shadow used on a navigation surface — it signals "selected tab" not "elevation."
+- **Content:** `repeat(auto-fit, minmax(300px, 1fr))` grid. Wide sections opt out with `.wide`.
+- **Section cards:** Raised Zinc bg, `line` border, 12px radius, 18px internal padding.
+
+### Chips and Labels
+
+- **Priority chip (`.chip`):** Mono 11px, Ash text, Raised Zinc bg, `line` border, pill
+- **Badge (`.badge`):** Kelp Teal text at 100% + 14% bg tint + 40% border, mono 11px uppercase. Used for "SOON" roadmap artifacts.
+- **PR/Issue labels (`.lbl`):** Color from the GitHub label's `--lbl` custom property. Default falls back to Ash. The bg and border are always `color-mix(in srgb, var(--lbl) 14%/45%, transparent)` — labels inherit their palette from the data, not from the design system.
+
+## 6. Do's and Don'ts
+
+### Do:
+
+- **Do** use Kelp Teal only for interactive affordances (primary buttons, focus rings, active nav, links) and positive-state indicators. If the element isn't clickable or explicitly "OK", it doesn't get teal.
+- **Do** use JetBrains Mono for all numeric, identifier, and code-like content: scores, usernames, repo names, timestamps, tier labels. The register distinction is load-bearing.
+- **Do** use spring easing (`cubic-bezier(.22,1,.36,1)`) for interactive transforms. Reserve linear easing for skeleton shimmer and spinner rotation only.
+- **Do** handle `prefers-reduced-motion` for every animation. The grain overlay reduces to 2% opacity; spinners stop animating; transitions collapse to instant crossfades.
+- **Do** use the Void → Carbon → Slate tonal ramp to convey surface layering. These three steps are the depth system.
+- **Do** verify contrast ≥ 4.5:1 for body text, ≥ 3:1 for large/bold text. Against Void Zinc, Bone achieves ~18:1 — do not substitute Ash for body text, even for "visual quietness."
+- **Do** include both `tier` label text (P0/P1/P2/P3) and color when displaying priority. Color is not the sole differentiator — the label is always present.
+
+### Don't:
+
+- **Don't** make the interface look like a GitHub reskin. triagekit has its own identity. Navigation should not mirror GitHub's sidebar; the data model should not mirror GitHub's visual hierarchy. The tool feeds from GitHub; it doesn't wear it.
+- **Don't** use the generic dev-tool dark mode palette — #1e1e1e / #252526 backgrounds, VSCode-grey surfaces, blue (`#007acc` / `#0ea5e9`) accents. This system uses Void Zinc (#0A0A0B) and Kelp Teal (#2E9E96) as its specific, non-generic identity.
+- **Don't** use security vendor dashboard patterns — badge-heavy layouts, chart-per-metric grids, corporate card-with-icon layouts, padded whitespace that implies an enterprise audience. triagekit is a developer's tool, not a compliance dashboard.
+- **Don't** use SaaS-slick patterns — gradient cards, generous whitespace, marketing-grade entrance animations. The landing page can be more expressive; the app interior must not be.
+- **Don't** add box-shadow to cards, table rows, or nav items at rest. The Float-Only Rule: shadows are for physically elevated surfaces (drawers, popovers) only.
+- **Don't** use border-left greater than 1px as a colored accent stripe on cards or list items. The only exception is the Settings sidebar's `inset 3px 0 0 var(--accent)` active indicator — that is a tab selection signal, not decoration.
+- **Don't** use gradient text (`background-clip: text`). All text is a single solid color.
+- **Don't** use P0–P3 colors outside their priority tier context. Critical Red is not a generic error color. Medium Amber is not "caution yellow." These colors carry scoring meaning; reusing them for unrelated UI states destroys the ramp's legibility.
+- **Don't** apply `text-transform: uppercase` to text over 13px or to sentence-case prose. Uppercase is structural (column headers, group labels, badge text) — never rhetorical.
+- **Don't** nest cards. A section card (`.set-section`) inside a panel inside a sheet is the correct depth; a card-inside-a-card-inside-a-card compounds depth without adding hierarchy.
