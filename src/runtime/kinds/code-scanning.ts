@@ -1,5 +1,7 @@
 // src/runtime/kinds/code-scanning.ts
 import type { KindDeclaration, Scorer } from "../catalog/types";
+import type { Tier } from "../scoring/tier";
+import type { CodeScanningDetails } from "../dataset/kinds/code-scanning";
 import { codeScanningScore } from "../scoring/code-scanning";
 import {
   codeScanningCharts,
@@ -39,4 +41,15 @@ export const codeScanningKind: KindDeclaration = {
   sorts: codeScanningSorts,
   charts: codeScanningCharts,
   views: [codeScanningView],
+  projectTarget: (item) => {
+    const d = item.details as CodeScanningDetails | undefined;
+    return {
+      title: item.title,
+      location: item.location,
+      providerReference: { ruleId: d?.ruleId ?? "", tool: d?.tool ?? "", securitySeverity: d?.securitySeverity ?? "low" },
+      createdAt: item.createdAt,
+      priority: { signal: item.signal, score: 0, tier: "P3" as Tier },
+      details: { ruleId: d?.ruleId ?? "", ruleName: d?.ruleName ?? "", securitySeverity: d?.securitySeverity ?? "low", tool: d?.tool ?? "" },
+    };
+  },
 };

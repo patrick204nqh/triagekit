@@ -1,5 +1,7 @@
 // src/runtime/kinds/dependency-vuln.ts
 import type { KindDeclaration, Scorer } from "../catalog/types";
+import type { Tier } from "../scoring/tier";
+import type { DependencyVulnDetails } from "../dataset/kinds/dependency-vuln";
 import { dependencyVulnScore } from "../scoring/dependency-vuln";
 import {
   dependencyVulnCharts,
@@ -41,4 +43,15 @@ export const dependencyVulnKind: KindDeclaration = {
   sorts: dependencyVulnSorts,
   charts: dependencyVulnCharts,
   views: [dependencyVulnView],
+  projectTarget: (item) => {
+    const d = item.details as DependencyVulnDetails | undefined;
+    return {
+      title: item.title,
+      location: item.location,
+      providerReference: { package: d?.package ?? "", severity: d?.severity ?? "low", cvss: d?.cvss ?? 0 },
+      createdAt: item.createdAt,
+      priority: { signal: item.signal, score: 0, tier: "P3" as Tier },
+      details: { package: d?.package ?? "", severity: d?.severity ?? "low", fixAvailable: d?.fixAvailable ?? false },
+    };
+  },
 };

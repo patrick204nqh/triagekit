@@ -1,6 +1,8 @@
 // src/runtime/kinds/change-request.ts
 import type { KindDeclaration, Scorer } from "../catalog/types";
+import type { Tier } from "../scoring/tier";
 import type { FieldDef } from "../scoring/field-catalog";
+import type { ReviewDetails } from "../dataset/shapes/review";
 import { reviewScore } from "../scoring/review";
 import {
   changeRequestRenderer,
@@ -28,4 +30,15 @@ export const changeRequestKind: KindDeclaration = {
   sorts: [],
   charts: [],
   views: [changeRequestView],
+  projectTarget: (item) => {
+    const d = item.details as ReviewDetails | undefined;
+    return {
+      title: item.title,
+      location: item.location,
+      providerReference: { number: d?.number ?? 0, state: d?.state ?? "open" },
+      createdAt: item.createdAt,
+      priority: { signal: item.signal, score: 0, tier: "P3" as Tier },
+      details: { number: d?.number ?? 0, state: d?.state ?? "open", author: d?.author?.login ?? "" },
+    };
+  },
 };
