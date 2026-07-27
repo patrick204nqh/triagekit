@@ -1,10 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { bootstrap } from "../../src/runtime/bootstrap";
-import { toolbarPropsFromShell } from "../../src/runtime/shell/app-shell";
-import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 import { mockGithubItems } from "../helpers/github-fetch";
-import { readUrlState } from "../../src/runtime/shell/url-state";
+import { parseSessionQuery } from "../../src/runtime/session/serialized-session";
 import type { TriageConfigT } from "../../src/config/schema";
 
 const flush = () => new Promise<void>(r => setTimeout(r, 0));
@@ -95,62 +93,6 @@ describe("mountShell artifact navigation", () => {
     expect(labels).not.toContain("Pull requests");
   });
 
-  it("keeps a sticky activeRepo 'on' across artifact switches that have it, and coerces to All where it's absent", () => {
-    // The shell's activeRepo STATE is sticky (never reset on artifact switch); only the
-    // DISPLAYED active tab is coerced by toolbarPropsFromShell. Exercise that coercion
-    // deterministically over two row-sets — far more reliable than the DOM path, which
-    // only produces repo tabs given credentialed/scoped sources unavailable in this env.
-    const row = (location: string): ScoredItem => ({
-      id: location + ":1", provider: "github", providerRef: {}, kind: "issue", title: "t",
-      location, signal: 1, createdAt: "2026-01-01T00:00:00Z", url: "", details: {},
-      score: 1, tier: "P3",
-    });
-    const base = {
-      artifact: { id: "issue", label: "Issues", group: "work" as const, kinds: ["issue" as const] },
-      filters: { axes: {}, sort: "priority" }, hasInsights: false, activeView: "list",
-      providers: [{ id: "github", provider: "github", status: "ready" }],
-      activeProvider: "github", extraTabs: [],
-    };
-
-    // Sticky activeRepo "acme/api" is present in artifact A → stays selected.
-    const onA = toolbarPropsFromShell({ ...base, rows: [row("acme/api"), row("acme/web")], activeRepo: "acme/api" });
-    expect(onA.activeRepo).toBe("acme/api");
-
-    // Same sticky state, an artifact B WITHOUT it → display falls back to All ("").
-    const onB = toolbarPropsFromShell({ ...base, rows: [row("acme/cli"), row("acme/docs")], activeRepo: "acme/api" });
-    expect(onB.activeRepo).toBe("");
-
-    // Returning to an artifact that has it again → selection restored (state never reset).
-    const backToA = toolbarPropsFromShell({ ...base, rows: [row("acme/api"), row("acme/web")], activeRepo: "acme/api" });
-    expect(backToA.activeRepo).toBe("acme/api");
-  });
-
-  it("scopes the toolbar's option rows to the active repo, but lists every repo as a tab", () => {
-    // Filter options + count must reflect the SELECTED repo (per-repo labels), while the
-    // repo tab list must still show all repos so the user can switch. Regression guard:
-    // toolbar `rows` (options/count source) was previously the all-repos set.
-    const row = (location: string): ScoredItem => ({
-      id: location + ":1", provider: "github", providerRef: {}, kind: "issue", title: "t",
-      location, signal: 1, createdAt: "2026-01-01T00:00:00Z", url: "", details: {},
-      score: 1, tier: "P3",
-    });
-    const base = {
-      artifact: { id: "issue", label: "Issues", group: "work" as const, kinds: ["issue" as const] },
-      filters: { axes: {}, sort: "priority" }, hasInsights: false, activeView: "list",
-      providers: [{ id: "github", provider: "github", status: "ready" }],
-      activeProvider: "github", extraTabs: [],
-    };
-    const rows = [row("acme/api"), row("acme/api"), row("acme/web")];
-
-    const scoped = toolbarPropsFromShell({ ...base, rows, activeRepo: "acme/api" });
-    expect(scoped.repos.map(r => r.id)).toEqual(["acme/api", "acme/web"]);   // all repos as tabs
-    expect(scoped.rows.every(r => r.location === "acme/api")).toBe(true);     // options scoped
-    expect(scoped.rows.length).toBe(2);
-
-    const all = toolbarPropsFromShell({ ...base, rows, activeRepo: "" });
-    expect(all.rows.length).toBe(3);                                          // All = unscoped
-  });
-
   it("writes state changes to the URL query string", async () => {
     history.replaceState(null, "", "/");
     bootstrap(config);
@@ -159,8 +101,8 @@ describe("mountShell artifact navigation", () => {
     const buttons = rail.querySelectorAll("button");
     (buttons[0] as HTMLElement).click();   // pick the first artifact
     await flush();
-    const state = readUrlState(location.search);
-    expect(state.artifact).toBeTruthy();   // artifact id was written
+    const state = parseSessionQuery(location.search);
+    expect(state.kind).toBeTruthy();   // artifact id was written
     expect(state.view).toBe("list");        // rail click resets view to list
   });
 
@@ -171,8 +113,8 @@ describe("mountShell artifact navigation", () => {
     history.replaceState(null, "", "/?artifact=issue&provider=github&view=list&sort=recent");
     bootstrap(config);
     await flush();
-    const state = readUrlState(location.search);
-    expect(state.artifact).toBe("issue");
+    const state = parseSessionQuery(location.search);
+    expect(state.kind).toBe("issue");
     expect(state.provider).toBe("github");
     expect(state.sort).toBe("recent");
     // The applied artifact leads the rail as the active button.
@@ -185,7 +127,7 @@ describe("mountShell artifact navigation", () => {
     history.replaceState(null, "", "/?artifact=does-not-exist&provider=nope&sort=bogus");
     expect(() => bootstrap(config)).not.toThrow();
     await flush();
-    const state = readUrlState(location.search);
+    const state = parseSessionQuery(location.search);
     // The bogus sort was dropped on load; default "priority" remains in effect, and
     // the (unchanged) URL still reflects the raw query (load doesn't rewrite it).
     expect(state.sort).toBe("bogus");

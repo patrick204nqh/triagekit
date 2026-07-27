@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { TriageConfigT } from "../../src/config/schema";
 import { createStore } from "../../src/runtime/core/store";
 import { mountShell } from "../../src/runtime/shell/app-shell";
@@ -14,6 +16,21 @@ const config: TriageConfigT = {
 };
 
 describe("shell Session adapter", () => {
+  it("contains no legacy navigation state owner", () => {
+    const source = readFileSync(
+      join(process.cwd(), "src/runtime/shell/app-shell.ts"),
+      "utf8",
+    );
+    for (const forbidden of [
+      "toolbarPropsFromShell",
+      "let activeProvider",
+      "let repoView",
+      "let filterState",
+    ]) {
+      expect(source).not.toContain(forbidden);
+    }
+  });
+
   beforeEach(() => {
     sessionStorage.clear();
     localStorage.clear();

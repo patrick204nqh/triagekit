@@ -53,7 +53,7 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
   const sel = (id: string) => p.filters.axes[id] ?? [];
   const fcount = activeFilterCount(p.filters);
   const curSort = sorts.find(s => s.id === p.filters.sort)?.label ?? "Priority";
-  // p.rows is the active-repo-scoped set (see toolbarPropsFromShell); count what the
+  // p.rows is the active-repository-scoped set; count what the
   // filters actually leave visible vs. that scoped total, so the badge never claims
   // more rows than the table shows.
   const total = p.rows.length;

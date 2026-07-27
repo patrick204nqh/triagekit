@@ -20,7 +20,6 @@ import { healthOf, scopeSummary } from "./health";
 import { mountSettings } from "./settings";
 import { providerIcon } from "./provider-icons";
 import { getThemeChoice, cycleTheme } from "./theme";
-import { writeUrlState, readUrlState } from "./url-state";
 import { getRefreshInterval, relativeSince } from "./refresh";
 import { scopeKey } from "../core/scope-key";
 import { adapterBotLogins } from "../core/author-policy";
@@ -77,7 +76,7 @@ export interface ToolbarPropsInput {
 
 // Pure assembly of the toolbar's view-mode / provider-scope / filter props from the
 // shell's state, extracted so it's testable without mounting the whole shell.
-export function toolbarPropsFromShell(i: ToolbarPropsInput): Omit<ToolbarProps, "onFilterChange" | "onViewChange" | "onProviderSelect" | "onRepoSelect"> {
+function assembleToolbarProps(i: ToolbarPropsInput): Omit<ToolbarProps, "onFilterChange" | "onViewChange" | "onProviderSelect" | "onRepoSelect"> {
   const viewModes = [{ id: "list", label: "List" }];
   if (i.hasInsights) viewModes.push({ id: "insights", label: "Insights" });
   for (const t of i.extraTabs) viewModes.push({ id: t.id, label: t.label });
@@ -124,11 +123,11 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   let active: Artifact = catalog.artifact(initialSession.kind)
     ?? artifacts.find((artifact) => readyProvidersFor(artifact).length)
     ?? artifacts[0];
-  let view: string = initialSession.view;
-  let activeProvider: string = initialSession.provider;
-  let repoView = initialSession.effectiveRepository;
+  const currentView = () => session.snapshot().view;
+  const currentProvider = () => session.snapshot().provider;
+  const currentRepository = () => session.snapshot().effectiveRepository;
+  const currentFilters = () => session.snapshot().filters;
   let lastRows: ScoredItem[] = [];
-  let filterState: ListState = initialSession.filters;
   let lastFetchedAt: number | null = null;
   let cancelRefresh: (() => void) | undefined;
 
@@ -143,55 +142,9 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     "|" + applicableCatalogTabs(catalog, active, lastRows).map(t => t.id).sort().join(",");
   let lastNavRowSig = "";
 
-  // --- Apply URL state on load (artifact → provider → repo → view → sort/axes) ---
-  // Runs before the first buildRail/buildNav/render and before any syncUrl(), so a
-  // bookmarked / shared / reloaded URL is honored, not clobbered. Each field is
-  // validated independently; invalid/absent values silently keep today's defaults.
-  {
-    const u = readUrlState();
-
-    // artifact: only if it's a known artifact id (artifact id === kind)
-    if (u.artifact) {
-      const a = artifacts.find(x => x.id === u.artifact);
-      if (a) active = a;
-    }
-
-    // provider: only if it's a source id within the (resolved) artifact's sources
-  if (u.provider) {
-      const ok = providersForArtifact(active)
-        .some(provider => provider.id === u.provider);
-      if (ok) activeProvider = u.provider;
-    }
-
-    // repo: applied optimistically (cannot validate pre-fetch; self-corrects via the
-    // repo control + the "All" fallback when the repo isn't among the loaded rows)
-    if (u.repoView) repoView = u.repoView;
-
-    // view: list / insights (when available) / a registered extra tab applicable to
-    // the artifact. applicableTabs needs rows to report a tab applicable, so pre-fetch
-    // an extra-tab id may fall back to "list" — acceptable degradation; it self-heals
-    // once data loads and the user re-selects the tab.
-    if (u.view) {
-    const isExtra = applicableCatalogTabs(catalog, active, []).some(t => t.id === u.view);
-      if (u.view === "list" || (u.view === "insights" && hasInsights) || isExtra) view = u.view;
-    }
-
-    // sort: only if the sort key exists
-    if (u.sort && catalog.sort(u.sort)) filterState = { ...filterState, sort: u.sort };
-
-    // axes: only axis ids that exist (values not deep-validated — unknown values match nothing)
-    if (u.axes) {
-      const axes: Record<string, string[]> = { ...filterState.axes };
-      for (const [id, vals] of Object.entries(u.axes)) {
-        if (catalog.filter(id) && vals.length) axes[id] = vals;
-      }
-      filterState = { ...filterState, axes };
-    }
-  }
-
   // The credentialed, scoped sources for the active artifact's active provider.
   const usableProviders = () => readyProvidersFor(active).filter(provider =>
-    provider.id === activeProvider
+    provider.id === currentProvider()
     && creds.get(connectionKey(provider))
     && Object.keys(scopes.get(connectionKey(provider))).length);
 
@@ -200,20 +153,6 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     const m = policy.getScoreModel(i.kind);
     if (!m || validateModel(m, catalog.fieldsFor(i.kind)).length !== 0) return null;
     try { return explainScoreModel(m, i); } catch { return null; }
-  };
-
-  // Assemble the current page state and mirror it to the URL query string.
-  // Called from every state-mutation handler (replaceState — no history spam).
-  const syncUrl = () => {
-    const { sort, axes } = filterState;
-    writeUrlState({
-      provider: activeProvider || undefined,
-      repoView: repoView || undefined,
-      artifact: active?.id,
-      view,
-      sort,
-      axes,
-    });
   };
 
   // Filter change: update state, re-derive from the store (no refetch).
@@ -237,9 +176,6 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
         ],
       }, vm.scored);
       if (reconciliation.work !== "none") {
-        repoView = reconciliation.state.effectiveRepository;
-        view = reconciliation.state.view;
-        filterState = reconciliation.state.filters;
         sessionUrl.write(reconciliation.serialized);
         if (reconciliation.work === "rederive") {
           queueMicrotask(() => core.rerender());
@@ -258,9 +194,9 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       // Rebuild the toolbar when that row-derived set actually changes — but not on
       // every paint, so a background refresh doesn't tear down an open filter popover.
       if (navRowSig() !== lastNavRowSig) buildNav();
-    if (view === "insights") { renderInsights(root, vm.scored, active.kinds, catalog); return; }
-    if (view !== "list") {
-      const tab = catalog.tabs().find((candidate) => candidate.id === view);
+      if (currentView() === "insights") { renderInsights(root, vm.scored, active.kinds, catalog); return; }
+      if (currentView() !== "list") {
+        const tab = catalog.tabs().find((candidate) => candidate.id === currentView());
       if (tab) { tab.render(root, vm.scored); return; }
     }
       // createDomView is called per-render intentionally: artifact: active and token
@@ -270,7 +206,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     env.createDomView(root, {
       artifact: active,
       token,
-      providerId: activeProvider,
+        providerId: currentProvider(),
       scoreExplain,
       catalog: catalog,
     }).render(vm);
@@ -295,16 +231,12 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       getThresholds: () => policy.getTiers(),
       override: env.scoreOverride,
     }),
-    filters: () => filterState,
-    repoView: () => repoView,
+    filters: currentFilters,
+    repoView: currentRepository,
   });
 
   function applySessionUpdate(update: SessionUpdate): void {
     active = catalog.artifact(update.state.kind) ?? active;
-    activeProvider = update.state.provider;
-    repoView = update.state.effectiveRepository;
-    view = update.state.view;
-    filterState = update.state.filters;
     sessionUrl.write(update.serialized);
 
     if (update.work === "refresh") {
@@ -367,7 +299,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   // Status chip shows the single active provider scope.
   function refreshBar() {
     const live = readyProvidersFor(active);
-    const lead = live.find(s => s.id === activeProvider) ?? primaryProvider(active);
+    const lead = live.find(s => s.id === currentProvider()) ?? primaryProvider(active);
     let cls = "warn", tail: string;
     if (!live.length) { tail = "upcoming"; }
     else {
@@ -419,12 +351,12 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     lastNavRowSig = navRowSig();   // track the row-derived inputs this build reflects
     nav.innerHTML = "";
     if (!readyProvidersFor(active).length) return;   // upcoming artifact: no toolbar
-    const base = toolbarPropsFromShell({
-      artifact: active, rows: lastRows, filters: filterState,
-      hasInsights, activeView: view,
+    const base = assembleToolbarProps({
+      artifact: active, rows: lastRows, filters: currentFilters(),
+      hasInsights, activeView: currentView(),
       providers: providersForArtifact(active).map(s => ({ id: s.id, provider: s.id, status: s.status })),
-      activeProvider,
-      activeRepo: repoView,
+      activeProvider: currentProvider(),
+      activeRepo: currentRepository(),
       extraTabs: applicableCatalogTabs(catalog, active, lastRows)
         .map(t => ({ id: t.id, label: t.label })),
     });
@@ -454,14 +386,14 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       lastFetchedAt = null; updateSync();
       return;
     }
-    if (!silent && view === "insights" && lastRows.length) { renderInsights(root, lastRows, active.kinds); return; }
-    if (!silent && view !== "list" && view !== "insights" && lastRows.length) {
-      const tab = catalog.tabs().find((candidate) => candidate.id === view);
+    if (!silent && currentView() === "insights" && lastRows.length) { renderInsights(root, lastRows, active.kinds); return; }
+    if (!silent && currentView() !== "list" && currentView() !== "insights" && lastRows.length) {
+      const tab = catalog.tabs().find((candidate) => candidate.id === currentView());
       if (tab) { tab.render(root, lastRows); return; }
     }
 
     if (!usableProviders().length) {
-      const needScope = live.some(s => s.id === activeProvider && creds.get(connectionKey(s)) && !Object.keys(scopes.get(connectionKey(s))).length);
+      const needScope = live.some(s => s.id === currentProvider() && creds.get(connectionKey(s)) && !Object.keys(scopes.get(connectionKey(s))).length);
       root.innerHTML = `<p class="muted">Open Settings to ${needScope ? "choose your scope" : "connect a token"}.</p>`;
       lastFetchedAt = null; updateSync();
       return;

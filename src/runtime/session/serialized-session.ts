@@ -10,9 +10,12 @@ const RESERVED = new Set([
 
 const canonicalProvider = (provider: string | null): string | undefined => {
   if (!provider) return undefined;
+  const githubLegacySuffix = provider.startsWith("github-")
+    ? provider.slice("github-".length)
+    : "";
   if (
-    provider === "github-review"
-    || provider === "github-code-scanning"
+    githubLegacySuffix === "review"
+    || githubLegacySuffix === "code-scanning"
   ) {
     return "github";
   }
