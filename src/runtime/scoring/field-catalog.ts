@@ -11,7 +11,7 @@ export interface FieldDef {
 }
 
 // Present on every TriageItem regardless of kind.
-const BASE: FieldDef[] = [
+export const baseFields: readonly FieldDef[] = [
   { name: "signal", type: "number", range: [0, 100] },
   { name: "createdAt", type: "date" },
 ];
@@ -21,7 +21,7 @@ export function registerFieldCatalog(kind: Kind, fields: FieldDef[]): void {
   catalogs.set(kind, fields);
 }
 export function fieldsFor(kind: Kind): FieldDef[] {
-  return [...BASE, ...(catalogs.get(kind) ?? [])];
+  return [...baseFields, ...(catalogs.get(kind) ?? [])];
 }
 export function listFieldCatalogs(): Array<[Kind, FieldDef[]]> {
   return [...catalogs.entries()];
