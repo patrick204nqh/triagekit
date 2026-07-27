@@ -39,7 +39,9 @@ function showBriefInDrawer(
   if (!head) return;
   const origHead = head.innerHTML;
   const origBody = body.innerHTML;
-  const origFoot = foot.innerHTML;
+  // Strip the Generate Brief button from origFoot so the back handler creates a fresh
+  // one with a working listener (innerHTML doesn't serialize addEventListener).
+  const origFoot = foot.innerHTML.replace(/<button\b[^>]*data-brief-gen[^>]*>.*?<\/button>/i, "");
   const intent = handoff.intent;
   const t = handoff.targets[0];
   const s = handoff.context.session;
