@@ -1,5 +1,6 @@
 import type { TriageConfigT } from "../config/schema";
 import { createDomView } from "./adapters/dom-view";
+import { createBrowserSessionUrl } from "./adapters/browser-session-url";
 import { createTimer } from "./adapters/timer";
 import { runtimeDefaults } from "./catalog/defaults";
 import { createRuntimeCatalog } from "./catalog/runtime-catalog";
@@ -16,6 +17,7 @@ import { installAvatarFallback } from "./layout/atoms/avatar-fallback";
 import { createGithubProvider } from "./providers/github/provider";
 import { upcomingProviders } from "./providers/upcoming";
 import { mountShell } from "./shell/app-shell";
+import { createTriageSession } from "./session/triage-session";
 
 export function createProductionCatalog(
   fetchImpl: typeof fetch,
@@ -39,6 +41,8 @@ export function bootstrap(config: TriageConfigT, scoreOverride?: Scorer): Core {
   const store = createStore();
   const timer = createTimer();
   const catalog = createProductionCatalog(fetch);
+  const session = createTriageSession({ catalog });
+  const sessionUrl = createBrowserSessionUrl(window);
 
   return mountShell(config, {
     store,
@@ -47,5 +51,7 @@ export function bootstrap(config: TriageConfigT, scoreOverride?: Scorer): Core {
     createDomView,
     scoreOverride,
     catalog,
+    session,
+    sessionUrl,
   });
 }
