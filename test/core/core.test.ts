@@ -39,7 +39,7 @@ describe("createCore", () => {
 
   it("rerender re-derives from the store without refetching", async () => {
     const store = createStore();
-    store.upsert([item("github:1", 10)], { provider: "github", scopeKey: "r1", fetchedAt: 1 });
+    store.upsert([item("github:1", 10)], { provider: "github", scopeKey: "r1", kind: "issue", fetchedAt: 1 });
     let renders = 0; let vm: ViewModel | null = null;
     let fetched = 0;
     const gh: ProviderPort = { id: "github", kinds: ["issue"], fetch: async () => { fetched++; return { items: [], errors: [] }; } };

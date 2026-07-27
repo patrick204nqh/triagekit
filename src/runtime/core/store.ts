@@ -1,9 +1,10 @@
 // src/runtime/core/store.ts
-import type { TriageItem } from "../dataset/item";
+import type { Kind, TriageItem } from "../dataset/item";
 
 export interface Provenance {
   provider: string;    // e.g. "github" — the providerOf(source) value
   scopeKey: string;    // serialized scope identity for that provider+scope
+  kind: Kind;
   fetchedAt: number;   // epoch ms
 }
 export interface StoreEntry { item: TriageItem; provenance: Provenance; }
@@ -22,7 +23,14 @@ export function createStore(fingerprint: Fingerprint = defaultFingerprint) {
   const entries = new Map<string, StoreEntry>();
 
   function upsert(items: readonly TriageItem[], provenance: Provenance): void {
-    for (const item of items) entries.set(fingerprint(item), { item, provenance });
+    for (const item of items) {
+      if (item.provider !== provenance.provider || item.kind !== provenance.kind) {
+        throw new Error(
+          `store provenance mismatch: expected ${provenance.provider}/${provenance.kind}, got ${item.provider}/${item.kind}`,
+        );
+      }
+      entries.set(fingerprint(item), { item, provenance });
+    }
   }
 
   // Swap one provider+scope slice atomically: drop its prior entries, add the new.
@@ -30,7 +38,26 @@ export function createStore(fingerprint: Fingerprint = defaultFingerprint) {
     for (const [fp, e] of entries) {
       if (e.provenance.provider === provider && e.provenance.scopeKey === scopeKey) entries.delete(fp);
     }
-    upsert(items, { provider, scopeKey, fetchedAt });
+    for (const item of items) {
+      upsert([item], { provider, scopeKey, kind: item.kind, fetchedAt });
+    }
+  }
+
+  function replaceKind(
+    provider: string,
+    scopeKey: string,
+    kind: Kind,
+    items: readonly TriageItem[],
+    fetchedAt: number,
+  ): void {
+    for (const [fp, entry] of entries) {
+      if (entry.provenance.provider === provider
+        && entry.provenance.scopeKey === scopeKey
+        && entry.provenance.kind === kind) {
+        entries.delete(fp);
+      }
+    }
+    upsert(items, { provider, scopeKey, kind, fetchedAt });
   }
 
   function remove(fingerprints: string[]): void {
@@ -51,7 +78,7 @@ export function createStore(fingerprint: Fingerprint = defaultFingerprint) {
     return { byProvider, byKind };
   }
 
-  return { upsert, replaceScope, remove, snapshot, stats };
+  return { upsert, replaceScope, replaceKind, remove, snapshot, stats };
 }
 
 export type DatasetStore = ReturnType<typeof createStore>;
