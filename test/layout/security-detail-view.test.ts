@@ -5,7 +5,7 @@ import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 
 function vuln(): ScoredItem {
   return {
-    id: "github:dv:1", source: "github", kind: "dependency-vuln",
+    id: "github:dv:1", provider: "github", providerRef: {}, kind: "dependency-vuln",
     title: "axios", url: "https://github.com/advisories/GHSA-xxxx",
     createdAt: new Date().toISOString(), score: 80, tier: "P0", location: "x/y",
     details: { package: "axios", severity: "high", cvss: 7.5, scope: "runtime", fixAvailable: true, fixVersion: "1.7.4" },

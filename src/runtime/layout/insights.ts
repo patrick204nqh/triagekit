@@ -1,14 +1,19 @@
 import type { Kind } from "../dataset/item";
+import { runtimeCatalog } from "../catalog/built-in";
+import type { RuntimeCatalog } from "../catalog/types";
 import type { ScoredItem } from "./table/kind-renderer";
-import { chartsFor } from "./charts/registry";
 import { esc } from "./util";
-import "./charts/generic";   // register generic charts (side-effect)
 
-export function renderInsights(root: HTMLElement, rows: ScoredItem[], kinds: Kind[]): void {
+export function renderInsights(
+  root: HTMLElement,
+  rows: ScoredItem[],
+  kinds: Kind[],
+  catalog: RuntimeCatalog = runtimeCatalog,
+): void {
   if (!rows.length) { root.innerHTML = `<p class="muted">No items to chart yet — load a view first.</p>`; return; }
   root.innerHTML = `<div class="insights"></div>`;
   const grid = root.querySelector<HTMLElement>(".insights")!;
-  for (const c of chartsFor(kinds)) {
+  for (const c of catalog.chartsFor(kinds)) {
     const card = document.createElement("div");
     card.className = "chart" + (c.span ? " span2" : "");
     const ktag = c.kinds === "*" ? "generic" : (c.kinds as Kind[]).join(", ");

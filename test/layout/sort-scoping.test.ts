@@ -1,8 +1,6 @@
 import { describe, it, expect } from "vitest";
 // Importing the views registers their sort keys as module side-effects.
-import "../../src/runtime/views/code-security/code-scanning";
-import "../../src/runtime/views/code-security/view";
-import { getSortKey } from "../../src/runtime/layout/toolbar/axis-registry";
+import { runtimeCatalog } from "../../src/runtime/catalog/built-in";
 import type { AxisCtx } from "../../src/runtime/layout/toolbar/axis-registry";
 
 // Kind-specific severity sort keys must be scoped via appliesTo, otherwise they
@@ -13,7 +11,7 @@ const ctx = (kinds: string[]): AxisCtx =>
 
 describe("severity sort keys are scoped to their kind", () => {
   it("cs-severity applies only to the code-scanning tab", () => {
-    const k = getSortKey("cs-severity")!;
+    const k = runtimeCatalog.sort("cs-severity")!;
     expect(k.appliesTo).toBeTypeOf("function");
     expect(k.appliesTo!(ctx(["code-scanning"]))).toBe(true);
     expect(k.appliesTo!(ctx(["dependency-vuln"]))).toBe(false);
@@ -21,7 +19,7 @@ describe("severity sort keys are scoped to their kind", () => {
   });
 
   it("dependency-vuln severity applies only to the dependencies tab", () => {
-    const k = getSortKey("severity")!;
+    const k = runtimeCatalog.sort("severity")!;
     expect(k.appliesTo).toBeTypeOf("function");
     expect(k.appliesTo!(ctx(["dependency-vuln"]))).toBe(true);
     expect(k.appliesTo!(ctx(["code-scanning"]))).toBe(false);
@@ -29,7 +27,7 @@ describe("severity sort keys are scoped to their kind", () => {
   });
 
   it("universal sort keys stay unscoped (apply everywhere)", () => {
-    expect(getSortKey("priority")!.appliesTo).toBeUndefined();
-    expect(getSortKey("recent")!.appliesTo).toBeUndefined();
+    expect(runtimeCatalog.sort("priority")!.appliesTo).toBeUndefined();
+    expect(runtimeCatalog.sort("recent")!.appliesTo).toBeUndefined();
   });
 });

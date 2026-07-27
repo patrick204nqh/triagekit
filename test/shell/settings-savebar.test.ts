@@ -10,7 +10,7 @@ function host() { const h = document.createElement("div"); document.body.appendC
 describe("unified save bar", () => {
   it("shows a 0-change baseline and increments when a bot is added", () => {
     const h = host();
-    const s = mountSettings(h, { sources: [], creds: new CredStore(), scopes: new ScopeStore(), policy: new PolicyStore(), onChange: () => {} });
+    const s = mountSettings(h, { providers: [], creds: new CredStore(), scopes: new ScopeStore(), policy: new PolicyStore(), onChange: () => {} });
     s.open();
     const count = () => h.querySelector("[data-unsaved-count]")!.textContent;
     expect(count()).toContain("0");

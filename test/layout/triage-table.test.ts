@@ -1,11 +1,24 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
+import { runtimeCatalog } from "../../src/runtime/catalog/built-in";
+import type { RuntimeCatalog } from "../../src/runtime/catalog/types";
 import { renderTriageList } from "../../src/runtime/layout/table/detail-panel";
-import { registerKindRenderer, type ScoredItem, type DetailCtx } from "../../src/runtime/layout/table/kind-renderer";
+import type {
+  DetailCtx,
+  KindRenderer,
+  ScoredItem,
+} from "../../src/runtime/layout/table/kind-renderer";
+
+const withRenderer = (renderer: KindRenderer): RuntimeCatalog => ({
+  ...runtimeCatalog,
+  readyKind: (kind) => kind === renderer.kind
+    ? { renderer } as ReturnType<RuntimeCatalog["readyKind"]>
+    : runtimeCatalog.readyKind(kind),
+});
 
 function row(over: Partial<ScoredItem>): ScoredItem {
   return {
-    id: "x", source: "t", kind: "dependency-vuln", title: "log4j", location: "acme/web",
+    id: "x", provider: "t", providerRef: {}, kind: "dependency-vuln", title: "log4j", location: "acme/web",
     signal: 10, createdAt: "2026-01-01T00:00:00Z", url: "https://x", details: {},
     score: 100, tier: "P1", ...over,
   } as ScoredItem;
@@ -23,18 +36,24 @@ describe("renderTriageList + DetailPanel", () => {
 
   it("opens the drawer with the row's kind detail, passing ctx", () => {
     const seen: { title?: string; token?: string } = {};
-    registerKindRenderer({
+    const renderer: KindRenderer = {
       kind: "secret-scanning",
       detail: (i, ctx: DetailCtx) => {
         seen.title = i.title; seen.token = ctx.token;
-        return {
-          header: { title: i.title, tier: i.tier, provider: i.source },
+          return {
+            header: { title: i.title, tier: i.tier, provider: i.provider },
           body: (host) => { host.innerHTML = `<p class="probe">${i.title}</p>`; },
         };
       },
-    });
+    };
     const root = document.createElement("div");
-    renderTriageList(root, [row({ kind: "secret-scanning", title: "leaked key" })], [], { token: "tok" });
+    renderTriageList(
+      root,
+      [row({ kind: "secret-scanning", title: "leaked key" })],
+      [],
+      { token: "tok" },
+      withRenderer(renderer),
+    );
     (root.querySelector(".alert-row") as HTMLElement).click();
     const drawer = root.querySelector<HTMLElement>(".drawer")!;
     expect(drawer.hidden).toBe(false);
@@ -63,7 +82,7 @@ describe("renderTriageList + DetailPanel", () => {
 
   it("falls back to a default detail when the kind has no detail()", () => {
     const root = document.createElement("div");
-    renderTriageList(root, [row({ kind: "code-scanning", title: "XSS" })], []);
+    renderTriageList(root, [row({ kind: "cloud-misconfig", title: "XSS" })], []);
     (root.querySelector(".alert-row") as HTMLElement).click();
     expect(root.querySelector(".drawer")!.textContent).toContain("XSS");
   });

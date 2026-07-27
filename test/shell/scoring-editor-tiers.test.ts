@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
 import { mountScoringEditor } from "../../src/runtime/shell/scoring-editor";
-import { registerDefaultModel, _resetDefaultModels } from "../../src/runtime/scoring/default-model";
-import { registerFieldCatalog } from "../../src/runtime/scoring/field-catalog";
 import type { ScoreModel } from "../../src/runtime/scoring/score-model";
+import { scoringCatalog } from "../helpers/scoring-catalog";
 
 const KIND = "dependency-vuln";
 const def: ScoreModel = {
@@ -17,6 +16,9 @@ function harness(initialDrafts: Record<string, ScoreModel> = {}) {
   const drafts = new Map<string, ScoreModel>(Object.entries(initialDrafts));
   const host = document.createElement("div");
   const editor = mountScoringEditor(host, {
+    catalog: scoringCatalog(def, [
+      { name: "cvss", type: "number", range: [0, 10] },
+    ]),
     getDraft: (k) => drafts.get(k) ?? null,
     setDraft: (k, m) => { drafts.set(k, m); },
     clearDraft: () => {},
@@ -27,11 +29,6 @@ function harness(initialDrafts: Record<string, ScoreModel> = {}) {
 }
 
 describe("scoring editor — tier bands", () => {
-  beforeEach(() => {
-    _resetDefaultModels();
-    registerFieldCatalog(KIND, [{ name: "cvss", type: "number", range: [0, 10] }]);
-    registerDefaultModel(KIND, def);
-  });
 
   it("renders P0/P1/P2 min inputs seeded from the model, P3 as floor", () => {
     const { host } = harness();

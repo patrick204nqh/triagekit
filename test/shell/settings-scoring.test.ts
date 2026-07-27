@@ -2,10 +2,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { mountSettings } from "../../src/runtime/shell/settings";
 import { PolicyStore } from "../../src/runtime/shell/policy-store";
-import { registerDefaultModel, _resetDefaultModels } from "../../src/runtime/scoring/default-model";
-import { registerFieldCatalog } from "../../src/runtime/scoring/field-catalog";
 import type { ScoreModel } from "../../src/runtime/scoring/score-model";
-import type { Source } from "../../src/runtime/ingest/source";
+import { scoringCatalog } from "../helpers/scoring-catalog";
 
 const KIND = "dependency-vuln";
 const def: ScoreModel = {
@@ -18,9 +16,12 @@ const def: ScoreModel = {
 function setup() {
   const host = document.createElement("div"); document.body.appendChild(host);
   const policy = new PolicyStore();
-  const sources: Source[] = [];
+  const sources = [];
   const api = mountSettings(host, {
-    sources, creds: { get: () => "", set: () => {} } as any,
+    catalog: scoringCatalog(def, [
+      { name: "cvss", type: "number", range: [0, 10] },
+    ]),
+    providers: sources, creds: { get: () => "", set: () => {} } as any,
     scopes: { get: () => ({}), set: () => {} } as any,
     policy, onChange: () => {},
   });
@@ -31,11 +32,10 @@ function setup() {
 
 describe("Settings → Scoring", () => {
   beforeEach(() => {
-    localStorage.clear(); document.body.innerHTML = "";
-    _resetDefaultModels();
-    registerFieldCatalog(KIND, [{ name: "cvss", type: "number", range: [0, 10] }]);
-    registerDefaultModel(KIND, def);
+    localStorage.clear();
+    document.body.innerHTML = "";
   });
+
 
   it("mounts the scoring editor in the Advanced pane", () => {
     const { host } = setup();

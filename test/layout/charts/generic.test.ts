@@ -4,7 +4,7 @@ import { tierChart, ageChart, topLocationsChart } from "../../../src/runtime/lay
 import type { ScoredItem } from "../../../src/runtime/layout/table/kind-renderer";
 
 const row = (over: Partial<ScoredItem>): ScoredItem => ({
-  id: "x", source: "github", kind: "dependency-vuln", title: "p", location: "acme/web",
+  id: "x", provider: "github", providerRef: {}, kind: "dependency-vuln", title: "p", location: "acme/web",
   signal: 50, createdAt: new Date(Date.now() - 100 * 86400000).toISOString(), url: "",
   details: {}, score: 100, tier: "P1", ...over,
 });

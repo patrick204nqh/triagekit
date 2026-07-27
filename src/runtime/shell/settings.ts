@@ -1,12 +1,29 @@
-import type { Source, Scope, DiscoveryOption } from "../ingest/source";
-import { providerOf } from "../ingest/source";
+import type {
+  DiscoveryOption,
+  ProviderDeclaration,
+  RuntimeCatalog,
+  Scope,
+} from "../catalog/types";
+import { runtimeCatalog } from "../catalog/built-in";
+
+const providerOf = (provider: ProviderDeclaration): string =>
+  provider.id;
+const scopeFieldsOf = (provider: ProviderDeclaration) =>
+  provider.connection.scopeFields;
+const setupHintOf = (provider: ProviderDeclaration) =>
+  provider.connection.setupHint;
+const setupUrlOf = (provider: ProviderDeclaration) =>
+  provider.connection.setupUrl;
+const discoverWith = (
+  provider: ProviderDeclaration,
+  credential: string,
+) => provider.adapter?.discoverScope?.(credential);
 import type { CredStore } from "./cred-store";
 import type { ScopeStore } from "./scope-store";
 import type { PolicyStore } from "./policy-store";
 import { type TierThresholds } from "../scoring/tier";
 import { mountScoringEditor } from "./scoring-editor";
 import { validateModel, type ScoreModel } from "../scoring/score-model";
-import { fieldsFor } from "../scoring/field-catalog";
 import type { Kind } from "../dataset/item";
 import { scopeSummary } from "./health";
 import { providerIcon, categoryIcon } from "./provider-icons";
@@ -26,7 +43,8 @@ const CATEGORIES = [
 ] as const;
 
 interface Opts {
-  sources: Source[]; creds: CredStore; scopes: ScopeStore; policy: PolicyStore;
+  catalog?: RuntimeCatalog;
+  providers: ProviderDeclaration[]; creds: CredStore; scopes: ScopeStore; policy: PolicyStore;
   onChange: () => void;            // credentials/scope committed or cleared
   onThemeChange?: () => void;      // theme applied (resync the top-right toggle)
   onRefreshChange?: () => void;    // auto-refresh cadence changed (reset the timer)
@@ -43,12 +61,11 @@ function fingerprint(token: string): string {
 }
 
 export function mountSettings(host: HTMLElement, opts: Opts) {
-  const { sources, creds, scopes, policy, onChange, onThemeChange, onRefreshChange, getRows, getAutoBots } = opts;
-  // One connection per provider: pick a representative (prefer a ready source), and
-  // key credentials/scope by provider so sources that share a provider share a token.
-  const providerReps: Source[] = (() => {
-    const byProv = new Map<string, Source>();
-    for (const s of sources) {
+  const catalog = opts.catalog ?? runtimeCatalog;
+  const { providers, creds, scopes, policy, onChange, onThemeChange, onRefreshChange, getRows, getAutoBots } = opts;
+  const providerReps: ProviderDeclaration[] = (() => {
+    const byProv = new Map<string, ProviderDeclaration>();
+    for (const s of providers) {
       const p = providerOf(s);
       const cur = byProv.get(p);
       if (!cur || (cur.status !== "ready" && s.status === "ready")) byProv.set(p, s);
@@ -136,14 +153,14 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   const allDraftsValid = () => {
     for (const [k, d] of draftModels) {
       if (d === "reset") continue;
-      if (validateModel(d, fieldsFor(k as Kind)).length) return false;
+      if (validateModel(d, catalog.fieldsFor(k as Kind)).length) return false;
     }
     return true;
   };
   const getTierDraft = () => draftTiers ?? policy.getTiers();
   const getCred = (prov: string) => draftCred.has(prov) ? draftCred.get(prov)! : (creds.get(prov) ?? "");
   const getScope = (prov: string) => draftScope.has(prov) ? draftScope.get(prov)! : scopes.get(prov);
-  const isConnected = (s: Source) => s.status !== "upcoming" && !!getCred(providerOf(s));
+  const isConnected = (s: ProviderDeclaration) => s.status !== "upcoming" && !!getCred(providerOf(s));
   let expanded: string | null = null;   // now holds a provider key
   const repOf = (prov: string) => providerReps.find(s => providerOf(s) === prov)!;
 
@@ -238,17 +255,17 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   // ── Integrations catalog: Connected on top, Available below, filterable ──
   function renderConns() {
     const q = filter.value.trim().toLowerCase();
-    const matches = (s: Source) => !q || providerOf(s).toLowerCase().includes(q);
+    const matches = (s: ProviderDeclaration) => !q || providerOf(s).toLowerCase().includes(q);
     const visible = providerReps.filter(matches);
     const connected = visible.filter(isConnected);
     const available = visible.filter(s => !isConnected(s));
 
-    const row = (s: Source) => {
+    const row = (s: ProviderDeclaration) => {
       const prov = providerOf(s);
       const open = expanded === prov;
       const off = s.status === "upcoming";
       const meta = off ? "" : scopeSummary(s, getScope(prov));
-      const info = s.setup ? `<span class="info" title="${esc(s.setup.hint)}" aria-label="How to connect ${esc(prov)}">i</span>` : "";
+      const info = `<span class="info" title="${esc(setupHintOf(s))}" aria-label="How to connect ${esc(prov)}">i</span>`;
       const action = off ? `<span class="cstat">upcoming</span>`
         : isConnected(s) ? `<span class="cstat">connected</span>`
         : `<span class="cstat add">+ Add</span>`;
@@ -260,7 +277,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
           ${info}${action}${chev}</button>
         <div class="conn-body" data-body="${esc(prov)}" ${open ? "" : "hidden"}></div></div>`;
     };
-    const group = (label: string, list: Source[]) => list.length
+    const group = (label: string, list: ProviderDeclaration[]) => list.length
       ? `<div class="conn-group"><span class="conn-group-label">${label}<span class="count">${list.length}</span></span>${list.map(row).join("")}</div>` : "";
 
     conns.innerHTML = group("Connected", connected) + group("Available", available)
@@ -274,16 +291,18 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     const body = conns.querySelector<HTMLElement>(`[data-body="${prov}"]`);
     if (!body) return;
     const s = repOf(prov); const off = s.status === "upcoming"; const scope = getScope(prov);
-    const setup = s.setup
-      ? `<span class="set-helper">${esc(s.setup.hint)}${s.setup.url ? ` <a class="set-link" href="${esc(s.setup.url)}" target="_blank" rel="noopener noreferrer">Create one ↗</a>` : ""}</span>`
-      : "";
+    const setup = `<span class="set-helper">${esc(setupHintOf(s))}${
+      setupUrlOf(s)
+        ? ` <a class="set-link" href="${esc(setupUrlOf(s)!)}" target="_blank" rel="noopener noreferrer">Create one ↗</a>`
+        : ""
+    }</span>`;
     let html = `<div class="set-group"><label class="set-label">Credential</label>
         <div class="cred-row">
           <input type="password" data-cred ${off ? "disabled" : ""} value="${getCred(prov) ? "••••••••" : ""}" placeholder="token / key — stored in this tab only"/>
           <button type="button" class="btn-ghost mini" data-cred-toggle ${off ? "disabled" : ""}>show</button>
         </div>
         ${setup}<span class="set-helper">Session-only, never persisted or embedded.</span></div>`;
-    for (const f of s.scopeSchema) {
+    for (const f of scopeFieldsOf(s)) {
       html += `<div class="set-group"><label class="set-label">${esc(f.label)}</label>`;
       if (f.discoverable) {
         const cached = getCred(prov) ? discoverCache.get(`${prov}:${fingerprint(getCred(prov))}`) : undefined;
@@ -312,7 +331,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       btn.addEventListener("click", () => runDiscover(s, btn.dataset.discover!, true)));
     // Always surface the *selected* scope as chips (independent of discovery);
     // the "Find/Re-scan" button loads the option list to add more.
-    for (const f of s.scopeSchema) if (f.discoverable && getCred(prov)) {
+    for (const f of scopeFieldsOf(s)) if (f.discoverable && getCred(prov)) {
       const cached = discoverCache.get(`${prov}:${fingerprint(getCred(prov))}`) ?? [];
       mountMultiSelect(body.querySelector<HTMLElement>(`[data-list="${f.key}"]`)!, s, f.key, cached);
     }
@@ -328,18 +347,18 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     if (cstat) { cstat.textContent = s.status === "upcoming" ? "upcoming" : ok ? "connected" : "+ Add"; cstat.classList.toggle("add", !ok && s.status !== "upcoming"); }
   }
 
-  async function runDiscover(s: Source, key: string, force: boolean) {
+  async function runDiscover(s: ProviderDeclaration, key: string, force: boolean) {
     const prov = providerOf(s);
     const list = conns.querySelector<HTMLElement>(`[data-list="${key}"]`)!;
     const cacheKey = `${prov}:${fingerprint(getCred(prov))}`;
     if (!force && discoverCache.has(cacheKey)) { mountMultiSelect(list, s, key, discoverCache.get(cacheKey)!); return; }
     list.innerHTML = `<div class="muted">Querying…</div>`;
     let options: DiscoveryOption[] = [];
-    try { options = (await s.discover?.(getCred(prov))) ?? []; }
+    try { options = (await discoverWith(s, getCred(prov))) ?? []; }
     catch (e: any) { list.innerHTML = `<div class="error">${esc(e?.message ?? e)}</div>`; return; }
     discoverCache.set(cacheKey, options);
     const btn = conns.querySelector<HTMLElement>(`[data-discover="${key}"]`);
-    const f = s.scopeSchema.find(x => x.key === key);
+    const f = scopeFieldsOf(s).find(x => x.key === key);
     if (btn && f) btn.textContent = `Re-scan ${f.label.toLowerCase()}`;
     mountMultiSelect(list, s, key, options);
   }
@@ -347,8 +366,9 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   // Tag-style multiselect: the chosen targets sit at the top as removable chips
   // (one-click removal, see-at-a-glance), and the searchable list below holds only
   // the *unselected* options — so at 100+ repos you only scroll what you can add.
-  function mountMultiSelect(list: HTMLElement, s: Source, key: string, options: DiscoveryOption[]) {
-    const noun = s.scopeSchema.find(f => f.key === key)?.label.toLowerCase() ?? "items";
+  function mountMultiSelect(list: HTMLElement, s: ProviderDeclaration, key: string, options: DiscoveryOption[]) {
+    const noun = scopeFieldsOf(s).find(f => f.key === key)
+      ?.label.toLowerCase() ?? "items";
     const prov = providerOf(s);
     const sel = new Set((getScope(prov)[key] as string[]) ?? []);
     const byVal = new Map(options.map(o => [o.value, o]));
@@ -401,7 +421,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   function clearData(kind: "creds" | "scope") {
     const noun = kind === "creds" ? "credentials (this session)" : "saved scope";
     if (typeof confirm === "function" && !confirm(`Clear all ${noun}? This cannot be undone.`)) return;
-    for (const prov of new Set(sources.map(providerOf))) {
+    for (const prov of new Set(providers.map(providerOf))) {
       if (kind === "creds") { creds.set(prov, ""); draftCred.delete(prov); }
       else { scopes.set(prov, {}); draftScope.delete(prov); }
     }
@@ -475,6 +495,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     botAdd.value = "";
   });
   const editor = mountScoringEditor(host.querySelector<HTMLElement>("[data-scoring-editor]")!, {
+    catalog,
     // Seed precedence: staged draft > persisted model > (editor falls back to default).
     // A "reset" draft returns null so the editor previews the default before Save commits the clear.
     getDraft: (k) => {

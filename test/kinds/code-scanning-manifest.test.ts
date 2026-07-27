@@ -1,16 +1,11 @@
-// test/kinds/code-scanning-manifest.test.ts
-import { describe, it, expect } from "vitest";
-import { registerKinds } from "../../src/runtime/core/register-kinds";
+import { describe, expect, it } from "vitest";
 import { codeScanningKind } from "../../src/runtime/kinds/code-scanning";
-import { resolveScorer } from "../../src/runtime/scoring/registry";
-import { getFilterAxis } from "../../src/runtime/layout/toolbar/axis-registry";
 
-describe("codeScanningKind manifest", () => {
-  it("registers scorer + filter axes via registerKinds", () => {
-    registerKinds([codeScanningKind]);
-    expect(typeof resolveScorer("code-scanning")).toBe("function");
-    expect(getFilterAxis("cs-severity")).toBeDefined();
-    expect(getFilterAxis("cs-tool")).toBeDefined();
-    expect(getFilterAxis("cs-state")).toBeDefined();
+describe("code-scanning Kind declaration", () => {
+  it("owns its scorer and filtering behavior", () => {
+    expect(typeof codeScanningKind.builtInScorer).toBe("function");
+    expect(codeScanningKind.filters.map((axis) => axis.id)).toEqual(
+      expect.arrayContaining(["cs-severity", "cs-tool", "cs-state"]),
+    );
   });
 });

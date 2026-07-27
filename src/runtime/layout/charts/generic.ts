@@ -1,6 +1,6 @@
 import type { Tier } from "../../scoring/tier";
 import type { ScoredItem } from "../table/kind-renderer";
-import { registerChart, type TriageChart } from "./registry";
+import type { TriageChart } from "./registry";
 import { esc } from "../util";
 
 const TIERS: Tier[] = ["P0", "P1", "P2", "P3"];
@@ -60,4 +60,8 @@ export const topLocationsChart: TriageChart = {
   },
 };
 
-[tierChart, ageChart, topLocationsChart].forEach(registerChart);
+export const genericCharts: readonly TriageChart[] = Object.freeze([
+  tierChart,
+  ageChart,
+  topLocationsChart,
+]);

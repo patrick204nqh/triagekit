@@ -1,17 +1,17 @@
 import type { TriageConfigT } from "../../config/schema";
 import { isCompiledConfig } from "./mode";
-import { getSource, listSources, providerOf, type Source } from "../ingest/source";
-import { listArtifacts, GROUP_LABEL, GROUP_ORDER, type Artifact } from "../dataset/artifact";
-import type { Scorer } from "../scoring/registry";
-import { fieldsFor } from "../scoring/field-catalog";
+import type {
+  ProviderDeclaration,
+  RuntimeCatalog,
+  Scorer,
+} from "../catalog/types";
+import { GROUP_LABEL, GROUP_ORDER, type Artifact } from "../dataset/artifact";
 import { explainScoreModel, validateModel, type ScoreExplanation } from "../scoring/score-model";
 import { renderTableSkeleton } from "../layout/table/triage-table";
 import { esc } from "../layout/util";
 import type { ScoredItem } from "../layout/table/kind-renderer";
 import { renderInsights } from "../layout/insights";
-import { applicableTabs, getTab } from "../layout/navigation/tab-registry";
-import { getSortKey, getFilterAxis } from "../layout/toolbar/axis-registry";
-import { emptyListState, pruneFilters, type ListState } from "../layout/toolbar/filter-state";
+import type { ListState } from "../layout/toolbar/filter-state";
 import { renderToolbar, type ToolbarProps } from "../layout/toolbar/toolbar";
 import { CredStore } from "./cred-store";
 import { ScopeStore } from "./scope-store";
@@ -20,7 +20,6 @@ import { healthOf, scopeSummary } from "./health";
 import { mountSettings } from "./settings";
 import { providerIcon } from "./provider-icons";
 import { getThemeChoice, cycleTheme } from "./theme";
-import { writeUrlState, readUrlState } from "./url-state";
 import { getRefreshInterval, relativeSince } from "./refresh";
 import { scopeKey } from "../core/scope-key";
 import { adapterBotLogins } from "../core/author-policy";
@@ -28,8 +27,17 @@ import type { DatasetStore } from "../core/store";
 import type { TimerPort, ViewPort } from "../core/ports";
 import type { CoreDeps, Core } from "../core/core";
 import type { DomViewDeps } from "../adapters/dom-view";
+import {
+  createBrowserSessionUrl,
+  type SessionUrlAdapter,
+} from "../adapters/browser-session-url";
+import { createTriageSession } from "../session/triage-session";
+import type { SessionUpdate, TriageSession } from "../session/types";
 
 export interface ShellEnv {
+  catalog: RuntimeCatalog;
+  session?: TriageSession;
+  sessionUrl?: SessionUrlAdapter;
   store: DatasetStore;
   timer: TimerPort;
   createCore: (deps: CoreDeps) => Core;
@@ -37,6 +45,16 @@ export interface ShellEnv {
   scoreOverride?: Scorer;
 }
 
+const applicableCatalogTabs = (
+  catalog: RuntimeCatalog,
+  artifact: Artifact,
+  rows: ScoredItem[],
+) =>
+  catalog.tabs()
+    .filter((tab) => tab.appliesTo(artifact, rows))
+    .sort((a, b) => a.order - b.order);
+
+const connectionKey = (provider: ProviderDeclaration): string => provider.id;
 // Product mark: a funnel (many signals in → a triaged few out) whose drip is the
 // teal accent, echoing the "·" in the wordmark.
 const BRAND_MARK = `<svg class="brand-mark" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 5.5H20.5L13 14.5V18H11V14.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="20.8" r="1.7" fill="var(--accent)"/></svg>`;
@@ -50,7 +68,7 @@ const REFRESH = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" str
 export interface ToolbarPropsInput {
   artifact: Artifact; rows: ScoredItem[]; filters: ListState;
   hasInsights: boolean; activeView: string;
-  sources: { id: string; provider: string; status: string }[];
+  providers: { id: string; provider: string; status: string }[];
   activeProvider: string;
   activeRepo: string;
   extraTabs: { id: string; label: string }[];
@@ -58,11 +76,11 @@ export interface ToolbarPropsInput {
 
 // Pure assembly of the toolbar's view-mode / provider-scope / filter props from the
 // shell's state, extracted so it's testable without mounting the whole shell.
-export function toolbarPropsFromShell(i: ToolbarPropsInput): Omit<ToolbarProps, "onFilterChange" | "onViewChange" | "onProviderSelect" | "onRepoSelect"> {
+function assembleToolbarProps(i: ToolbarPropsInput): Omit<ToolbarProps, "onFilterChange" | "onViewChange" | "onProviderSelect" | "onRepoSelect"> {
   const viewModes = [{ id: "list", label: "List" }];
   if (i.hasInsights) viewModes.push({ id: "insights", label: "Insights" });
   for (const t of i.extraTabs) viewModes.push({ id: t.id, label: t.label });
-  const providers = i.sources.map(s => ({
+  const providers = i.providers.map(s => ({
     id: s.id, label: s.provider, on: s.id === i.activeProvider, live: s.status === "ready",
   }));
   // Repo display-scope options: distinct row locations, count-descending.
@@ -83,24 +101,33 @@ export function toolbarPropsFromShell(i: ToolbarPropsInput): Omit<ToolbarProps, 
 }
 
 export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
+  const catalog = env.catalog;
+  const session = env.session ?? createTriageSession({ catalog });
+  const sessionUrl = env.sessionUrl ?? createBrowserSessionUrl(window);
   const creds = new CredStore();
   const scopes = new ScopeStore();
   const policy = new PolicyStore();
-  const liveSource = getSource(config.source);
-  if (isCompiledConfig(config)) scopes.set(providerOf(liveSource), config.scope!);
+  if (isCompiledConfig(config)) {
+    scopes.set(config.source, config.scope!);
+  }
   const hasInsights = config.views.includes("insights");
 
-  const sourcesFor = (a: Artifact) => listSources().filter(s => s.kinds.some(k => a.kinds.includes(k)));
-  const liveSourcesFor = (a: Artifact) => sourcesFor(a).filter(s => s.status === "ready");
-  const artifacts = listArtifacts().filter(a => sourcesFor(a).length > 0);
-  const primarySource = (a: Artifact): Source => liveSourcesFor(a)[0] ?? sourcesFor(a)[0];
+  const providersForArtifact = (a: Artifact) =>
+    catalog.providersFor(a.kinds[0]);
+  const readyProvidersFor = (a: Artifact) => providersForArtifact(a).filter(s => s.status === "ready");
+  const artifacts = catalog.artifacts().filter(a => providersForArtifact(a).length > 0);
+  const primaryProvider = (a: Artifact): ProviderDeclaration =>
+    readyProvidersFor(a)[0] ?? providersForArtifact(a)[0];
 
-  let active: Artifact = artifacts.find(a => liveSourcesFor(a).length) ?? artifacts[0];
-  let view: string = "list";
-  let activeProvider: string = (liveSourcesFor(active)[0] ?? sourcesFor(active)[0])?.id ?? "";
-  let repoView = "";   // "" = All; sticky across artifact switches, reset on provider change
+  const initialSession = session.restore(sessionUrl.read()).state;
+  let active: Artifact = catalog.artifact(initialSession.kind)
+    ?? artifacts.find((artifact) => readyProvidersFor(artifact).length)
+    ?? artifacts[0];
+  const currentView = () => session.snapshot().view;
+  const currentProvider = () => session.snapshot().provider;
+  const currentRepository = () => session.snapshot().effectiveRepository;
+  const currentFilters = () => session.snapshot().filters;
   let lastRows: ScoredItem[] = [];
-  let filterState: ListState = emptyListState();
   let lastFetchedAt: number | null = null;
   let cancelRefresh: (() => void) | undefined;
 
@@ -112,81 +139,26 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   // location set won't rebuild — tolerating cosmetic tab-order lag to keep popovers open.
   const navRowSig = () =>
     [...new Set(lastRows.map(r => r.location))].sort().join(",") +
-    "|" + applicableTabs(active, lastRows).map(t => t.id).sort().join(",");
+    "|" + applicableCatalogTabs(catalog, active, lastRows).map(t => t.id).sort().join(",");
   let lastNavRowSig = "";
 
-  // --- Apply URL state on load (artifact → provider → repo → view → sort/axes) ---
-  // Runs before the first buildRail/buildNav/render and before any syncUrl(), so a
-  // bookmarked / shared / reloaded URL is honored, not clobbered. Each field is
-  // validated independently; invalid/absent values silently keep today's defaults.
-  {
-    const u = readUrlState();
-
-    // artifact: only if it's a known artifact id (artifact id === kind)
-    if (u.artifact) {
-      const a = artifacts.find(x => x.id === u.artifact);
-      if (a) active = a;
-    }
-
-    // provider: only if it's a source id within the (resolved) artifact's sources
-    if (u.provider) {
-      const ok = sourcesFor(active).some(s => s.id === u.provider);
-      if (ok) activeProvider = u.provider;
-    }
-
-    // repo: applied optimistically (cannot validate pre-fetch; self-corrects via the
-    // repo control + the "All" fallback when the repo isn't among the loaded rows)
-    if (u.repoView) repoView = u.repoView;
-
-    // view: list / insights (when available) / a registered extra tab applicable to
-    // the artifact. applicableTabs needs rows to report a tab applicable, so pre-fetch
-    // an extra-tab id may fall back to "list" — acceptable degradation; it self-heals
-    // once data loads and the user re-selects the tab.
-    if (u.view) {
-      const isExtra = applicableTabs(active, []).some(t => t.id === u.view);
-      if (u.view === "list" || (u.view === "insights" && hasInsights) || isExtra) view = u.view;
-    }
-
-    // sort: only if the sort key exists
-    if (u.sort && getSortKey(u.sort)) filterState = { ...filterState, sort: u.sort };
-
-    // axes: only axis ids that exist (values not deep-validated — unknown values match nothing)
-    if (u.axes) {
-      const axes: Record<string, string[]> = { ...filterState.axes };
-      for (const [id, vals] of Object.entries(u.axes)) {
-        if (getFilterAxis(id) && vals.length) axes[id] = vals;
-      }
-      filterState = { ...filterState, axes };
-    }
-  }
-
   // The credentialed, scoped sources for the active artifact's active provider.
-  const usableSources = () => liveSourcesFor(active).filter(s =>
-    s.id === activeProvider && creds.get(providerOf(s)) && Object.keys(scopes.get(providerOf(s))).length);
+  const usableProviders = () => readyProvidersFor(active).filter(provider =>
+    provider.id === currentProvider()
+    && creds.get(connectionKey(provider))
+    && Object.keys(scopes.get(connectionKey(provider))).length);
 
   // Per-item score breakdown for the list drawer (lifted from renderListWithFilters).
   const scoreExplain = (i: ScoredItem): ScoreExplanation | null => {
     const m = policy.getScoreModel(i.kind);
-    if (!m || validateModel(m, fieldsFor(i.kind)).length !== 0) return null;
+    if (!m || validateModel(m, catalog.fieldsFor(i.kind)).length !== 0) return null;
     try { return explainScoreModel(m, i); } catch { return null; }
   };
 
-  // Assemble the current page state and mirror it to the URL query string.
-  // Called from every state-mutation handler (replaceState — no history spam).
-  const syncUrl = () => {
-    const { sort, axes } = filterState;
-    writeUrlState({
-      provider: activeProvider || undefined,
-      repoView: repoView || undefined,
-      artifact: active?.id,
-      view,
-      sort,
-      axes,
-    });
-  };
-
   // Filter change: update state, re-derive from the store (no refetch).
-  const onFilterChange = (next: ListState) => { filterState = next; syncUrl(); core.rerender(); };
+  const onFilterChange = (next: ListState) => {
+    applySessionUpdate(session.changeFilters(next));
+  };
 
   // Dispatcher view: owns view-mode selection (mirrors the original post-fetch
   // branching). insights/tab render directly; list mode delegates to the DOM view.
@@ -194,42 +166,100 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     render(vm) {
       lastRows = vm.scored;
       lastFetchedAt = Date.now(); updateSync();
+      const reconciliation = session.reconcile({
+        repositories: [...new Set(vm.scored.map((row) => row.location))],
+        views: [
+          "list",
+          ...(hasInsights ? ["insights"] : []),
+          ...applicableCatalogTabs(catalog, active, vm.scored)
+            .map((tab) => tab.id),
+        ],
+      });
+      if (reconciliation.work !== "none") {
+        sessionUrl.write(reconciliation.serialized);
+        if (reconciliation.work === "rederive") {
+          queueMicrotask(() => core.rerender());
+        }
+      }
+      if (catalog.kind(active.id)?.status === "upcoming") {
+        render();
+        return;
+      }
+      if (!usableProviders().length) {
+        render();
+        return;
+      }
       // The toolbar's repo tabs and applicable extra tabs are derived from the rows,
       // which are empty at the initial buildNav() and only arrive here post-fetch.
       // Rebuild the toolbar when that row-derived set actually changes — but not on
       // every paint, so a background refresh doesn't tear down an open filter popover.
       if (navRowSig() !== lastNavRowSig) buildNav();
-      if (view === "insights") { renderInsights(root, vm.scored, active.kinds); return; }
-      if (view !== "list") { const t = getTab(view); if (t) { t.render(root, vm.scored); return; } }
+      if (currentView() === "insights") { renderInsights(root, vm.scored, active.kinds, catalog); return; }
+      if (currentView() !== "list") {
+        const tab = catalog.tabs().find((candidate) => candidate.id === currentView());
+        if (tab) { tab.render(root, vm.scored); return; }
+      }
       // createDomView is called per-render intentionally: artifact: active and token
       // both reflect the current artifact/credential at render time and go stale if
       // captured at construction (active is reassigned when the user switches artifacts).
-      const token = creds.get(providerOf(usableSources()[0]))!;  // usableSources filter guarantees a credential
-      env.createDomView(root, { artifact: active, token, scoreExplain }).render(vm);
+      const token = creds.get(connectionKey(usableProviders()[0]))!;  // usableProviders filter guarantees a credential
+      env.createDomView(root, {
+        artifact: active,
+        token,
+        providerId: currentProvider(),
+        scoreExplain,
+        catalog: catalog,
+      }).render(vm);
     },
   };
 
   const core = env.createCore({
     store: env.store,
     view: dispatchView,
-    jobsFor: () => usableSources().map(s => ({
-      provider: providerOf(s),
-      scopeKey: scopeKey(scopes.get(providerOf(s))),
-      scope: scopes.get(providerOf(s)),
-      token: creds.get(providerOf(s))!,
-      port: s,
+    jobsFor: () => usableProviders().map(s => ({
+      provider: s,
+      scopeKey: scopeKey(scopes.get(connectionKey(s))),
+      scope: scopes.get(connectionKey(s)),
+      credential: creds.get(connectionKey(s))!,
+      kinds: active.kinds.filter(kind => s.kinds.includes(kind)),
     })),
     activeKinds: () => active.kinds,
     botLogins: () => policy.getBotLogins(),
     scoreContext: () => ({
       getModel: (k) => policy.getScoreModel(k),
-      getFields: (k) => fieldsFor(k),
+      getFields: (k) => catalog.fieldsFor(k),
       getThresholds: () => policy.getTiers(),
       override: env.scoreOverride,
     }),
-    filters: () => filterState,
-    repoView: () => repoView,
+    filters: currentFilters,
+    repoView: currentRepository,
   });
+
+  function applySessionUpdate(update: SessionUpdate): void {
+    active = catalog.artifact(update.state.kind) ?? active;
+    sessionUrl.write(update.serialized);
+
+    if (update.work === "refresh") {
+      lastRows = [];
+      lastFetchedAt = null;
+      buildRail();
+      buildNav();
+      refreshBar();
+      void core.refreshNow();
+    } else if (update.work === "rederive") {
+      core.rerender();
+      buildNav();
+    } else if (update.work === "present") {
+      buildRail();
+      buildNav();
+      refreshBar();
+      if (catalog.kind(update.state.kind)?.status === "upcoming") {
+        render();
+      } else {
+        core.rerender();
+      }
+    }
+  }
 
   // ── Command bar: brand + merged status chip + sync stamp + refresh + theme ──
   const bar = document.getElementById("appbar")!;
@@ -244,14 +274,15 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
 
   const settingsHost = document.getElementById("settings-host")!;
   const settings = mountSettings(settingsHost, {
-    sources: listSources(), creds, scopes, policy,
+    catalog,
+    providers: [...catalog.providers()], creds, scopes, policy,
     onChange: () => { lastRows = []; refreshBar(); render(); },
     onThemeChange: () => syncTheme(),
     onRefreshChange: () => applyRefreshTimer(),
     getRows: () => lastRows,
     getAutoBots: () => adapterBotLogins(env.store.snapshot(), active.kinds),
   });
-  const openSettings = () => settings.open(providerOf(primarySource(active)));
+  const openSettings = () => settings.open(primaryProvider(active).id);
   status.addEventListener("click", openSettings);
   gear.addEventListener("click", openSettings);
   refresh.addEventListener("click", () => { lastRows = []; render(); });
@@ -267,17 +298,17 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
 
   // Status chip shows the single active provider scope.
   function refreshBar() {
-    const live = liveSourcesFor(active);
-    const lead = live.find(s => s.id === activeProvider) ?? primarySource(active);
+    const live = readyProvidersFor(active);
+    const lead = live.find(s => s.id === currentProvider()) ?? primaryProvider(active);
     let cls = "warn", tail: string;
     if (!live.length) { tail = "upcoming"; }
     else {
       const missing = healthOf(lead, creds) !== "connected";
       cls = missing ? "warn" : "ok";
-      tail = missing ? "no token" : scopeSummary(lead, scopes.get(providerOf(lead)));
+      tail = missing ? "no token" : scopeSummary(lead, scopes.get(connectionKey(lead)));
     }
     status.className = "status-chip " + cls;
-    status.innerHTML = `${providerIcon(providerOf(lead), 15)}<span class="sid">${esc(providerOf(lead))}</span><span class="sep">·</span><span class="muted">${esc(tail)}</span>`;
+    status.innerHTML = `${providerIcon(lead.id, 15)}<span class="sid">${esc(lead.id)}</span><span class="sep">·</span><span class="muted">${esc(tail)}</span>`;
   }
 
   function updateSync() {
@@ -286,7 +317,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   function applyRefreshTimer() {
     if (cancelRefresh) cancelRefresh();
     const secs = getRefreshInterval();
-    if (secs > 0) cancelRefresh = env.timer.every(secs * 1000, () => { if (liveSourcesFor(active).length) render(true); });
+    if (secs > 0) cancelRefresh = env.timer.every(secs * 1000, () => { if (readyProvidersFor(active).length) render(true); });
   }
 
   // ── Navigation: grouped artifact rail (Findings / Work) → list/insights + filter ──
@@ -303,15 +334,12 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       const heading = document.createElement("span"); heading.className = "rail-group-label"; heading.textContent = GROUP_LABEL[g];
       section.appendChild(heading);
       for (const a of items) {
-        const live = liveSourcesFor(a).length > 0;
+        const live = readyProvidersFor(a).length > 0;
         const b = document.createElement("button");
         b.innerHTML = live ? esc(a.label) : `${esc(a.label)}<span class="rail-soon">soon</span>`;
         b.className = [a.id === active.id ? "active" : "", live ? "" : "upcoming"].filter(Boolean).join(" ");
         b.addEventListener("click", () => {
-          active = a; view = "list"; activeProvider = (liveSourcesFor(a)[0] ?? sourcesFor(a)[0])?.id ?? "";
-          lastRows = []; filterState = emptyListState(); lastFetchedAt = null;
-          syncUrl();
-          buildRail(); buildNav(); refreshBar(); render();
+          applySessionUpdate(session.selectKind(a.id));
         });
         section.appendChild(b);
       }
@@ -322,58 +350,50 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   function buildNav() {
     lastNavRowSig = navRowSig();   // track the row-derived inputs this build reflects
     nav.innerHTML = "";
-    if (!liveSourcesFor(active).length) return;   // upcoming artifact: no toolbar
-    const base = toolbarPropsFromShell({
-      artifact: active, rows: lastRows, filters: filterState,
-      hasInsights, activeView: view,
-      sources: sourcesFor(active).map(s => ({ id: s.id, provider: providerOf(s), status: s.status })),
-      activeProvider,
-      activeRepo: repoView,
-      extraTabs: applicableTabs(active, lastRows).map(t => ({ id: t.id, label: t.label })),
+    if (!readyProvidersFor(active).length) return;   // upcoming artifact: no toolbar
+    const base = assembleToolbarProps({
+      artifact: active, rows: lastRows, filters: currentFilters(),
+      hasInsights, activeView: currentView(),
+      providers: providersForArtifact(active).map(s => ({ id: s.id, provider: s.id, status: s.status })),
+      activeProvider: currentProvider(),
+      activeRepo: currentRepository(),
+      extraTabs: applicableCatalogTabs(catalog, active, lastRows)
+        .map(t => ({ id: t.id, label: t.label })),
     });
     renderToolbar(nav, {
       ...base,
+      catalog: catalog,
       onFilterChange,
-      onViewChange: (id) => { view = id; syncUrl(); buildNav(); render(); },
+      onViewChange: (id) => {
+        applySessionUpdate(session.selectView(id));
+      },
       onProviderSelect: (id) => {
-        activeProvider = id;
-        repoView = "";
-        lastRows = []; filterState = emptyListState(); lastFetchedAt = null;
-        syncUrl();
-        buildNav(); refreshBar(); render();
+        applySessionUpdate(session.selectProvider(id));
       },
       onRepoSelect: (id) => {
-        repoView = id;
-        // Prune selections that don't exist in the repo we're switching to (e.g. a
-        // label unique to the previous repo) so the table doesn't silently empty out
-        // against an option that's no longer in the dropdown to un-check.
-        const scoped = id && lastRows.some(r => r.location === id)
-          ? lastRows.filter(r => r.location === id) : lastRows;
-        filterState = pruneFilters(filterState, scoped, { artifact: active });
-        syncUrl();
-        core.rerender();      // client-side re-derive, no refetch
-        buildNav();           // re-render tabs so the active one updates
+        applySessionUpdate(session.selectRepository(id, lastRows));
       },
     });
   }
 
   // silent: an auto-refresh tick re-fetches in place (no skeleton flash).
   const render = (silent = false) => {
-    const live = liveSourcesFor(active);
+    const live = readyProvidersFor(active);
     if (!live.length) {   // upcoming artifact placeholder
-      const provs = sourcesFor(active).map(s => `<li>${providerIcon(providerOf(s), 14)} ${esc(providerOf(s))}</li>`).join("");
+      const provs = providersForArtifact(active).map(s => `<li>${providerIcon(s.id, 14)} ${esc(s.id)}</li>`).join("");
       root.innerHTML = `<div class="upcoming"><h2>${esc(active.label)} <span class="badge">upcoming</span></h2>
         <p class="muted">On the roadmap. Will triage from:</p><ul class="prov-roadmap">${provs}</ul></div>`;
       lastFetchedAt = null; updateSync();
       return;
     }
-    if (!silent && view === "insights" && lastRows.length) { renderInsights(root, lastRows, active.kinds); return; }
-    if (!silent && view !== "list" && view !== "insights" && lastRows.length) {
-      const t = getTab(view); if (t) { t.render(root, lastRows); return; }
+    if (!silent && currentView() === "insights" && lastRows.length) { renderInsights(root, lastRows, active.kinds); return; }
+    if (!silent && currentView() !== "list" && currentView() !== "insights" && lastRows.length) {
+      const tab = catalog.tabs().find((candidate) => candidate.id === currentView());
+      if (tab) { tab.render(root, lastRows); return; }
     }
 
-    if (!usableSources().length) {
-      const needScope = live.some(s => s.id === activeProvider && creds.get(providerOf(s)) && !Object.keys(scopes.get(providerOf(s))).length);
+    if (!usableProviders().length) {
+      const needScope = live.some(s => s.id === currentProvider() && creds.get(connectionKey(s)) && !Object.keys(scopes.get(connectionKey(s))).length);
       root.innerHTML = `<p class="muted">Open Settings to ${needScope ? "choose your scope" : "connect a token"}.</p>`;
       lastFetchedAt = null; updateSync();
       return;

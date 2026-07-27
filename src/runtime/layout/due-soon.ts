@@ -1,6 +1,6 @@
 import type { ScoredItem } from "./table/kind-renderer";
 import { esc } from "./util";
-import { registerTab } from "./navigation/tab-registry";
+import type { TabModule } from "./navigation/tab-registry";
 import { deadlineOf } from "../dataset/details";
 
 export function dueSoonRows(rows: ScoredItem[]): ScoredItem[] {
@@ -26,10 +26,10 @@ export function renderDueSoon(root: HTMLElement, rows: ScoredItem[]): void {
     <tbody>${body}</tbody></table>`;
 }
 
-registerTab({
+export const dueSoonTab: TabModule = {
   id: "due-soon",
   label: "Due soon",
   order: 10,
   appliesTo: (_artifact, rows) => rows.some(r => deadlineOf(r) != null),
   render: (root, rows) => renderDueSoon(root, rows),
-});
+};

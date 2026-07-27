@@ -1,31 +1,53 @@
-import { describe, it, expect } from "vitest";
-import { dependencyVulnScore } from "../../src/runtime/scoring/dependency-vuln";
-import { tierOf } from "../../src/runtime/scoring/tier";
-import type { TriageItem } from "../../src/runtime/dataset/item";
+import { describe, expect, it } from "vitest";
+import { runtimeCatalog } from "../../src/runtime/catalog/built-in";
 import type { DependencyVulnDetails } from "../../src/runtime/dataset/kinds/dependency-vuln";
+import type { TriageItem } from "../../src/runtime/dataset/item";
+import { dependencyVulnScore } from "../../src/runtime/scoring/dependency-vuln";
 
-const item = (d: Partial<DependencyVulnDetails>): TriageItem<DependencyVulnDetails> => ({
-  id: "github:web-app:1", source: "github", kind: "dependency-vuln",
-  title: "lodash", location: "web-app", signal: 0, createdAt: new Date().toISOString(), url: "",
-  details: { package: "lodash", severity: "critical", cvss: 9.8, scope: "runtime", fixAvailable: true, fixVersion: "1.0.0", ...d },
+const item = (
+  details: Partial<DependencyVulnDetails>,
+): TriageItem<DependencyVulnDetails> => ({
+  id: "github:web-app:1",
+  provider: "github",
+  providerRef: {},
+  kind: "dependency-vuln",
+  title: "pkg",
+  location: "web-app",
+  signal: 0,
+  createdAt: "2026-01-01T00:00:00Z",
+  url: "",
+  details: {
+    package: "pkg",
+    severity: "critical",
+    cvss: 9.8,
+    scope: "runtime",
+    fixAvailable: true,
+    fixVersion: "2.0.0",
+    ...details,
+  },
 });
-describe("dependencyVulnScore", () => {
-  it("scores critical+fix+runtime P0", () => {
-    const s = dependencyVulnScore(item({})); expect(s).toBeGreaterThanOrEqual(130); expect(tierOf(s)).toBe("P0");
-  });
-  it("penalizes dev scope", () => {
-    expect(dependencyVulnScore(item({ scope: "development" }))).toBeLessThan(dependencyVulnScore(item({})));
+
+describe("dependency vulnerability scoring", () => {
+  it("scores critical runtime vulnerabilities with a fix at P0 strength", () => {
+    expect(dependencyVulnScore(item({}))).toBeGreaterThanOrEqual(130);
   });
 
-  it("publishes a field catalog for dependency-vuln", async () => {
-    const { registerKinds } = await import("../../src/runtime/core/register-kinds");
-    const { dependencyVulnKind } = await import("../../src/runtime/kinds/dependency-vuln");
-    registerKinds([dependencyVulnKind]);   // registers field catalog (+ scorer, model)
-    const { fieldsFor } = await import("../../src/runtime/scoring/field-catalog");
-    const names = fieldsFor("dependency-vuln").map(f => f.name);
-    expect(names).toEqual(expect.arrayContaining(["severity", "cvss", "fixAvailable", "scope"]));
-    const sev = fieldsFor("dependency-vuln").find(f => f.name === "severity")!;
-    expect(sev.type).toBe("enum");
-    expect(sev.values).toEqual(["critical", "high", "medium", "low"]);
+  it("penalizes development scope", () => {
+    expect(dependencyVulnScore(item({ scope: "development" })))
+      .toBeLessThan(dependencyVulnScore(item({ scope: "runtime" })));
+  });
+
+  it("publishes its fields through the runtime catalog", () => {
+    const fields = runtimeCatalog.fieldsFor("dependency-vuln");
+    expect(fields.map((field) => field.name)).toEqual(expect.arrayContaining([
+      "severity",
+      "cvss",
+      "fixAvailable",
+      "scope",
+    ]));
+    expect(fields.find((field) => field.name === "severity")).toMatchObject({
+      type: "enum",
+      values: ["critical", "high", "medium", "low"],
+    });
   });
 });

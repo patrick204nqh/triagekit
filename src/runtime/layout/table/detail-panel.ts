@@ -1,6 +1,8 @@
-import type { TriageError } from "../../ingest/source";
+import type { TriageFailure } from "../../catalog/types";
+import { runtimeCatalog } from "../../catalog/built-in";
+import type { RuntimeCatalog } from "../../catalog/types";
 import type { ScoredItem, DetailCtx } from "./kind-renderer";
-import { renderers, warningsHtml } from "./kind-renderer";
+import { warningsHtml } from "./kind-renderer";
 import { tableHtml } from "./triage-table";
 import { renderScoreBreakdown } from "./score-breakdown";
 import { dismissible } from "../../shell/dismissible";
@@ -11,7 +13,7 @@ import type { DetailView } from "./detail-view";
 // Fallback detail for kinds without a renderer: identity header + a bare link.
 function defaultDetailView(r: ScoredItem): DetailView {
   return {
-    header: { title: r.title, tier: r.tier, provider: r.source, ref: undefined },
+    header: { title: r.title, tier: r.tier, provider: r.provider, ref: undefined },
     body: (host) => {
       host.innerHTML = r.url
         ? `<p><a href="${esc(r.url)}" target="_blank" rel="noreferrer">${esc(r.url)}</a></p>`
@@ -24,7 +26,13 @@ function defaultDetailView(r: ScoredItem): DetailView {
 // drawer per row. The drawer is a flex column — non-scrolling header, scrolling
 // body, bottom action footer — so footer actions stay visible on long content.
 // Each row's kind renderer returns a DetailView the frame mounts into the slots.
-export function renderTriageList(root: HTMLElement, rows: ScoredItem[], errors: TriageError[], ctx: DetailCtx = {}): void {
+export function renderTriageList(
+  root: HTMLElement,
+  rows: ScoredItem[],
+  errors: TriageFailure[],
+  ctx: DetailCtx = {},
+  catalog: RuntimeCatalog = runtimeCatalog,
+): void {
   const warnings = warningsHtml(errors);
   if (!rows.length) {
     root.innerHTML = warnings + `<div class="empty">
@@ -34,7 +42,7 @@ export function renderTriageList(root: HTMLElement, rows: ScoredItem[], errors: 
     </div>`;
     return;
   }
-  const r0 = renderers.get(rows[0].kind);
+  const r0 = catalog.readyKind(rows[0].kind)?.renderer;
   root.innerHTML = warnings + tableHtml(rows, r0?.columns)
     + `<div class="scrim" data-drawer-scrim></div>`
     + `<aside class="drawer" hidden>
@@ -58,7 +66,7 @@ export function renderTriageList(root: HTMLElement, rows: ScoredItem[], errors: 
   root.querySelectorAll<HTMLElement>(".alert-row").forEach(tr => {
     tr.addEventListener("click", () => {
       const r = rows[Number(tr.dataset.i)];
-      const kr = renderers.get(r.kind);
+      const kr = catalog.readyKind(r.kind)?.renderer;
       const view: DetailView = kr?.detail ? kr.detail(r, ctx) : defaultDetailView(r);
       head.innerHTML = detailHeadHtml(view.header);
       body.innerHTML = "";

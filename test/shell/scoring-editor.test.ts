@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
 import { mountScoringEditor } from "../../src/runtime/shell/scoring-editor";
-import { registerDefaultModel, _resetDefaultModels } from "../../src/runtime/scoring/default-model";
-import { registerFieldCatalog } from "../../src/runtime/scoring/field-catalog";
 import type { ScoreModel } from "../../src/runtime/scoring/score-model";
+import { scoringCatalog } from "../helpers/scoring-catalog";
 
 const KIND = "dependency-vuln";
 const def: ScoreModel = {
@@ -16,11 +15,15 @@ const def: ScoreModel = {
   tiers: [{ name: "P0", min: 80 }, { name: "P3", min: 0 }],
 };
 
-function harness(initialDrafts: Record<string, ScoreModel> = {}) {
+function harness(
+  initialDrafts: Record<string, ScoreModel> = {},
+  catalog = scoringCatalog(def),
+) {
   const drafts = new Map<string, ScoreModel>(Object.entries(initialDrafts));
   const cleared = new Set<string>();
   const host = document.createElement("div");
   const editor = mountScoringEditor(host, {
+    catalog,
     getDraft: (k) => drafts.get(k) ?? null,
     setDraft: (k, m) => { drafts.set(k, m); cleared.delete(k); },
     clearDraft: (k) => { cleared.add(k); drafts.delete(k); },
@@ -31,15 +34,6 @@ function harness(initialDrafts: Record<string, ScoreModel> = {}) {
 }
 
 describe("mountScoringEditor", () => {
-  beforeEach(() => {
-    _resetDefaultModels();
-    registerFieldCatalog(KIND, [
-      { name: "severity", type: "enum", values: ["critical", "high", "medium", "low"] },
-      { name: "cvss", type: "number", range: [0, 10] },
-      { name: "fixAvailable", type: "bool" },
-    ]);
-    registerDefaultModel(KIND, def);
-  });
 
   it("renders the Default state (explainer + Customize) when no draft is saved", () => {
     const { host, drafts } = harness();
@@ -153,8 +147,7 @@ describe("mountScoringEditor", () => {
   });
 
   it("renders nothing actionable when no kind has a default", () => {
-    _resetDefaultModels();
-    const { host } = harness();
+    const { host } = harness({}, scoringCatalog(undefined));
     expect(host.querySelector("[data-kind]")).toBeNull();
     expect(host.textContent).toContain("No configurable");
   });

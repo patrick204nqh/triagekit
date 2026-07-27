@@ -18,8 +18,11 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { bootstrap } from "../../src/runtime/bootstrap";
-import { githubSource } from "../../src/runtime/ingest/github/dependency-vuln-source";
+import {
+  bootstrap,
+  createProductionCatalog,
+} from "../../src/runtime/bootstrap";
+import { mockGithubItems } from "../helpers/github-fetch";
 import type { TriageConfigT } from "../../src/config/schema";
 
 const flush = () => new Promise<void>(r => setTimeout(r, 0));
@@ -48,19 +51,19 @@ function scaffold() {
 // Fixed, unsorted input: cvss values [10, 2, 6] → expected desc sort → [10, 6, 2]
 const ITEMS = [
   {
-    id: "github:acme/web:10", source: "github", kind: "dependency-vuln",
+    id: "github:acme/web:10", provider: "github", providerRef: {}, kind: "dependency-vuln",
     title: "critical-pkg", location: "acme/web", signal: 100,
     createdAt: new Date().toISOString(), url: "https://example.test/10",
     details: { package: "critical-pkg", severity: "critical", cvss: 10, scope: "runtime", fixAvailable: true, fixVersion: "2.0.0" },
   },
   {
-    id: "github:acme/web:2", source: "github", kind: "dependency-vuln",
+    id: "github:acme/web:2", provider: "github", providerRef: {}, kind: "dependency-vuln",
     title: "low-pkg", location: "acme/web", signal: 20,
     createdAt: new Date().toISOString(), url: "https://example.test/2",
     details: { package: "low-pkg", severity: "low", cvss: 2, scope: "runtime", fixAvailable: false, fixVersion: "" },
   },
   {
-    id: "github:acme/web:6", source: "github", kind: "dependency-vuln",
+    id: "github:acme/web:6", provider: "github", providerRef: {}, kind: "dependency-vuln",
     title: "medium-pkg", location: "acme/web", signal: 60,
     createdAt: new Date().toISOString(), url: "https://example.test/6",
     details: { package: "medium-pkg", severity: "medium", cvss: 6, scope: "runtime", fixAvailable: true, fixVersion: "1.1.0" },
@@ -98,10 +101,7 @@ describe("parity — scores/tiers/sort unchanged through the re-layered core", (
     sessionStorage.setItem("triagekit.cred.github", "tok");
     localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: ["acme/web"] }));
 
-    fetchSpy = vi.spyOn(githubSource, "fetch").mockResolvedValue({
-      items: ITEMS,
-      errors: [],
-    } as any);
+    fetchSpy = mockGithubItems(ITEMS);
   });
 
   afterEach(() => {
@@ -138,5 +138,94 @@ describe("parity — scores/tiers/sort unchanged through the re-layered core", (
     const tiers = [...document.querySelectorAll<HTMLElement>("#root .surface-body .tier")].map(t => t.textContent?.trim());
     // Stored model must win: P0/P1/P3 via model bands, not all-P3 from absurd thresholds.
     expect(tiers).toEqual(GOLDEN.tiers);
+  });
+});
+
+describe("production Provider parity", () => {
+  it("loads every ready GitHub Kind through one stable provider", async () => {
+    const fetchMock: typeof fetch = async (input) => {
+      const url = String(input);
+      if (url.includes("/dependabot/alerts")) {
+        return new Response(JSON.stringify([{
+          number: 1,
+          security_advisory: {
+            severity: "high",
+            cvss: { score: 7.5 },
+          },
+          security_vulnerability: {
+            first_patched_version: { identifier: "2.0.0" },
+          },
+          dependency: {
+            scope: "runtime",
+            package: { name: "package-a" },
+          },
+          created_at: "2026-01-01T00:00:00Z",
+          html_url: "https://example.test/dependency/1",
+        }]), { status: 200 });
+      }
+      if (url.includes("/code-scanning/alerts")) {
+        return new Response(JSON.stringify([{
+          number: 2,
+          state: "open",
+          rule: {
+            id: "js/sql-query",
+            name: "SQL query built from user-controlled sources",
+            security_severity_level: "high",
+          },
+          tool: { name: "CodeQL" },
+          most_recent_instance: {
+            location: { path: "src/db.ts", start_line: 12 },
+          },
+          created_at: "2026-01-02T00:00:00Z",
+          html_url: "https://example.test/code/2",
+        }]), { status: 200 });
+      }
+      if (url.includes("/issues?")) {
+        return new Response(JSON.stringify([{
+          number: 3,
+          title: "Update dependency",
+          pull_request: { url: "https://api.example.test/pulls/3" },
+          user: { login: "renovate[bot]", type: "Bot" },
+          assignees: [],
+          labels: [],
+          comments: 0,
+          created_at: "2026-01-03T00:00:00Z",
+          html_url: "https://example.test/pull/3",
+        }, {
+          number: 4,
+          title: "Document recovery path",
+          user: { login: "alice", type: "User" },
+          assignees: [],
+          labels: [],
+          comments: 0,
+          created_at: "2026-01-04T00:00:00Z",
+          html_url: "https://example.test/issues/4",
+        }]), { status: 200 });
+      }
+      return new Response("[]", { status: 200 });
+    };
+    const github = createProductionCatalog(fetchMock).provider("github")!;
+
+    const outcomes = await github.adapter!.refresh({
+      credential: "token",
+      scope: { repos: ["acme-corp/web"] },
+      kinds: [
+        "dependency-vuln",
+        "code-scanning",
+        "change-request",
+        "issue",
+      ],
+    });
+
+    expect(outcomes.map((outcome) => outcome.kind)).toEqual([
+      "dependency-vuln",
+      "code-scanning",
+      "change-request",
+      "issue",
+    ]);
+    expect(outcomes.every((outcome) => outcome.status === "success")).toBe(true);
+    expect(outcomes.flatMap((outcome) => outcome.items)).toHaveLength(4);
+    expect(outcomes.flatMap((outcome) => outcome.items)
+      .every((item) => item.provider === github.id)).toBe(true);
   });
 });

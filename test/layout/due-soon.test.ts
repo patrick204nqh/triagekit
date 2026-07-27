@@ -1,14 +1,16 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { dueSoonRows, renderDueSoon } from "../../src/runtime/layout/due-soon";
+import {
+  dueSoonRows,
+  dueSoonTab,
+  renderDueSoon,
+} from "../../src/runtime/layout/due-soon";
 import { deadlineOf } from "../../src/runtime/dataset/details";
-import { getTab } from "../../src/runtime/layout/navigation/tab-registry";
-import "../../src/runtime/layout/due-soon";   // side-effect: registers the tab
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 
 function row(over: Partial<ScoredItem> & { details?: unknown }): ScoredItem {
   return {
-    id: "x", source: "github", kind: "change-request", title: "t", location: "acme/web",
+    id: "x", provider: "github", providerRef: {}, kind: "change-request", title: "t", location: "acme/web",
     signal: 0, createdAt: "2026-01-01T00:00:00Z", url: "", details: {}, score: 50, tier: "P2", ...over,
   } as ScoredItem;
 }
@@ -35,8 +37,8 @@ describe("due-soon lens", () => {
     expect(host.textContent).toContain("deadline");
   });
 
-  it("registers a due-soon tab applicable only when a row has a deadline", () => {
-    const t = getTab("due-soon")!;
+  it("declares a due-soon tab applicable only when a row has a deadline", () => {
+    const t = dueSoonTab;
     expect(t).toBeDefined();
     expect(t.label).toBe("Due soon");
     const art = { id: "review", label: "Review", group: "work", kinds: [] } as never;

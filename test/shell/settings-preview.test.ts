@@ -2,11 +2,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { mountSettings } from "../../src/runtime/shell/settings";
 import { PolicyStore } from "../../src/runtime/shell/policy-store";
-import { registerDefaultModel, _resetDefaultModels } from "../../src/runtime/scoring/default-model";
-import { registerFieldCatalog } from "../../src/runtime/scoring/field-catalog";
 import type { ScoreModel } from "../../src/runtime/scoring/score-model";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
-import type { Source } from "../../src/runtime/ingest/source";
+import { scoringCatalog } from "../helpers/scoring-catalog";
 
 const KIND = "dependency-vuln";
 const def: ScoreModel = {
@@ -16,7 +14,7 @@ const def: ScoreModel = {
   tiers: [{ name: "P0", min: 80 }, { name: "P3", min: 0 }],
 };
 const row = (id: string, cvss: number): ScoredItem => ({
-  id, source: "github", kind: KIND, title: `pkg-${id}`, location: "acme/web",
+  id, provider: "github", providerRef: {}, kind: KIND, title: `pkg-${id}`, location: "acme/web",
   signal: 0, createdAt: "2026-01-01T00:00:00Z", url: "", details: { cvss }, score: 0, tier: "P3",
 });
 
@@ -24,7 +22,10 @@ function setup(rows: ScoredItem[]) {
   const host = document.createElement("div"); document.body.appendChild(host);
   const policy = new PolicyStore();
   const api = mountSettings(host, {
-    sources: [] as Source[], creds: { get: () => "", set: () => {} } as any,
+    catalog: scoringCatalog(def, [
+      { name: "cvss", type: "number", range: [0, 10] },
+    ]),
+    providers: [], creds: { get: () => "", set: () => {} } as any,
     scopes: { get: () => ({}), set: () => {} } as any,
     policy, onChange: () => {}, getRows: () => rows,
   });
@@ -35,11 +36,10 @@ function setup(rows: ScoredItem[]) {
 
 describe("Settings → scoring preview wiring", () => {
   beforeEach(() => {
-    localStorage.clear(); document.body.innerHTML = "";
-    _resetDefaultModels();
-    registerFieldCatalog(KIND, [{ name: "cvss", type: "number", range: [0, 10] }]);
-    registerDefaultModel(KIND, def);
+    localStorage.clear();
+    document.body.innerHTML = "";
   });
+
 
   it("feeds getRows (filtered to the active kind) into the editor preview", () => {
     const { host } = setup([row("low", 2), row("high", 9)]);

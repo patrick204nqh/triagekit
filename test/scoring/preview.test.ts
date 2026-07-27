@@ -10,7 +10,7 @@ const model: ScoreModel = {
   tiers: [{ name: "P0", min: 80 }, { name: "P1", min: 50 }, { name: "P2", min: 25 }, { name: "P3", min: 0 }],
 };
 const item = (id: string, cvss: number): TriageItem => ({
-  id, source: "github", kind: "dependency-vuln", title: `pkg-${id}`, location: "acme/web",
+  id, provider: "github", providerRef: {}, kind: "dependency-vuln", title: `pkg-${id}`, location: "acme/web",
   signal: 0, createdAt: "2026-01-01T00:00:00Z", url: "", details: { cvss },
 });
 

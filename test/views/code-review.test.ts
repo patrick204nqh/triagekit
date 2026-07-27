@@ -2,21 +2,20 @@
 import { describe, it, expect } from "vitest";
 import { renderTriageList } from "../../src/runtime/layout/table/detail-panel";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
-import { registerKinds } from "../../src/runtime/core/register-kinds";
 import { changeRequestKind } from "../../src/runtime/kinds/change-request";
 import { issueKind } from "../../src/runtime/kinds/issue";
-registerKinds([changeRequestKind, issueKind]);   // registers change-request + issue kind renderers + axes
-import { getFilterAxis } from "../../src/runtime/layout/toolbar/axis-registry";
+import { runtimeDefaults } from "../../src/runtime/catalog/defaults";
 
-it("registers the assignee axis and exactly one (generic) labels axis — no duplicate", () => {
-  expect(getFilterAxis("assignee")).toBeDefined();
-  expect(getFilterAxis("labels")).toBeDefined();    // generic axis already covers review labels
-  expect(getFilterAxis("label")).toBeUndefined();   // the redundant review-specific "Label" axis is gone
+it("declares the assignee axis and exactly one generic labels axis", () => {
+  const axisIds = runtimeDefaults.filters.map((axis) => axis.id);
+  expect(axisIds).toContain("assignee");
+  expect(axisIds).toContain("labels");
+  expect(axisIds).not.toContain("label");
 });
 
 function pr(over: Partial<ScoredItem> = {}): ScoredItem {
   return {
-    id: "github:acme/web:1", source: "github", kind: "change-request", title: "Fix it",
+    id: "github:acme/web:1", provider: "github", providerRef: {}, kind: "change-request", title: "Fix it",
     location: "acme/web", signal: 50, createdAt: "2026-01-01T00:00:00Z", url: "https://x",
     details: { number: 42, state: "open", body: "b", author: { login: "alice", avatarUrl: "", kind: "human" },
       assignees: [], reviewers: [], comments: 0, labels: [], checks: null, permalinks: [], relations: [] },

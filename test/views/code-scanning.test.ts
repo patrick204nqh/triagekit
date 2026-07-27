@@ -6,7 +6,7 @@ import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 import type { CodeScanningDetails } from "../../src/runtime/dataset/kinds/code-scanning";
 
 const row = (d: Partial<CodeScanningDetails>): ScoredItem => ({
-  id: "x", source: "github", kind: "code-scanning", title: "SQL injection",
+  id: "x", provider: "github", providerRef: {}, kind: "code-scanning", title: "SQL injection",
   location: "acme/api", signal: 0, createdAt: "2026-01-01T00:00:00Z", url: "u",
   score: 80, tier: "P0",
   details: {

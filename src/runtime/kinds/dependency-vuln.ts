@@ -1,15 +1,23 @@
 // src/runtime/kinds/dependency-vuln.ts
-import type { KindManifest } from "../core/manifest";
-import type { Scorer } from "../scoring/registry";
+import type { KindDeclaration, Scorer } from "../catalog/types";
 import { dependencyVulnScore } from "../scoring/dependency-vuln";
-import { dependencyVulnRenderer, severityAxis, fixAvailableAxis } from "../views/code-security/view";
+import {
+  dependencyVulnCharts,
+  dependencyVulnRenderer,
+  dependencyVulnSorts,
+  dependencyVulnView,
+  fixAvailableAxis,
+  severityAxis,
+} from "../views/code-security/view";
 
-// Fields + defaultModel live here in the manifest (the single source of truth).
-// scoring/dependency-vuln.ts is now a pure score function; registerKinds wires
+// Fields and defaultModel live in this declaration, the single source of truth.
+// scoring/dependency-vuln.ts remains a pure score function.
 // these into the registries.
-export const dependencyVulnKind: KindManifest = {
+export const dependencyVulnKind: KindDeclaration = {
   kind: "dependency-vuln",
   domain: "code-security",
+  label: "Dependencies",
+  status: "ready",
   fields: [
     { name: "severity", type: "enum", values: ["critical", "high", "medium", "low"] },
     { name: "cvss", type: "number", range: [0, 10] },
@@ -30,4 +38,7 @@ export const dependencyVulnKind: KindManifest = {
   },
   renderer: dependencyVulnRenderer,
   filters: [severityAxis, fixAvailableAxis],
+  sorts: dependencyVulnSorts,
+  charts: dependencyVulnCharts,
+  views: [dependencyVulnView],
 };
