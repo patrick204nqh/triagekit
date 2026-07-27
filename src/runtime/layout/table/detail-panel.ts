@@ -74,6 +74,13 @@ export function renderTriageList(
       if (ctx.scoreExplain) renderScoreBreakdown(body, r, ctx.scoreExplain(r));
       foot.innerHTML = "";
       view.actions?.(foot);
+      if (ctx.handoffController) {
+        const btn = document.createElement("button");
+        btn.className = "btn ghost";
+        btn.textContent = "Continue with agent";
+        btn.addEventListener("click", () => ctx.handoffController!.openFor(r));
+        foot.appendChild(btn);
+      }
       drawer.hidden = false;
       scrim.classList.add("open");
       dismiss.activate();
