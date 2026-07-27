@@ -2,6 +2,7 @@ import type { RuntimeCatalog } from "../catalog/types";
 import type { Kind } from "../dataset/item";
 import {
   emptyListState,
+  pruneFilters,
   type ListState,
 } from "../layout/toolbar/filter-state";
 import type { ScoredItem } from "../layout/table/kind-renderer";
@@ -135,15 +136,30 @@ export function createTriageSession(
     },
 
     selectRepository(repository, rows) {
-      if (repository === state.preferredRepository) return unchanged();
-      const effectiveRepository = repository === ""
-        || rows.some((row) => row.location === repository)
-        ? repository
-        : "";
+      if (
+        repository !== ""
+        && !rows.some((row) => row.location === repository)
+      ) {
+        return unchanged();
+      }
+      if (
+        repository === state.preferredRepository
+        && repository === state.effectiveRepository
+      ) {
+        return unchanged();
+      }
+      const artifact = catalog.artifact(state.kind);
+      const scopedRows = repository
+        ? rows.filter((row) => row.location === repository)
+        : [...rows];
+      const filters = artifact
+        ? pruneFilters(state.filters, scopedRows, { artifact }, catalog)
+        : state.filters;
       return update({
         ...state,
         preferredRepository: repository,
-        effectiveRepository,
+        effectiveRepository: repository,
+        filters,
       }, "rederive");
     },
 
@@ -160,15 +176,14 @@ export function createTriageSession(
       return unchanged();
     },
 
-    reconcile(availability: SessionAvailability, rows: readonly ScoredItem[]) {
+    reconcile(availability: SessionAvailability, _rows: readonly ScoredItem[]) {
       const preferred = state.preferredRepository;
       const effective = preferred
         && availability.repositories.includes(preferred)
-        && rows.some((row) => row.location === preferred)
         ? preferred
         : "";
       if (effective === state.effectiveRepository) return unchanged();
-      return update({ ...state, effectiveRepository: effective }, "present");
+      return update({ ...state, effectiveRepository: effective }, "rederive");
     },
   };
 }
