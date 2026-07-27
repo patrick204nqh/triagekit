@@ -77,7 +77,7 @@ export function renderTriageList(
       if (ctx.handoffController) {
         const btn = document.createElement("button");
         btn.className = "btn ghost";
-        btn.textContent = "Continue with agent";
+        btn.textContent = "Generate brief";
         btn.addEventListener("click", () => { closeDrawer(); ctx.handoffController!.openFor(r); });
         foot.appendChild(btn);
       }

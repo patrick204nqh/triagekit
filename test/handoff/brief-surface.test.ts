@@ -8,7 +8,7 @@ function sample(): AgentHandoffV1 {
     schema: "triagekit.agent-handoff",
     version: 1,
     createdAt: "2026-07-27T00:00:00.000Z",
-    intent: { outcome: "Fix the vuln", constraints: [], verification: [] },
+    intent: { outcome: "Fix the vuln", constraints: ["Don't force-push"], verification: ["Tests pass"] },
     targets: [{
       id: "gh:42", kind: "dependency-vuln", provider: "github",
       providerReference: { alertNumber: 42 },
@@ -33,9 +33,6 @@ describe("BriefSurface", () => {
     surface = new BriefSurface();
     surface.mount(container);
     callbacks = {
-      onOutcomeChange: vi.fn(),
-      onConstraintChange: vi.fn(),
-      onVerificationChange: vi.fn(),
       onCopy: vi.fn(),
       onDownloadMarkdown: vi.fn(),
       onDownloadJSON: vi.fn(),
@@ -47,7 +44,7 @@ describe("BriefSurface", () => {
     document.body.removeChild(container);
   });
 
-  it("opens and shows the preview", () => {
+  it("opens and shows the drawer", () => {
     surface.open(sample(), callbacks);
     expect(surface["drawer"].hidden).toBe(false);
     expect(surface["scrim"].hidden).toBe(false);
@@ -67,10 +64,43 @@ describe("BriefSurface", () => {
     expect(callbacks.onClose).toHaveBeenCalled();
   });
 
-  it("calls onCopy when copy button is clicked", () => {
+  it("shows item identity in head meta", () => {
     surface.open(sample(), callbacks);
-    (surface["drawer"].querySelector("[data-copy]") as HTMLElement).click();
-    expect(callbacks.onCopy).toHaveBeenCalled();
+    expect(surface["headMeta"].textContent).toContain("dependency-vuln");
+    expect(surface["headMeta"].textContent).toContain("lodash");
+    expect(surface["headMeta"].textContent).toContain("P0");
+  });
+
+  it("shows disclosure text", () => {
+    surface.open(sample(), callbacks);
+    expect(surface["drawer"].querySelector(".brief-disclosure")!.textContent)
+      .toContain("does not contain your GitHub token");
+  });
+
+  it("shows outcome", () => {
+    surface.open(sample(), callbacks);
+    expect(surface["drawer"].querySelector(".brief-outcome")!.textContent)
+      .toContain("Fix the vuln");
+  });
+
+  it("shows raw markdown preview", () => {
+    surface.open(sample(), callbacks);
+    const raw = surface["drawer"].querySelector(".brief-raw")!;
+    expect(raw).not.toBeNull();
+    expect(raw.textContent).toContain("Fix the vuln");
+  });
+
+  it("shows target info grid", () => {
+    surface.open(sample(), callbacks);
+    const info = surface["drawer"].querySelector(".brief-info")!;
+    expect(info.textContent).toContain("github");
+    expect(info.textContent).toContain("acme/app");
+  });
+
+  it("shows constraints and verification lists when present", () => {
+    surface.open(sample(), callbacks);
+    expect(surface["drawer"].textContent).toContain("Don't force-push");
+    expect(surface["drawer"].textContent).toContain("Tests pass");
   });
 
   it("shows status message", () => {
@@ -78,13 +108,9 @@ describe("BriefSurface", () => {
     expect(surface["status"].textContent).toBe("Copied!");
   });
 
-  it("renders editable outcome", () => {
+  it("calls onCopy when copy button is clicked", () => {
     surface.open(sample(), callbacks);
-    const textarea = surface["drawer"].querySelector("textarea") as HTMLTextAreaElement;
-    expect(textarea).not.toBeNull();
-    expect(textarea.value).toBe("Fix the vuln");
-    textarea.value = "New outcome";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
-    expect(callbacks.onOutcomeChange).toHaveBeenCalledWith("New outcome");
+    (surface["drawer"].querySelector("[data-copy]") as HTMLElement).click();
+    expect(callbacks.onCopy).toHaveBeenCalled();
   });
 });

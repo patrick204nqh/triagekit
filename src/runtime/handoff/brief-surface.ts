@@ -1,11 +1,8 @@
-import type { AgentHandoffV1, HandoffIntent } from "./types";
+import type { AgentHandoffV1 } from "./types";
 import { renderMarkdown } from "./markdown";
 import { esc } from "../layout/util";
 
 export interface BriefSurfaceCallbacks {
-  onOutcomeChange(value: string): void;
-  onConstraintChange(index: number, value: string): void;
-  onVerificationChange(index: number, value: string): void;
   onCopy(): void;
   onDownloadMarkdown(): void;
   onDownloadJSON(): void;
@@ -15,13 +12,10 @@ export interface BriefSurfaceCallbacks {
 export class BriefSurface {
   private drawer!: HTMLElement;
   private scrim!: HTMLElement;
-  private head!: HTMLElement;
+  private headMeta!: HTMLElement;
   private body!: HTMLElement;
-  private preview!: HTMLElement;
   private status!: HTMLElement;
   private foot!: HTMLElement;
-  private closeBtn!: HTMLElement;
-  private copyBtn!: HTMLElement;
   private callbacks: BriefSurfaceCallbacks | null = null;
   private returnFocus: HTMLElement | null = null;
 
@@ -39,28 +33,22 @@ export class BriefSurface {
 
     this.drawer.innerHTML = `
       <div class="brief-head">
-        <h2 tabindex="-1">Agent Brief</h2>
+        <div class="brief-head-left">
+          <h2 tabindex="-1">Agent Brief</h2>
+          <span class="brief-meta"></span>
+        </div>
         <button class="drawer-close" aria-label="Close brief">×</button>
       </div>
       <div class="brief-body"></div>
       <div class="brief-status" aria-live="polite"></div>
-      <div class="brief-foot">
-        <button class="btn" data-copy>Copy Markdown</button>
-        <button class="btn ghost" data-dl-md>Download .md</button>
-        <button class="btn ghost" data-dl-json>Download .json</button>
-      </div>`;
+      <div class="brief-foot"></div>`;
 
-    this.head = this.drawer.querySelector(".brief-head")!;
+    this.headMeta = this.drawer.querySelector(".brief-meta")!;
     this.body = this.drawer.querySelector(".brief-body")!;
     this.status = this.drawer.querySelector(".brief-status")!;
     this.foot = this.drawer.querySelector(".brief-foot")!;
-    this.closeBtn = this.drawer.querySelector(".drawer-close")!;
-    this.copyBtn = this.drawer.querySelector("[data-copy]")!;
-
-    this.closeBtn.addEventListener("click", () => this.callbacks?.onClose());
-    this.copyBtn.addEventListener("click", () => this.callbacks?.onCopy());
-    this.foot.querySelector("[data-dl-md]")!.addEventListener("click", () => this.callbacks?.onDownloadMarkdown());
-    this.foot.querySelector("[data-dl-json]")!.addEventListener("click", () => this.callbacks?.onDownloadJSON());
+    const closeBtn = this.drawer.querySelector(".drawer-close")!;
+    closeBtn.addEventListener("click", () => this.callbacks?.onClose());
 
     container.appendChild(this.scrim);
     container.appendChild(this.drawer);
@@ -69,11 +57,19 @@ export class BriefSurface {
   open(handoff: AgentHandoffV1, callbacks: BriefSurfaceCallbacks, returnFocus?: HTMLElement): void {
     this.callbacks = callbacks;
     this.returnFocus = returnFocus ?? null;
-    this.renderContent(handoff);
+
+    const t = handoff.targets[0];
+    this.headMeta.textContent = t
+      ? `${esc(t.kind)} · ${esc(t.title)} · ${t.priority.tier}`
+      : "";
+
+    this.renderReadonly(handoff);
+    this.renderFoot();
+
     this.drawer.hidden = false;
     this.scrim.hidden = false;
     requestAnimationFrame(() => this.drawer.classList.add("open"));
-    this.head.querySelector("h2")!.focus();
+    this.drawer.querySelector("h2")!.focus();
   }
 
   close(): void {
@@ -88,68 +84,86 @@ export class BriefSurface {
     this.status.textContent = message;
   }
 
-  private renderContent(handoff: AgentHandoffV1): void {
+  private renderReadonly(handoff: AgentHandoffV1): void {
+    const body = this.body;
+    body.innerHTML = "";
     const intent = handoff.intent;
-    this.body.innerHTML = "";
+    const t = handoff.targets[0];
+    const s = handoff.context.session;
 
-    this.body.appendChild(this.fieldBlock("Outcome", "outcome", intent.outcome, true,
-      v => this.callbacks?.onOutcomeChange(v)));
-
-    const cBlock = document.createElement("div");
-    cBlock.className = "brief-item";
-    cBlock.innerHTML = "<label>Constraints</label><div id=\"brief-constraints\"></div>";
-    this.renderListFields(cBlock.querySelector("#brief-constraints")!, intent.constraints, "constraint",
-      (i, v) => this.callbacks?.onConstraintChange(i, v));
-    this.body.appendChild(cBlock);
-
-    const vBlock = document.createElement("div");
-    vBlock.className = "brief-item";
-    vBlock.innerHTML = "<label>Verification</label><div id=\"brief-verification\"></div>";
-    this.renderListFields(vBlock.querySelector("#brief-verification")!, intent.verification, "verification",
-      (i, v) => this.callbacks?.onVerificationChange(i, v));
-    this.body.appendChild(vBlock);
-
-    const disclosure = document.createElement("div");
-    disclosure.className = "brief-item";
-    disclosure.style.fontSize = "12px";
-    disclosure.style.color = "var(--muted)";
+    const disclosure = document.createElement("p");
+    disclosure.className = "brief-disclosure";
     disclosure.textContent = "This brief contains the selected item's repository context and provider link. It does not contain your GitHub token.";
-    this.body.appendChild(disclosure);
+    body.appendChild(disclosure);
 
-    const pBlock = document.createElement("div");
-    pBlock.className = "brief-item";
-    pBlock.innerHTML = "<label>Preview</label>";
-    this.preview = document.createElement("div");
-    this.preview.className = "brief-preview";
-    this.preview.textContent = renderMarkdown(handoff);
-    pBlock.appendChild(this.preview);
-    this.body.appendChild(pBlock);
-  }
+    const outcomeGroup = document.createElement("div");
+    outcomeGroup.className = "brief-item";
+    outcomeGroup.innerHTML = `<label>Outcome</label><p class="brief-outcome">${esc(intent.outcome)}</p>`;
+    body.appendChild(outcomeGroup);
 
-  private fieldBlock(label: string, id: string, value: string, multiLine: boolean,
-    onChange: (v: string) => void): HTMLElement {
-    const block = document.createElement("div");
-    block.className = "brief-item";
-    const el = multiLine
-      ? (() => { const t = document.createElement("textarea"); t.rows = 3; return t; })()
-      : document.createElement("input");
-    el.id = `brief-${id}`;
-    el.value = value;
-    el.addEventListener("input", () => onChange((el as HTMLInputElement).value));
-    block.innerHTML = `<label for=\"brief-${id}\">${esc(label)}</label>`;
-    block.appendChild(el);
-    return block;
-  }
+    if (t) {
+      const infoGroup = document.createElement("div");
+      infoGroup.className = "brief-item";
+      let infoHtml = `<label>Target</label><div class="brief-info">`;
+      infoHtml += `<span>Kind</span><span>${esc(t.kind)}</span>`;
+      infoHtml += `<span>Provider</span><span>${esc(t.provider)}</span>`;
+      infoHtml += `<span>Location</span><span>${esc(t.location)}</span>`;
+      infoHtml += `<span>Tier</span><span>${t.priority.tier} (score ${t.priority.score}, signal ${t.priority.signal})</span>`;
+      if (t.url) {
+        infoHtml += `<span>URL</span><span><a href="${esc(t.url)}" target="_blank" rel="noreferrer">${esc(t.url)}</a></span>`;
+      }
+      infoHtml += `</div>`;
+      infoGroup.innerHTML = infoHtml;
+      body.appendChild(infoGroup);
 
-  private renderListFields(container: HTMLElement, items: readonly string[],
-    prefix: string, onChange: (i: number, v: string) => void): void {
-    for (let i = 0; i < items.length; i++) {
-      const input = document.createElement("input");
-      input.value = items[i];
-      input.placeholder = `Add ${prefix}...`;
-      const idx = i;
-      input.addEventListener("input", () => onChange(idx, (input as HTMLInputElement).value));
-      container.appendChild(input);
+      if (t.priority.explanation && t.priority.explanation.length > 0) {
+        const evGroup = document.createElement("div");
+        evGroup.className = "brief-item";
+        evGroup.innerHTML = `<label>Evidence</label><ul class="brief-evidence">${t.priority.explanation.map(e =>
+          `<li><strong>${esc(e.label)}</strong> ${esc(String(e.value))}${e.reason ? ` — ${esc(e.reason)}` : ""}</li>`
+        ).join("")}</ul>`;
+        body.appendChild(evGroup);
+      }
     }
+
+    if (intent.constraints.length > 0) {
+      const cGroup = document.createElement("div");
+      cGroup.className = "brief-item";
+      cGroup.innerHTML = `<label>Constraints</label><ul>${intent.constraints.map(c => `<li>${esc(c)}</li>`).join("")}</ul>`;
+      body.appendChild(cGroup);
+    }
+
+    if (intent.verification.length > 0) {
+      const vGroup = document.createElement("div");
+      vGroup.className = "brief-item";
+      vGroup.innerHTML = `<label>Verification</label><ul>${intent.verification.map(v => `<li>${esc(v)}</li>`).join("")}</ul>`;
+      body.appendChild(vGroup);
+    }
+
+    const ctxGroup = document.createElement("div");
+    ctxGroup.className = "brief-item";
+    let ctxHtml = `<label>Context</label><div class="brief-info">`;
+    ctxHtml += `<span>Kind</span><span>${esc(s.kind)}</span>`;
+    ctxHtml += `<span>Provider</span><span>${esc(s.provider)}</span>`;
+    if (s.repository) ctxHtml += `<span>Repository</span><span>${esc(s.repository)}</span>`;
+    ctxHtml += `</div>`;
+    ctxGroup.innerHTML = ctxHtml;
+    body.appendChild(ctxGroup);
+
+    const md = renderMarkdown(handoff);
+    const mdGroup = document.createElement("div");
+    mdGroup.className = "brief-item";
+    mdGroup.innerHTML = `<label>Raw Markdown</label><pre class="brief-raw">${esc(md)}</pre>`;
+    body.appendChild(mdGroup);
+  }
+
+  private renderFoot(): void {
+    this.foot.innerHTML = `
+      <button class="btn brief-copy" data-copy>Copy Markdown</button>
+      <button class="btn ghost" data-dl-md>Download .md</button>
+      <button class="btn ghost" data-dl-json>Download .json</button>`;
+    this.foot.querySelector("[data-copy]")!.addEventListener("click", () => this.callbacks?.onCopy());
+    this.foot.querySelector("[data-dl-md]")!.addEventListener("click", () => this.callbacks?.onDownloadMarkdown());
+    this.foot.querySelector("[data-dl-json]")!.addEventListener("click", () => this.callbacks?.onDownloadJSON());
   }
 }
