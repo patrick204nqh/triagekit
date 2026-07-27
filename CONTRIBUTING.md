@@ -8,11 +8,13 @@ triage tool — that constraint shapes everything below.
 Requires **Node ≥ 20**.
 
 ```bash
-npm install          # install dependencies
-npm test             # vitest — the full unit suite
-npm run build:cli    # compile the CLI to dist-cli/
-npm run lint:anon    # anonymity guardrail (see below)
-npm run pack:smoke   # tarball smoke test: pack → install → build --generic → assert
+npm install             # install dependencies
+npm run check           # typecheck, test, anonymity lint, build smoke, Pages sync
+npm test                # run only the Vitest suite
+npm run typecheck       # check CLI/config and browser runtime TypeScript
+npm run build:cli       # compile the CLI to dist-cli/
+npm run lint:anon       # run only the anonymity guardrail
+npm run check:release   # ordinary checks plus tarball install/build smoke
 ```
 
 Build a dashboard locally to try a change end to end:
@@ -53,8 +55,8 @@ push. Never commit a real token, repo name, or screenshot containing private dat
 
 - Conventional-commit prefixes: `feat`, `fix`, `docs`, `refactor`, `test`, `build`, `ci`.
 - **No AI co-author / attribution footers** in commits or PRs.
-- Before opening a PR: `npm test`, `npm run lint:anon`, and `npm run pack:smoke` all pass.
-- PRs run CI (tests, anon-lint, build smoke, Pages drift). Green CI is required to merge.
+- Before opening a PR, run `npm run check`. For packaging or release changes, run
+  `npm run check:release`. Green CI is required to merge.
 
 ## Refreshing the screenshots
 

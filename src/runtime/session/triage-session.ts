@@ -20,16 +20,20 @@ export interface CreateTriageSessionOptions {
 }
 
 const frozenFilters = (filters: ListState): ListState => {
-  const axes = Object.fromEntries(
-    Object.entries(filters.axes).map(([id, values]) => [
-      id,
-      Object.freeze([...values]),
-    ]),
+  const axes: Record<string, string[]> = Object.fromEntries(
+    Object.entries(filters.axes).map(([id, values]) => {
+      const copiedValues = [...values];
+      Object.freeze(copiedValues);
+      return [id, copiedValues];
+    }),
   );
-  return Object.freeze({
+  Object.freeze(axes);
+  const snapshot: ListState = {
     sort: filters.sort,
-    axes: Object.freeze(axes),
-  });
+    axes,
+  };
+  Object.freeze(snapshot);
+  return snapshot;
 };
 
 const frozenState = (state: SessionState): Readonly<SessionState> =>

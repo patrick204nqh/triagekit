@@ -39,6 +39,7 @@ export const codeScanningRenderer: KindRenderer = {
 };
 export const codeScanningView: ViewModule = {
   id: "code-scanning",
+  label: "Code scanning",
   kind: CODE_SCANNING,
 };
 

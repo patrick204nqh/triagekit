@@ -6,7 +6,7 @@ import { esc } from "../layout/util";
 export interface SignalEditorOpts {
   name: string;
   signal: SignalSpec;
-  fields: FieldDef[];
+  fields: readonly FieldDef[];
   onChange(name: string, signal: SignalSpec): void;
   onRename(oldName: string, newName: string): void;
   onRemove(name: string): void;
@@ -23,7 +23,10 @@ function defaultTransform(type: Transform["type"]): Transform {
   }
 }
 
-function paramsHtml(signal: SignalSpec, fields: FieldDef[]): string {
+function paramsHtml(
+  signal: SignalSpec,
+  fields: readonly FieldDef[],
+): string {
   const t = signal.transform;
   if (t.type === "linear")
     return `<label>min <input type="number" step="any" data-p="lo" value="${t.in[0]}"></label>`

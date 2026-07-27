@@ -8,7 +8,7 @@ import type { FieldDef } from "./field-catalog";
 
 export interface ScoreContext {
   getModel(kind: string): ScoreModel | null;
-  getFields(kind: Kind): FieldDef[];
+  getFields(kind: Kind): readonly FieldDef[];
   getThresholds(): TierThresholds;
   override?: Scorer;
 }
