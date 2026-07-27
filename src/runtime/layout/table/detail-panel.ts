@@ -128,9 +128,9 @@ function showBriefInDrawer(
   });
 
   const back = document.createElement("button");
-  back.className = "drawer-back";
+  back.className = "drawer-close";
   back.setAttribute("aria-label", "Back to detail");
-  back.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>`;
+  back.textContent = "‹";
   back.addEventListener("click", () => {
     head.innerHTML = origHead;
     body.innerHTML = origBody;
