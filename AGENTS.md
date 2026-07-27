@@ -33,6 +33,10 @@ issues), each scored, tiered, and sortable.
 - **No trackers in the build artifact.** Analytics (GoatCounter) live only on the hosted
   landing/site, never in the CLI output — build output must stay tracker-free.
 - Match the style of surrounding code; keep the output a single self-contained HTML file.
+- **Use existing CSS classes first** — never write new CSS rules before checking what
+  already exists. Button system: `.act` / `.act.primary` / `.act.danger` for drawer
+  footer actions, `.drawer-close` for drawer-head icon buttons, `.btn-primary` /
+  `.btn-ghost` for settings panels. If no existing class fits, only then add new CSS.
 
 ## PR and commit guidelines
 
