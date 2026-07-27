@@ -6,16 +6,30 @@ import type { ViewModel } from "../../src/runtime/core/view-model";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 
 // Minimal manifest registration so the issue renderer exists.
-import { registerKinds } from "../../src/runtime/core/register-kinds";
 
 const row = (id: string, score: number): ScoredItem => ({
   id, source: "github", kind: "issue", title: id, location: "r",
-  signal: score, createdAt: "2026-01-01T00:00:00Z", url: "", details: {}, score, tier: "P2",
+  signal: score,
+  createdAt: "2026-01-01T00:00:00Z",
+  url: "",
+  details: {
+    number: 1,
+    state: "open",
+    body: "",
+    author: { login: "alice", avatarUrl: "", kind: "human" },
+    assignees: [],
+    comments: 0,
+    labels: [],
+    checks: null,
+    permalinks: [],
+    relations: [],
+  },
+  score,
+  tier: "P2",
 });
 
 describe("DOM view adapter", () => {
   beforeEach(() => {
-    registerKinds([{ kind: "issue", domain: "tracking", fields: [{ name: "signal", type: "number" }], builtInScorer: (i) => i.signal, renderer: { kind: "issue" } }]);
     document.body.innerHTML = `<div id="root"></div>`;
   });
 

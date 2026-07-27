@@ -35,7 +35,13 @@ const isReview = (k: string) => k === CHANGE_REQUEST || k === ISSUE;
 // in the Filter popover alongside "Labels".
 export const assigneeAxis: FilterAxis = {
   id: "assignee", label: "Assignee", widget: "chips", quick: false,
-  appliesTo: (rows) => rows.some(r => isReview(r.kind) && det(r).assignees.length > 0),
-  optionsFrom: (rows) => uniqueValues(rows, r => det(r).assignees.map(a => a.login), r => isReview(r.kind)),
-  test: (i, sel) => isReview(i.kind) && det(i).assignees.some(a => sel.includes(a.login)),
+  appliesTo: (rows) => rows.some(r =>
+    isReview(r.kind) && (det(r)?.assignees?.length ?? 0) > 0),
+  optionsFrom: (rows) => uniqueValues(
+    rows,
+    r => det(r)?.assignees?.map(a => a.login) ?? [],
+    r => isReview(r.kind),
+  ),
+  test: (i, sel) => isReview(i.kind)
+    && (det(i)?.assignees ?? []).some(a => sel.includes(a.login)),
 };

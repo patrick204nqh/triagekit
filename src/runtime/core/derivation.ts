@@ -1,5 +1,7 @@
 // src/runtime/core/derivation.ts
 import type { Kind, TriageItem } from "../dataset/item";
+import { runtimeCatalog } from "../catalog/built-in";
+import type { RuntimeCatalog } from "../catalog/types";
 import { scoreAndTier, type ScoreContext } from "../scoring/configured";
 import { applyDecorators } from "./decorators";
 import { applyFilters, type ListState } from "../layout/toolbar/filter-state";
@@ -12,6 +14,7 @@ export interface DeriveInput {
   score: ScoreContext;
   repoView: string;        // "" = all repos (display-filter; not fetch-config Scope)
   filters: ListState;
+  catalog?: RuntimeCatalog;
 }
 export interface Derived {
   scored: ScoredItem[];   // active-kind items, bot-policy applied, scored + sorted (pre-filter)
@@ -20,17 +23,18 @@ export interface Derived {
 
 // Mirrors app-shell.ts:209-223 exactly, as a pure function over a snapshot.
 export function derive(input: DeriveInput): Derived {
+  const catalog = input.catalog ?? runtimeCatalog;
   const scored = input.items
     .filter(it => input.activeKinds.includes(it.kind))
     .map(it => applyDecorators(it, { botLogins: input.botLogins }))
     .map(it => {
-      const { score, tier } = scoreAndTier(it, input.score);
+      const { score, tier } = scoreAndTier(it, input.score, catalog);
       return { ...it, score, tier } as ScoredItem;
     })
     .sort((a, b) => b.score - a.score);
   const scoped = input.repoView && scored.some(r => r.location === input.repoView)
     ? scored.filter(r => r.location === input.repoView)
     : scored;
-  const shown = applyFilters(scoped, input.filters);
+  const shown = applyFilters(scoped, input.filters, catalog);
   return { scored, shown };
 }

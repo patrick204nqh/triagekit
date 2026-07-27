@@ -4,12 +4,14 @@ import type { ViewModel } from "../core/view-model";
 import type { Artifact } from "../dataset/artifact";
 import type { ScoredItem } from "../layout/table/kind-renderer";
 import type { ScoreExplanation } from "../scoring/score-model";
+import type { RuntimeCatalog } from "../catalog/types";
 import { renderTriageList } from "../layout/table/detail-panel";
 
 export interface DomViewDeps {
   artifact: Artifact;
   token: string;
   scoreExplain(i: ScoredItem): ScoreExplanation | null;
+  catalog?: RuntimeCatalog;
 }
 
 // Render-only list surface. Filtering/sorting is driven by the unified toolbar
@@ -20,7 +22,13 @@ export function createDomView(host: HTMLElement, deps: DomViewDeps): ViewPort {
     render(vm: ViewModel) {
       host.innerHTML = `<div class="surface-body"></div>`;
       const body = host.querySelector<HTMLElement>(".surface-body")!;
-      renderTriageList(body, vm.shown, vm.errors, { token: deps.token, scoreExplain: deps.scoreExplain });
+      renderTriageList(
+        body,
+        vm.shown,
+        vm.errors,
+        { token: deps.token, scoreExplain: deps.scoreExplain },
+        deps.catalog,
+      );
     },
   };
 }

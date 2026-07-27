@@ -1,7 +1,8 @@
 import type { TriageConfigT } from "../../config/schema";
 import { isCompiledConfig } from "./mode";
 import { getSource, listSources, providerOf, type Source } from "../ingest/source";
-import { listArtifacts, GROUP_LABEL, GROUP_ORDER, type Artifact } from "../dataset/artifact";
+import { GROUP_LABEL, GROUP_ORDER, type Artifact } from "../dataset/artifact";
+import { runtimeCatalog } from "../catalog/built-in";
 import type { Scorer } from "../scoring/registry";
 import { fieldsFor } from "../scoring/field-catalog";
 import { explainScoreModel, validateModel, type ScoreExplanation } from "../scoring/score-model";
@@ -9,8 +10,6 @@ import { renderTableSkeleton } from "../layout/table/triage-table";
 import { esc } from "../layout/util";
 import type { ScoredItem } from "../layout/table/kind-renderer";
 import { renderInsights } from "../layout/insights";
-import { applicableTabs, getTab } from "../layout/navigation/tab-registry";
-import { getSortKey, getFilterAxis } from "../layout/toolbar/axis-registry";
 import { emptyListState, pruneFilters, type ListState } from "../layout/toolbar/filter-state";
 import { renderToolbar, type ToolbarProps } from "../layout/toolbar/toolbar";
 import { CredStore } from "./cred-store";
@@ -36,6 +35,11 @@ export interface ShellEnv {
   createDomView: (host: HTMLElement, deps: DomViewDeps) => ViewPort;
   scoreOverride?: Scorer;
 }
+
+const applicableCatalogTabs = (artifact: Artifact, rows: ScoredItem[]) =>
+  runtimeCatalog.tabs()
+    .filter((tab) => tab.appliesTo(artifact, rows))
+    .sort((a, b) => a.order - b.order);
 
 // Product mark: a funnel (many signals in → a triaged few out) whose drip is the
 // teal accent, echoing the "·" in the wordmark.
@@ -92,7 +96,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
 
   const sourcesFor = (a: Artifact) => listSources().filter(s => s.kinds.some(k => a.kinds.includes(k)));
   const liveSourcesFor = (a: Artifact) => sourcesFor(a).filter(s => s.status === "ready");
-  const artifacts = listArtifacts().filter(a => sourcesFor(a).length > 0);
+  const artifacts = runtimeCatalog.artifacts().filter(a => sourcesFor(a).length > 0);
   const primarySource = (a: Artifact): Source => liveSourcesFor(a)[0] ?? sourcesFor(a)[0];
 
   let active: Artifact = artifacts.find(a => liveSourcesFor(a).length) ?? artifacts[0];
@@ -112,7 +116,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   // location set won't rebuild — tolerating cosmetic tab-order lag to keep popovers open.
   const navRowSig = () =>
     [...new Set(lastRows.map(r => r.location))].sort().join(",") +
-    "|" + applicableTabs(active, lastRows).map(t => t.id).sort().join(",");
+    "|" + applicableCatalogTabs(active, lastRows).map(t => t.id).sort().join(",");
   let lastNavRowSig = "";
 
   // --- Apply URL state on load (artifact → provider → repo → view → sort/axes) ---
@@ -143,18 +147,18 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     // an extra-tab id may fall back to "list" — acceptable degradation; it self-heals
     // once data loads and the user re-selects the tab.
     if (u.view) {
-      const isExtra = applicableTabs(active, []).some(t => t.id === u.view);
+    const isExtra = applicableCatalogTabs(active, []).some(t => t.id === u.view);
       if (u.view === "list" || (u.view === "insights" && hasInsights) || isExtra) view = u.view;
     }
 
     // sort: only if the sort key exists
-    if (u.sort && getSortKey(u.sort)) filterState = { ...filterState, sort: u.sort };
+    if (u.sort && runtimeCatalog.sort(u.sort)) filterState = { ...filterState, sort: u.sort };
 
     // axes: only axis ids that exist (values not deep-validated — unknown values match nothing)
     if (u.axes) {
       const axes: Record<string, string[]> = { ...filterState.axes };
       for (const [id, vals] of Object.entries(u.axes)) {
-        if (getFilterAxis(id) && vals.length) axes[id] = vals;
+        if (runtimeCatalog.filter(id) && vals.length) axes[id] = vals;
       }
       filterState = { ...filterState, axes };
     }
@@ -199,13 +203,21 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       // Rebuild the toolbar when that row-derived set actually changes — but not on
       // every paint, so a background refresh doesn't tear down an open filter popover.
       if (navRowSig() !== lastNavRowSig) buildNav();
-      if (view === "insights") { renderInsights(root, vm.scored, active.kinds); return; }
-      if (view !== "list") { const t = getTab(view); if (t) { t.render(root, vm.scored); return; } }
+    if (view === "insights") { renderInsights(root, vm.scored, active.kinds, runtimeCatalog); return; }
+    if (view !== "list") {
+      const tab = runtimeCatalog.tabs().find((candidate) => candidate.id === view);
+      if (tab) { tab.render(root, vm.scored); return; }
+    }
       // createDomView is called per-render intentionally: artifact: active and token
       // both reflect the current artifact/credential at render time and go stale if
       // captured at construction (active is reassigned when the user switches artifacts).
       const token = creds.get(providerOf(usableSources()[0]))!;  // usableSources filter guarantees a credential
-      env.createDomView(root, { artifact: active, token, scoreExplain }).render(vm);
+    env.createDomView(root, {
+      artifact: active,
+      token,
+      scoreExplain,
+      catalog: runtimeCatalog,
+    }).render(vm);
     },
   };
 
@@ -329,10 +341,12 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       sources: sourcesFor(active).map(s => ({ id: s.id, provider: providerOf(s), status: s.status })),
       activeProvider,
       activeRepo: repoView,
-      extraTabs: applicableTabs(active, lastRows).map(t => ({ id: t.id, label: t.label })),
+      extraTabs: applicableCatalogTabs(active, lastRows)
+        .map(t => ({ id: t.id, label: t.label })),
     });
     renderToolbar(nav, {
       ...base,
+      catalog: runtimeCatalog,
       onFilterChange,
       onViewChange: (id) => { view = id; syncUrl(); buildNav(); render(); },
       onProviderSelect: (id) => {
@@ -349,7 +363,12 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
         // against an option that's no longer in the dropdown to un-check.
         const scoped = id && lastRows.some(r => r.location === id)
           ? lastRows.filter(r => r.location === id) : lastRows;
-        filterState = pruneFilters(filterState, scoped, { artifact: active });
+        filterState = pruneFilters(
+          filterState,
+          scoped,
+          { artifact: active },
+          runtimeCatalog,
+        );
         syncUrl();
         core.rerender();      // client-side re-derive, no refetch
         buildNav();           // re-render tabs so the active one updates
@@ -369,7 +388,8 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     }
     if (!silent && view === "insights" && lastRows.length) { renderInsights(root, lastRows, active.kinds); return; }
     if (!silent && view !== "list" && view !== "insights" && lastRows.length) {
-      const t = getTab(view); if (t) { t.render(root, lastRows); return; }
+      const tab = runtimeCatalog.tabs().find((candidate) => candidate.id === view);
+      if (tab) { tab.render(root, lastRows); return; }
     }
 
     if (!usableSources().length) {

@@ -2,7 +2,9 @@ import type { ScoredItem } from "../table/kind-renderer";
 import type { Artifact } from "../../dataset/artifact";
 import { esc } from "../util";
 import { applyFilters, type ListState } from "./filter-state";
-import { listFilterAxes, listSortKeys, type AxisCtx, type FilterAxis, type AxisOption } from "./axis-registry";
+import { runtimeCatalog } from "../../catalog/built-in";
+import type { RuntimeCatalog } from "../../catalog/types";
+import { type AxisCtx, type FilterAxis, type AxisOption } from "./axis-registry";
 import { renderProviderSwitch, type SwitchProvider } from "../navigation/provider-switch";
 import { renderRepoTabs, type RepoOption } from "../navigation/repo-tabs";
 import { chipHtml } from "../atoms/atoms";
@@ -24,6 +26,7 @@ export interface ToolbarProps {
   onViewChange: (id: string) => void;
   onProviderSelect: (id: string) => void;
   onRepoSelect: (id: string) => void;
+  catalog?: RuntimeCatalog;
 }
 
 function activeFilterCount(state: ListState): number {
@@ -41,9 +44,12 @@ function optHtml(axisId: string, o: AxisOption, checked: boolean): string {
 }
 
 export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
+  const catalog = p.catalog ?? runtimeCatalog;
   const ctx: AxisCtx = { artifact: p.artifact };
-  const axes = listFilterAxes().filter(a => a.appliesTo(p.rows, ctx));
-  const sorts = listSortKeys().filter(s => !s.appliesTo || s.appliesTo(ctx));
+  const axes = catalog.filtersFor(p.artifact.kinds[0])
+    .filter(a => a.appliesTo(p.rows, ctx));
+  const sorts = catalog.sortsFor(p.artifact.kinds[0])
+    .filter(s => !s.appliesTo || s.appliesTo(ctx));
   const sel = (id: string) => p.filters.axes[id] ?? [];
   const fcount = activeFilterCount(p.filters);
   const curSort = sorts.find(s => s.id === p.filters.sort)?.label ?? "Priority";
@@ -51,7 +57,7 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
   // filters actually leave visible vs. that scoped total, so the badge never claims
   // more rows than the table shows.
   const total = p.rows.length;
-  const shown = applyFilters(p.rows, p.filters).length;
+  const shown = applyFilters(p.rows, p.filters, catalog).length;
   const countLabel = shown === total ? `${total}` : `${shown} / ${total}`;
 
   const views = p.viewModes.map(v =>
