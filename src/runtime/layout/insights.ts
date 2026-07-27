@@ -7,7 +7,7 @@ import { esc } from "./util";
 export function renderInsights(
   root: HTMLElement,
   rows: ScoredItem[],
-  kinds: Kind[],
+  kinds: readonly Kind[],
   catalog: RuntimeCatalog = runtimeCatalog,
 ): void {
   if (!rows.length) { root.innerHTML = `<p class="muted">No items to chart yet — load a view first.</p>`; return; }
@@ -16,7 +16,7 @@ export function renderInsights(
   for (const c of catalog.chartsFor(kinds)) {
     const card = document.createElement("div");
     card.className = "chart" + (c.span ? " span2" : "");
-    const ktag = c.kinds === "*" ? "generic" : (c.kinds as Kind[]).join(", ");
+    const ktag = c.kinds === "*" ? "generic" : c.kinds.join(", ");
     const meta = c.meta?.(rows) ?? "";
     card.innerHTML = `<div class="chart-head"><span class="chart-title">${esc(c.title)}<span class="k">${esc(ktag)}</span></span><span class="chart-meta">${meta}</span></div><div class="chart-body"></div>`;
     c.render(rows, card.querySelector<HTMLElement>(".chart-body")!);

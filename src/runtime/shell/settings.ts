@@ -54,7 +54,7 @@ interface Opts {
 
 // Discovery results cached per source+credential so re-opening Settings or
 // re-filtering never re-hits the API; a "Re-scan" action forces a fresh call.
-const discoverCache = new Map<string, DiscoveryOption[]>();
+const discoverCache = new Map<string, readonly DiscoveryOption[]>();
 function fingerprint(token: string): string {
   let h = 0; for (let i = 0; i < token.length; i++) h = (h * 31 + token.charCodeAt(i)) | 0;
   return h.toString(36);
@@ -353,7 +353,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     const cacheKey = `${prov}:${fingerprint(getCred(prov))}`;
     if (!force && discoverCache.has(cacheKey)) { mountMultiSelect(list, s, key, discoverCache.get(cacheKey)!); return; }
     list.innerHTML = `<div class="muted">Querying…</div>`;
-    let options: DiscoveryOption[] = [];
+    let options: readonly DiscoveryOption[] = [];
     try { options = (await discoverWith(s, getCred(prov))) ?? []; }
     catch (e: any) { list.innerHTML = `<div class="error">${esc(e?.message ?? e)}</div>`; return; }
     discoverCache.set(cacheKey, options);
@@ -366,7 +366,12 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   // Tag-style multiselect: the chosen targets sit at the top as removable chips
   // (one-click removal, see-at-a-glance), and the searchable list below holds only
   // the *unselected* options — so at 100+ repos you only scroll what you can add.
-  function mountMultiSelect(list: HTMLElement, s: ProviderDeclaration, key: string, options: DiscoveryOption[]) {
+  function mountMultiSelect(
+    list: HTMLElement,
+    s: ProviderDeclaration,
+    key: string,
+    options: readonly DiscoveryOption[],
+  ) {
     const noun = scopeFieldsOf(s).find(f => f.key === key)
       ?.label.toLowerCase() ?? "items";
     const prov = providerOf(s);

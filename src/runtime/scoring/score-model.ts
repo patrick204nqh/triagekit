@@ -53,7 +53,10 @@ export function tierFromBands(score: number, tiers: TierBand[]): string {
 }
 
 // Returns a list of human-readable problems; empty = valid.
-export function validateModel(model: ScoreModel, fields: FieldDef[]): string[] {
+export function validateModel(
+  model: ScoreModel,
+  fields: readonly FieldDef[],
+): string[] {
   const errs: string[] = [];
   const known = new Set(fields.map(f => f.name));
   for (const [name, spec] of Object.entries(model.signals)) {

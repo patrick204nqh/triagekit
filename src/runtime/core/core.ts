@@ -15,7 +15,7 @@ export interface CoreDeps {
   store: DatasetStore;
   view: ViewPort;
   jobsFor(): ProviderRefreshJob[];
-  activeKinds(): Kind[];
+  activeKinds(): readonly Kind[];
   botLogins(): string[];
   scoreContext(): ScoreContext;
   filters(): ListState;

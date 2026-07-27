@@ -21,10 +21,12 @@ export const changeRequestRenderer: KindRenderer = { kind: CHANGE_REQUEST, colum
 export const issueRenderer: KindRenderer = { kind: ISSUE, columns: reviewColumns, detail: (r, ctx) => reviewDetailView(r, ctx) };
 export const changeRequestView: ViewModule = {
   id: "code-review",
+  label: "Code review",
   kind: CHANGE_REQUEST,
 };
 export const issueView: ViewModule = {
   id: "code-review",
+  label: "Issues",
   kind: ISSUE,
 };
 

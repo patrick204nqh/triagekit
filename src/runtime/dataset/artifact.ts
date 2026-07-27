@@ -12,7 +12,12 @@ import { listDomains, type Class } from "./taxonomy";
 //   - work:    human items, scored by priority × age × blocker
 
 export type ArtifactGroup = Class;             // "finding" | "work"
-export interface Artifact { id: string; label: string; group: ArtifactGroup; kinds: Kind[]; }
+export interface Artifact {
+  id: Kind;
+  label: string;
+  group: ArtifactGroup;
+  kinds: readonly Kind[];
+}
 
 export const GROUP_LABEL: Record<ArtifactGroup, string> = { finding: "Findings", work: "Work" };
 export const GROUP_ORDER: ArtifactGroup[] = ["finding", "work"];

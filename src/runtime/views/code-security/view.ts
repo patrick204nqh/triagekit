@@ -42,6 +42,7 @@ export const dependencyVulnRenderer: KindRenderer = {
 };
 export const dependencyVulnView: ViewModule = {
   id: "code-security",
+  label: "Code security",
   kind: DEPENDENCY_VULN,
 };
 
