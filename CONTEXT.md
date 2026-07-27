@@ -71,12 +71,3 @@ Four-unit pipeline: projector → validator → markdown renderer → transport 
 wires them). Per-kind intent defaults in `handoff/intent.ts`. `kind-renderer.ts` carries
 `HandoffController` on `DetailCtx`. `app-shell.ts` instantiates the controller.
 
-### Recent commits (newest → oldest)
-
-| Commit | What |
-|--------|------|
-| 2edfb1f | add CONTEXT.md as north star file, enforce reading at session start |
-| c9be210 | back button: use drawer-close class + text entity, remove custom CSS |
-| 2872b9c | fix brief button consistency: use .act system to match drawer footer pattern |
-| 511717f | brief: add back arrow to restore original detail view |
-| 8d7d56a | agent handoff: inline brief in detail drawer, remove separate brief-surface panel |
