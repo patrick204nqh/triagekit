@@ -1,9 +1,10 @@
 # Context
 
-**Read this at every session start.** ↓ North Star (human, stable) stays above the line;
-↓ Session State (AI-maintained) tracks active work.
+**Read this at every session start.** The `<GOAL>`…`<GOAL_END>` block (top) is
+human-authored and stable — project identity, design system, CSS conventions, test
+commands. Below it is AI-maintained session state — update when work shifts.
 
-<NORTH_STAR>
+<GOAL>
 
 ## North Star — Project Identity
 
@@ -37,7 +38,7 @@ Never write new CSS before checking existing classes. Button system:
 - `npm run lint:anon` — anonymisation guard (run if you touch example data)
 - `npm run build:pages` — rebuild demo HTML + Pages site
 
-<NORTH_STAR_END>
+<GOAL_END>
 
 ---
 
