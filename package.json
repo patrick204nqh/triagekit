@@ -55,7 +55,7 @@
     "check:release": "node scripts/run-parallel.mjs typecheck test lint:anon check:dist && npm run pack:smoke",
     "test": "vitest run",
     "test:watch": "vitest",
-    "dev:server": "vite --config src/runtime/vite.config.ts src/runtime",
+    "dev:server": "vite --config src/runtime/dev.vite.config.ts src/runtime",
     "lint:anon": "node scripts/anon-lint.mjs",
     "pack:smoke": "node scripts/pack-smoke.mjs",
     "screenshots": "python3 scripts/gen-screenshots.py",
