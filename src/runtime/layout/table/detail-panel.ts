@@ -108,9 +108,9 @@ function showBriefInDrawer(
   body.appendChild(mg);
 
   foot.innerHTML = `<span class="drawer-msg" data-brief-msg></span>
-    <button class="btn brief-copy" data-brief-copy>Copy Markdown</button>
-    <button class="btn ghost" data-brief-dl-md>Download .md</button>
-    <button class="btn ghost" data-brief-dl-json>Download .json</button>`;
+    <button class="act primary" data-brief-copy>Copy Markdown</button>
+    <button class="act" data-brief-dl-md>Download .md</button>
+    <button class="act" data-brief-dl-json>Download .json</button>`;
   const msg = foot.querySelector<HTMLElement>("[data-brief-msg]")!;
 
   foot.querySelector("[data-brief-copy]")!.addEventListener("click", async () => {
@@ -193,7 +193,7 @@ export function renderTriageList(
       view.actions?.(foot);
       if (ctx.handoffController) {
         const btn = document.createElement("button");
-        btn.className = "btn ghost";
+        btn.className = "act";
         btn.textContent = "Generate brief";
         btn.addEventListener("click", () => {
           const handoff = ctx.handoffController!.generateFor(r);

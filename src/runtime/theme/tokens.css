@@ -562,8 +562,7 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 .brief-evidence { margin:0; padding:0; list-style:none; }
 .brief-evidence li { padding:4px 0; font-size:13px; }
 .brief-evidence li + li { border-top:1px solid var(--line); }
-.brief-copy { background:var(--accent); color:var(--on-accent) !important; }
-.brief-copy:hover { filter:brightness(1.12); }
+
 .brief-raw { margin:0; padding:10px 12px; background:var(--void); border:1px solid var(--line);
   border-radius:6px; font:400 12px/1.5 var(--mono); white-space:pre-wrap; word-break:break-word;
   max-height:180px; overflow-y:auto; }
