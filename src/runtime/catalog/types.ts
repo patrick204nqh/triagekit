@@ -11,6 +11,7 @@ import type {
 import type { TriageChart } from "../layout/charts/registry";
 import type { ViewModule } from "../views/registry";
 import type { TabModule } from "../layout/navigation/tab-registry";
+import type { HandoffTargetV1 } from "../handoff/types";
 
 export type Scope = Readonly<Record<string, unknown>>;
 export type Scorer = (item: TriageItem) => number;
@@ -108,6 +109,7 @@ export interface ReadyKindDeclaration {
   sorts: readonly SortKey[];
   charts: readonly TriageChart[];
   views: readonly ViewModule[];
+  projectTarget?: (item: TriageItem) => Omit<HandoffTargetV1, "id" | "kind" | "provider" | "url">;
 }
 
 export interface UpcomingKindDeclaration {

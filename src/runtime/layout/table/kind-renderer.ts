@@ -4,6 +4,7 @@ import type { TriageFailure } from "../../catalog/types";
 import type { Tier } from "../../scoring/tier";
 import type { ScoreExplanation } from "../../scoring/score-model";
 import type { DetailView } from "./detail-view";
+import type { HandoffController } from "../../handoff/controller";
 import { esc } from "../util";
 
 export interface ScoredItem extends TriageItem { score: number; tier: Tier; }
@@ -17,6 +18,7 @@ export interface DetailCtx {
   provider?: ProviderDetailPort;
   onChange?: (i: ScoredItem) => void;
   scoreExplain?: (i: ScoredItem) => ScoreExplanation | null;   // null = built-in path (no per-signal breakdown)
+  handoffController?: HandoffController;
 }
 export interface KindRenderer {
   kind: Kind;

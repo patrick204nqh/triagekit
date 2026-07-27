@@ -1,3 +1,4 @@
+import { NotFoundError } from "../core/errors.js";
 import type { Kind } from "./item";
 import { listDomains, type Class } from "./taxonomy";
 
@@ -40,5 +41,5 @@ const byKind = new Map<Kind, Artifact>(ARTIFACTS.map(a => [a.kinds[0], a] as con
 
 export function listArtifacts(): Artifact[] { return ARTIFACTS; }
 export function artifactOf(kind: Kind): Artifact {
-  const a = byKind.get(kind); if (!a) throw new Error(`kind has no artifact: ${kind}`); return a;
+  const a = byKind.get(kind); if (!a) throw new NotFoundError("artifact", kind); return a;
 }

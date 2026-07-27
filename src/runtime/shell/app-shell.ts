@@ -33,6 +33,7 @@ import {
 } from "../adapters/browser-session-url";
 import { createTriageSession } from "../session/triage-session";
 import type { SessionUpdate, TriageSession } from "../session/types";
+import { HandoffController } from "../handoff/controller";
 
 export interface ShellEnv {
   catalog: RuntimeCatalog;
@@ -209,6 +210,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
         providerId: currentProvider(),
         scoreExplain,
         catalog: catalog,
+        handoffController,
       }).render(vm);
     },
   };
@@ -324,6 +326,11 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   const rail = document.getElementById("domainRail")!;
   const nav = document.getElementById("viewswitch")!;
   const root = document.getElementById("root")!;
+  const handoffController = new HandoffController({
+    session: () => session.snapshot(),
+    scoreExplain,
+    catalog,
+  });
 
   function buildRail() {
     rail.innerHTML = "";

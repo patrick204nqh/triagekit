@@ -1,4 +1,5 @@
 // src/runtime/adapters/dom-view.ts
+import { ProviderError } from "../core/errors.js";
 import type { ViewPort } from "../core/ports";
 import type { ViewModel } from "../core/view-model";
 import type { Artifact } from "../dataset/artifact";
@@ -7,6 +8,7 @@ import type { ScoreExplanation } from "../scoring/score-model";
 import type { RuntimeCatalog } from "../catalog/types";
 import type { Kind } from "../dataset/item";
 import type { ProviderDetailPort } from "../layout/table/kind-renderer";
+import type { HandoffController } from "../handoff/controller";
 import { renderTriageList } from "../layout/table/detail-panel";
 
 export interface DomViewDeps {
@@ -15,6 +17,7 @@ export interface DomViewDeps {
   providerId?: string;
   scoreExplain(i: ScoredItem): ScoreExplanation | null;
   catalog?: RuntimeCatalog;
+  handoffController?: HandoffController;
 }
 
 // Render-only list surface. Filtering/sorting is driven by the unified toolbar
@@ -35,14 +38,14 @@ export function createDomView(host: HTMLElement, deps: DomViewDeps): ViewPort {
       async enrich(kind, ref) {
         const provider = declarationFor(kind);
         if (!provider?.adapter?.enrich) {
-          throw new Error(`no Provider enrichment for "${kind}"`);
+          throw new ProviderError(kind, "enrich", "no adapter registered");
         }
         return provider.adapter.enrich(kind, ref, deps.token);
       },
       async execute(command) {
         const provider = declarationFor(command.kind);
         if (!provider?.adapter?.execute) {
-          throw new Error(`no Provider action adapter for "${command.kind}"`);
+          throw new ProviderError(command.kind, "execute", "no adapter registered");
         }
         await provider.adapter.execute(command, deps.token);
       },
@@ -56,7 +59,7 @@ export function createDomView(host: HTMLElement, deps: DomViewDeps): ViewPort {
         body,
         vm.shown,
         vm.errors,
-        { provider: providerDetail, scoreExplain: deps.scoreExplain },
+        { provider: providerDetail, scoreExplain: deps.scoreExplain, handoffController: deps.handoffController },
         deps.catalog,
       );
     },

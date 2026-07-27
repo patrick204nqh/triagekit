@@ -1,4 +1,5 @@
 // src/runtime/core/store.ts
+import { StoreError } from "./errors.js";
 import type { Kind, TriageItem } from "../dataset/item";
 
 export interface Provenance {
@@ -25,7 +26,7 @@ export function createStore(fingerprint: Fingerprint = defaultFingerprint) {
   function upsert(items: readonly TriageItem[], provenance: Provenance): void {
     for (const item of items) {
       if (item.provider !== provenance.provider || item.kind !== provenance.kind) {
-        throw new Error(
+        throw new StoreError(
           `store provenance mismatch: expected ${provenance.provider}/${provenance.kind}, got ${item.provider}/${item.kind}`,
         );
       }

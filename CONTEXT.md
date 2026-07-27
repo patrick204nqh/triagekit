@@ -1,41 +1,130 @@
-# Triage
+# Context
 
-Triagekit normalizes repository work and findings so they can be assessed consistently without losing their provider identity.
+**Read this at every session start.** The `<GOAL>`…`<GOAL_END>` block is human-authored
+and stable — project identity, design system, code conventions. Below it: reference
+sections (tooling, PR guidelines). This file tracks stable context only — active work
+state lives in the current conversation.
 
-## Language
+<GOAL>
 
-**Triage Item**:
-A normalized finding or piece of work that can be scored, filtered, and acted upon.
-_Avoid_: Record, entry
+**triagekit** — single self-contained HTML dashboard for repo triage, browser-only
+(MIT · `patrick204nqh/triagekit` · Patrick). TypeScript, `tsc`, `vitest`.
 
-**Kind**:
-A provider-neutral category of Triage Item with shared meaning, fields, scoring, and presentation.
-_Avoid_: Type, resource
+## Design identity
 
-**Provider**:
-An external repository system that supplies Triage Items and may support actions on them.
-_Avoid_: Source, integration
+Read `PRODUCT.md` (voice, strategy) and `DESIGN.md` (visual system) before UI work.
+`DESIGN.md` wins on visuals; `PRODUCT.md` wins on voice.
+Architecture decisions: `docs/adr/README.md`. Load relevant ADRs per task.
 
-**Provider Reference**:
-An opaque provider-owned identity retained with a Triage Item so the Provider can later enrich or act on it. Triagekit stores and returns it but does not interpret it.
-_Avoid_: Provider metadata, raw payload
+## Code conventions
 
-**Triage Session**:
-A focused period in which an operator selects what to triage and narrows the visible Triage Items while preserving useful navigation choices.
-_Avoid_: Workspace, page state
+- **Never commit real names/tokens.** Examples: `acme-corp`.
+- **Use existing CSS classes first.** Button system: `.act` / `.act.primary` / `.act.danger`
+  (drawer foot), `.drawer-close` (drawer head), `.btn-primary` / `.btn-ghost` (settings).
+- **No trackers in build artifact.** Match surrounding code style.
 
-**Agent Handoff**:
-A portable, human-approved request that gives an agent one bounded outcome, its Triage Item targets, and enough supporting context to continue the work outside triagekit.
-_Avoid_: Prompt, export, agent session
+<GOAL_END>
 
-**Handoff Target**:
-A Triage Item the agent is explicitly expected to act on as part of an Agent Handoff. The first handoff workflow has exactly one Handoff Target.
-_Avoid_: Selected item, task
+## Source architecture
 
-**Handoff Context**:
-Supporting information included in an Agent Handoff that helps the agent understand the target but does not independently authorize work on another Triage Item.
-_Avoid_: Extra targets, page state
+triagekit has 4 layers compiled into 2 artifacts:
 
-**Agent Brief**:
-The human-readable projection of an Agent Handoff that an operator reviews before copying, downloading, or sending it.
-_Avoid_: Agent mode, prompt preview
+| Directory | Purpose | Artifact |
+|-----------|---------|----------|
+| `src/cli/` | CLI entry point + `build` command | `dist-cli/` (Node binary) |
+| `src/config/` | YAML schema + loading (shared by CLI & runtime) | inlined into CLI |
+| `src/runtime/` | Browser-side application (Vite-built) | `dist/triage.html` (single-file artifact) |
+| `src/vite/` | Vite plugins (singlefile + CSP) | inlined at build time |
+
+**Runtime architecture (`src/runtime/`):**
+
+```
+core/         → state management (createCore → derive → render)
+dataset/      → data model (items, kinds, scoring)
+providers/    → GitHub API adapters (one per provider)
+kinds/        → item types (dependency-vuln, code-scanning, issue, PR)
+scoring/      → scoring engine (tier, weights, formulas)
+views/        → UI views (table, insights, detail)
+shell/        → app shell (command bar, sidebars, theme)
+layout/       → layout components (toolbar, panels, drawers)
+session/      → URL/session state persistence
+catalog/      → error/failure types
+adapters/     → transport adapters (clipboard, downloads)
+handoff/      → agent handoff (projector, validator, renderer)
+bootstrap.ts  → app initialization
+main.ts       → entry point
+```
+
+## Testing conventions
+
+- Mirror layout with `src/`: `src/runtime/core/core.ts` → `test/runtime/core/core.test.ts`
+- Framework: Vitest with `describe` / `it` / `expect`
+- One test file per source file; at least one test per exported function
+- `test/helpers/` for shared utilities across tests
+- `test/support/` for test fixtures and factories
+- `test/site/` for e2e-style build artifact tests
+- Known: 81 pre-existing localStorage test failures (not blocking merge)
+- New features must include tests; pure refactors maintain current test coverage
+
+## Naming conventions
+
+- Files: kebab-case (`score-model.ts`, `author-policy.ts`)
+- Functions/variables: camelCase (`derive()`, `createCore()`)
+- Types/interfaces: PascalCase, usually with domain suffix (`CoreDeps`, `TriageFailure`, `ScoreContext`)
+- Exports: named exports preferred, except for a few known Vite plugin entry points
+- Constants: SCREAMING_SNAKE_CASE (`testExclude` in vitest.config.ts)
+
+## Tooling
+
+| Command | Purpose |
+|---------|---------|
+| `npm run build:cli` | compile CLI (`tsc`) |
+| `npm run build:pages` | build demo HTML and Pages site |
+| `npm test` | full vitest suite (~450 tests, 81 pre-existing localStorage failures) |
+| `npm run lint:anon` | anonymisation lint (run if you touched example data) |
+| `npm run pack:smoke` | npm pack smoke test |
+| `npm run typecheck` | typecheck both CLI and runtime |
+| `npm run check` | full pre-commit suite: typecheck + test + lint + build + pages |
+
+Skills: `.claude/skills/` (git-ignored). Design: `impeccable`. Plugins: `superpowers`.
+Config: `opencode.json`, `.claude/settings.json`.
+
+## PR guidelines
+
+- **No AI co-author attribution** — no `Co-Authored-By` or AI footers (also in
+  `.claude/settings.json`).
+- `npm test` must stay green; run `lint:anon` if you touched example data.
+- Keep PRs scoped; note verification in description.
+
+## Inline planning pattern
+
+For multi-step tasks, emit a lightweight plan before executing:
+
+```
+PLAN:
+1. Step one — brief
+2. Step two — brief
+→ Executing unless you redirect.
+```
+
+This catches wrong directions before work is baked in.
+
+## Confusion management
+
+When spec and existing code conflict, surface it explicitly rather than silently picking:
+
+```
+CONFUSION:
+Spec says X, but existing code does Y.
+
+Options:
+A) Follow spec — change code
+B) Follow existing pattern — update spec
+C) Ask — seems intentional
+
+→ Which approach?
+```
+
+
+
+

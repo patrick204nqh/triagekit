@@ -1,3 +1,4 @@
+import { CatalogError } from "../core/errors.js";
 import type { Kind } from "../dataset/item";
 import { getDomain } from "../dataset/taxonomy";
 import { baseFields } from "../scoring/field-catalog";
@@ -62,7 +63,7 @@ function addUnique<T extends { id: string }>(
 ): void {
   const existing = map.get(value.id);
   if (existing && existing !== value) {
-    throw new Error(`duplicate ${noun} identifier: ${value.id}`);
+      throw new CatalogError(`duplicate ${noun} identifier: ${value.id}`);
   }
   map.set(value.id, value);
 }
@@ -77,23 +78,23 @@ function validateReadyKind(kind: ReadyKindDeclaration): void {
   ] as const;
   for (const property of requiredCollections) {
     if (!Array.isArray(kind[property])) {
-      throw new Error(
+      throw new CatalogError(
         `kind "${kind.kind}": missing required ${property}`,
       );
     }
   }
   if (typeof kind.builtInScorer !== "function") {
-    throw new Error(
+    throw new CatalogError(
       `kind "${kind.kind}": missing required builtInScorer`,
     );
   }
   if (!kind.renderer || typeof kind.renderer !== "object") {
-    throw new Error(
+    throw new CatalogError(
       `kind "${kind.kind}": missing required renderer`,
     );
   }
   if (kind.renderer.kind !== kind.kind) {
-    throw new Error(
+    throw new CatalogError(
       `kind "${kind.kind}": renderer declares "${kind.renderer.kind}"`,
     );
   }
@@ -101,12 +102,12 @@ function validateReadyKind(kind: ReadyKindDeclaration): void {
   const views = new Set<string>();
   for (const view of kind.views) {
     if (view.kind !== kind.kind) {
-      throw new Error(
+      throw new CatalogError(
         `kind "${kind.kind}": view "${view.id}" declares "${view.kind}"`,
       );
     }
     if (views.has(view.id)) {
-      throw new Error(
+      throw new CatalogError(
         `kind "${kind.kind}": duplicate view identifier "${view.id}"`,
       );
     }
@@ -119,27 +120,27 @@ function validateProvider(
   kinds: ReadonlyMap<Kind, KindDeclaration>,
 ): void {
   if (provider.status === "ready" && !provider.adapter) {
-    throw new Error(`provider "${provider.id}" requires an adapter`);
+    throw new CatalogError(`provider "${provider.id}" requires an adapter`);
   }
 
   const supported = new Set(provider.kinds);
   for (const kind of provider.kinds) {
     if (!kinds.has(kind)) {
-      throw new Error(
+      throw new CatalogError(
         `provider "${provider.id}" references kind "${kind}" that is unregistered`,
       );
     }
   }
   for (const kind of provider.capabilities.enrich) {
     if (!supported.has(kind)) {
-      throw new Error(
+      throw new CatalogError(
         `provider "${provider.id}" enrichment references unsupported kind "${kind}"`,
       );
     }
   }
   for (const kind of Object.keys(provider.capabilities.actions) as Kind[]) {
     if (!supported.has(kind)) {
-      throw new Error(
+      throw new CatalogError(
         `provider "${provider.id}" actions reference unsupported kind "${kind}"`,
       );
     }
@@ -153,7 +154,7 @@ export function createRuntimeCatalog(
   for (const candidate of input.kinds) {
     const kind = immutableSnapshot(candidate);
     if (kindMap.has(kind.kind)) {
-      throw new Error(`duplicate kind identifier: ${kind.kind}`);
+      throw new CatalogError(`duplicate kind identifier: ${kind.kind}`);
     }
     if (kind.status === "ready") validateReadyKind(kind);
     kindMap.set(kind.kind, kind);
@@ -163,7 +164,7 @@ export function createRuntimeCatalog(
   for (const candidate of input.providers) {
     const provider = immutableSnapshot(candidate);
     if (providerMap.has(provider.id)) {
-      throw new Error(`duplicate provider identifier: ${provider.id}`);
+      throw new CatalogError(`duplicate provider identifier: ${provider.id}`);
     }
     validateProvider(provider, kindMap);
     providerMap.set(provider.id, provider);

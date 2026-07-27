@@ -1,3 +1,4 @@
+import { ConfigError } from "../core/errors.js";
 import type { RuntimeCatalog } from "../catalog/types";
 import type { Kind } from "../dataset/item";
 import {
@@ -61,7 +62,7 @@ export function createTriageSession(
   const kind = requestedKind && catalog.kind(requestedKind)
     ? requestedKind
     : catalog.kinds()[0]?.kind;
-  if (!kind) throw new Error("cannot create a Triage Session without a Kind");
+  if (!kind) throw new ConfigError("cannot create a Triage Session without a Kind");
 
   const compatibleProviders = (candidate: Kind) =>
     catalog.providersFor(candidate);
