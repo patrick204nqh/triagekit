@@ -9,6 +9,9 @@ import { dismissible } from "../../shell/dismissible";
 import { esc } from "../util";
 import { detailHeadHtml } from "../atoms/atoms";
 import type { DetailView } from "./detail-view";
+import type { AgentHandoffV1 } from "../../handoff/types";
+import type { HandoffController } from "../../handoff/controller";
+import { renderMarkdown } from "../../handoff/markdown";
 
 // Fallback detail for kinds without a renderer: identity header + a bare link.
 function defaultDetailView(r: ScoredItem): DetailView {
@@ -20,6 +23,103 @@ function defaultDetailView(r: ScoredItem): DetailView {
         : `<p class="muted">No further detail.</p>`;
     },
   };
+}
+
+// Switch the same drawer to show the agent brief instead of the item detail.
+function showBriefInDrawer(
+  handoff: AgentHandoffV1,
+  ctrl: HandoffController,
+  body: HTMLElement,
+  foot: HTMLElement,
+): void {
+  const intent = handoff.intent;
+  const t = handoff.targets[0];
+  const s = handoff.context.session;
+
+  body.innerHTML = "";
+
+  const disclosure = document.createElement("p");
+  disclosure.className = "brief-disclosure";
+  disclosure.textContent = "This brief contains the selected item's repository context and provider link. It does not contain your GitHub token.";
+  body.appendChild(disclosure);
+
+  const og = document.createElement("div");
+  og.className = "brief-item";
+  og.innerHTML = `<label>Outcome</label><p class="brief-outcome">${esc(intent.outcome)}</p>`;
+  body.appendChild(og);
+
+  if (t) {
+    const ig = document.createElement("div");
+    ig.className = "brief-item";
+    let ih = `<label>Target</label><div class="brief-info">`;
+    ih += `<span>Kind</span><span>${esc(t.kind)}</span>`;
+    ih += `<span>Provider</span><span>${esc(t.provider)}</span>`;
+    ih += `<span>Location</span><span>${esc(t.location)}</span>`;
+    ih += `<span>Tier</span><span>${t.priority.tier} (score ${t.priority.score}, signal ${t.priority.signal})</span>`;
+    if (t.url) ih += `<span>URL</span><span><a href="${esc(t.url)}" target="_blank" rel="noreferrer">${esc(t.url)}</a></span>`;
+    ih += `</div>`;
+    ig.innerHTML = ih;
+    body.appendChild(ig);
+
+    if (t.priority.explanation && t.priority.explanation.length > 0) {
+      const eg = document.createElement("div");
+      eg.className = "brief-item";
+      eg.innerHTML = `<label>Evidence</label><ul class="brief-evidence">${t.priority.explanation.map(e =>
+        `<li><strong>${esc(e.label)}</strong> ${esc(String(e.value))}${e.reason ? ` — ${esc(e.reason)}` : ""}</li>`
+      ).join("")}</ul>`;
+      body.appendChild(eg);
+    }
+  }
+
+  if (intent.constraints.length > 0) {
+    const cg = document.createElement("div");
+    cg.className = "brief-item";
+    cg.innerHTML = `<label>Constraints</label><ul>${intent.constraints.map(c => `<li>${esc(c)}</li>`).join("")}</ul>`;
+    body.appendChild(cg);
+  }
+
+  if (intent.verification.length > 0) {
+    const vg = document.createElement("div");
+    vg.className = "brief-item";
+    vg.innerHTML = `<label>Verification</label><ul>${intent.verification.map(v => `<li>${esc(v)}</li>`).join("")}</ul>`;
+    body.appendChild(vg);
+  }
+
+  const cg = document.createElement("div");
+  cg.className = "brief-item";
+  let ch = `<label>Context</label><div class="brief-info">`;
+  ch += `<span>Kind</span><span>${esc(s.kind)}</span>`;
+  ch += `<span>Provider</span><span>${esc(s.provider)}</span>`;
+  if (s.repository) ch += `<span>Repository</span><span>${esc(s.repository)}</span>`;
+  ch += `</div>`;
+  cg.innerHTML = ch;
+  body.appendChild(cg);
+
+  const md = renderMarkdown(handoff);
+  const mg = document.createElement("div");
+  mg.className = "brief-item";
+  mg.innerHTML = `<label>Raw Markdown</label><pre class="brief-raw">${esc(md)}</pre>`;
+  body.appendChild(mg);
+
+  foot.innerHTML = `<span class="drawer-msg" data-brief-msg></span>
+    <button class="btn brief-copy" data-brief-copy>Copy Markdown</button>
+    <button class="btn ghost" data-brief-dl-md>Download .md</button>
+    <button class="btn ghost" data-brief-dl-json>Download .json</button>`;
+  const msg = foot.querySelector<HTMLElement>("[data-brief-msg]")!;
+
+  foot.querySelector("[data-brief-copy]")!.addEventListener("click", async () => {
+    const err = await ctrl.copy(handoff);
+    msg.textContent = err ? err : "Copied to clipboard";
+    setTimeout(() => { if (msg.textContent === "Copied to clipboard" || msg.textContent === err) msg.textContent = ""; }, 2500);
+  });
+  foot.querySelector("[data-brief-dl-md]")!.addEventListener("click", () => {
+    const err = ctrl.downloadMD(handoff);
+    if (err) msg.textContent = err;
+  });
+  foot.querySelector("[data-brief-dl-json]")!.addEventListener("click", () => {
+    const err = ctrl.downloadJSON(handoff);
+    if (err) msg.textContent = err;
+  });
 }
 
 // Pure layout: render pre-scored rows + non-fatal errors; open a shared right-side
@@ -78,7 +178,10 @@ export function renderTriageList(
         const btn = document.createElement("button");
         btn.className = "btn ghost";
         btn.textContent = "Generate brief";
-        btn.addEventListener("click", () => { closeDrawer(); ctx.handoffController!.openFor(r); });
+        btn.addEventListener("click", () => {
+          const handoff = ctx.handoffController!.generateFor(r);
+          showBriefInDrawer(handoff, ctx.handoffController!, body, foot);
+        });
         foot.appendChild(btn);
       }
       drawer.hidden = false;

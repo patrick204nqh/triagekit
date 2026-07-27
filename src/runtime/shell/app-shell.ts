@@ -326,14 +326,10 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   const rail = document.getElementById("domainRail")!;
   const nav = document.getElementById("viewswitch")!;
   const root = document.getElementById("root")!;
-  const handoffHost = document.createElement("div");
-  handoffHost.id = "handoff-host";
-  document.body.appendChild(handoffHost);
   const handoffController = new HandoffController({
     session: () => session.snapshot(),
     scoreExplain,
     catalog,
-    container: handoffHost,
   });
 
   function buildRail() {
