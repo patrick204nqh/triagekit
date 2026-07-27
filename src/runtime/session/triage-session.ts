@@ -1,0 +1,174 @@
+import type { RuntimeCatalog } from "../catalog/types";
+import type { Kind } from "../dataset/item";
+import {
+  emptyListState,
+  type ListState,
+} from "../layout/toolbar/filter-state";
+import type { ScoredItem } from "../layout/table/kind-renderer";
+import type {
+  SerializedSession,
+  SessionAvailability,
+  SessionState,
+  SessionUpdate,
+  TriageSession,
+  WorkIntent,
+} from "./types";
+
+export interface CreateTriageSessionOptions {
+  catalog: RuntimeCatalog;
+  initial?: Partial<SessionState>;
+}
+
+const frozenFilters = (filters: ListState): ListState => {
+  const axes = Object.fromEntries(
+    Object.entries(filters.axes).map(([id, values]) => [
+      id,
+      Object.freeze([...values]),
+    ]),
+  );
+  return Object.freeze({
+    sort: filters.sort,
+    axes: Object.freeze(axes),
+  });
+};
+
+const frozenState = (state: SessionState): Readonly<SessionState> =>
+  Object.freeze({
+    ...state,
+    filters: frozenFilters(state.filters),
+  });
+
+const serializedState = (
+  state: Readonly<SessionState>,
+): Readonly<SerializedSession> => Object.freeze({
+  kind: state.kind,
+  provider: state.provider || undefined,
+  repository: state.preferredRepository || undefined,
+  view: state.view,
+  sort: state.filters.sort,
+  axes: state.filters.axes,
+});
+
+export function createTriageSession(
+  options: CreateTriageSessionOptions,
+): TriageSession {
+  const { catalog } = options;
+  const requestedKind = options.initial?.kind;
+  const kind = requestedKind && catalog.kind(requestedKind)
+    ? requestedKind
+    : catalog.kinds()[0]?.kind;
+  if (!kind) throw new Error("cannot create a Triage Session without a Kind");
+
+  const compatibleProviders = (candidate: Kind) =>
+    catalog.providersFor(candidate);
+  const providerFor = (candidate: Kind, preferred?: string): string => {
+    const providers = compatibleProviders(candidate);
+    const selected = preferred
+      ? providers.find((provider) => provider.id === preferred)
+      : undefined;
+    return (
+      selected
+      ?? providers.find((provider) => provider.status === "ready")
+      ?? providers[0]
+    )?.id ?? "";
+  };
+  const workFor = (candidate: Kind): WorkIntent =>
+    catalog.kind(candidate)?.status === "upcoming" ? "present" : "refresh";
+
+  let state = frozenState({
+    kind,
+    provider: providerFor(kind, options.initial?.provider),
+    preferredRepository: options.initial?.preferredRepository ?? "",
+    effectiveRepository: options.initial?.effectiveRepository ?? "",
+    view: options.initial?.view ?? "list",
+    filters: options.initial?.filters ?? emptyListState(),
+  });
+
+  const update = (next: SessionState, work: WorkIntent): SessionUpdate => {
+    state = frozenState(next);
+    return Object.freeze({
+      state,
+      serialized: serializedState(state),
+      work,
+    });
+  };
+  const unchanged = (): SessionUpdate => Object.freeze({
+    state,
+    serialized: serializedState(state),
+    work: "none",
+  });
+
+  return {
+    snapshot: () => state,
+    serialize: () => serializedState(state),
+
+    selectKind(candidate) {
+      if (!catalog.kind(candidate) || candidate === state.kind) {
+        return unchanged();
+      }
+      return update({
+        kind: candidate,
+        provider: providerFor(candidate, state.provider),
+        preferredRepository: state.preferredRepository,
+        effectiveRepository: "",
+        view: "list",
+        filters: emptyListState(),
+      }, workFor(candidate));
+    },
+
+    selectProvider(providerId) {
+      const provider = catalog.provider(providerId);
+      if (
+        !provider
+        || !provider.kinds.includes(state.kind)
+        || providerId === state.provider
+      ) {
+        return unchanged();
+      }
+      return update({
+        ...state,
+        provider: providerId,
+        preferredRepository: "",
+        effectiveRepository: "",
+        filters: emptyListState(),
+      }, workFor(state.kind));
+    },
+
+    selectRepository(repository, rows) {
+      if (repository === state.preferredRepository) return unchanged();
+      const effectiveRepository = repository === ""
+        || rows.some((row) => row.location === repository)
+        ? repository
+        : "";
+      return update({
+        ...state,
+        preferredRepository: repository,
+        effectiveRepository,
+      }, "rederive");
+    },
+
+    selectView(view) {
+      if (!view || view === state.view) return unchanged();
+      return update({ ...state, view }, "present");
+    },
+
+    changeFilters(filters) {
+      return update({ ...state, filters }, "rederive");
+    },
+
+    restore(_serialized) {
+      return unchanged();
+    },
+
+    reconcile(availability: SessionAvailability, rows: readonly ScoredItem[]) {
+      const preferred = state.preferredRepository;
+      const effective = preferred
+        && availability.repositories.includes(preferred)
+        && rows.some((row) => row.location === preferred)
+        ? preferred
+        : "";
+      if (effective === state.effectiveRepository) return unchanged();
+      return update({ ...state, effectiveRepository: effective }, "present");
+    },
+  };
+}
