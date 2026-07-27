@@ -26,12 +26,18 @@ function defaultDetailView(r: ScoredItem): DetailView {
 }
 
 // Switch the same drawer to show the agent brief instead of the item detail.
+// The drawer head gets a back button to restore the original detail view.
 function showBriefInDrawer(
   handoff: AgentHandoffV1,
   ctrl: HandoffController,
   body: HTMLElement,
   foot: HTMLElement,
 ): void {
+  const head = body.parentElement?.querySelector<HTMLElement>("[data-head]");
+  if (!head) return;
+  const origHead = head.innerHTML;
+  const origBody = body.innerHTML;
+  const origFoot = foot.innerHTML;
   const intent = handoff.intent;
   const t = handoff.targets[0];
   const s = handoff.context.session;
@@ -120,6 +126,17 @@ function showBriefInDrawer(
     const err = ctrl.downloadJSON(handoff);
     if (err) msg.textContent = err;
   });
+
+  const back = document.createElement("button");
+  back.className = "drawer-back";
+  back.setAttribute("aria-label", "Back to detail");
+  back.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>`;
+  back.addEventListener("click", () => {
+    head.innerHTML = origHead;
+    body.innerHTML = origBody;
+    foot.innerHTML = origFoot;
+  });
+  head.parentElement?.insertBefore(back, head);
 }
 
 // Pure layout: render pre-scored rows + non-fatal errors; open a shared right-side

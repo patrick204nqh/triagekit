@@ -568,3 +568,6 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
   border-radius:6px; font:400 12px/1.5 var(--mono); white-space:pre-wrap; word-break:break-word;
   max-height:180px; overflow-y:auto; }
 .drawer-msg { flex:1; font:400 12px var(--sans); color:var(--muted); min-width:0; }
+.drawer-back { flex:0 0 auto; background:none; border:none; color:var(--muted); cursor:pointer;
+  padding:4px; margin:0 2px 0 -4px; border-radius:4px; display:flex; align-items:center; }
+.drawer-back:hover { color:var(--fg); background:var(--slate); }
