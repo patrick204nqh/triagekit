@@ -23,7 +23,8 @@
   --drawer-shadow:rgba(9,9,11,0.18); --scrim:rgba(9,9,11,0.28);
   --shadow-accent:0 2px 14px color-mix(in srgb,var(--accent) 20%,transparent);
 }
-* { box-sizing:border-box; }
+*, *::before, *::after { box-sizing:border-box; }
+h1, h2, h3, h4, h5, h6 { margin:0; font-size:inherit; font-weight:inherit; }
 html,body { margin:0; }
 body {
   min-height:100dvh; background:var(--canvas); color:var(--fg);
@@ -57,7 +58,7 @@ svg { display:block; }
 
 /* ── Command bar (#appbar header) ──────────────────────────────────── */
 #appbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:14px 32px; border-bottom:1px solid var(--line); }
-.brand { display:inline-flex; align-items:center; gap:9px; font-weight:640; font-size:clamp(1.3rem,1rem + 1.1vw,1.7rem); letter-spacing:-0.035em; }
+h1.brand { display:inline-flex; align-items:center; gap:9px; font-weight:640; font-size:clamp(1.3rem,1rem + 1.1vw,1.7rem); letter-spacing:-0.035em; margin:0; font-family:inherit; }
 .brand-mark { flex:none; }
 .brand .dot { color:var(--accent); }
 

@@ -14,15 +14,15 @@ const release = readFileSync(
 );
 
 describe("developer verification commands", () => {
-  it("runs the complete ordinary check sequentially", () => {
+  it("runs the complete ordinary check in parallel", () => {
     expect(pkg.scripts.check).toBe(
-      "npm run typecheck && npm test && npm run lint:anon && npm run check:build && npm run check:pages",
+      "node scripts/run-parallel.mjs typecheck test lint:anon check:dist",
     );
   });
 
   it("adds package validation only to the release check", () => {
     expect(pkg.scripts["check:release"]).toBe(
-      "npm run check && npm run pack:smoke",
+      "node scripts/run-parallel.mjs typecheck test lint:anon check:dist && npm run pack:smoke",
     );
   });
 

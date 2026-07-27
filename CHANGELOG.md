@@ -6,6 +6,27 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.2] — 2026-07-28
+
+### Added
+- Dev server (`npm run dev:server`): Vite HMR on port 5173 for live editing
+- Parallel check pipeline (`npm run check`): typecheck, test, lint, build in parallel
+- `test:watch`, `typecheck:watch`, `check:dist` scripts for faster iteration
+- `triage.hooks.example.ts` — documented example for the scoring hooks API
+- Config auto-fallback: `triage.config.example.yml` loaded when `triage.config.yml` doesn't exist
+
+### Accessibility
+- Table rows now keyboard accessible via Tab/Enter/Space (`role="button"`, `tabindex="0"`)
+- Drawer has `role="dialog"`, `aria-modal`, `aria-label`
+- Popover triggers toggle `aria-expanded` and have `aria-controls`
+- Brand wordmark is now `<h1>` for screen reader landmark navigation
+- CSS heading reset ensures no unintended default styling leaks
+
+### Changed
+- `check:pages` is now a pure check (no build) — caller runs `build:pages` first
+- `check:build` removed (subsumed by `check:dist`)
+- `npm run dev` removed (use `dev:server` or `test:watch` individually)
+
 ## [0.1.1] — 2026-06-09
 
 ### Fixed
@@ -40,6 +61,7 @@ All notable changes to this project are documented here. The format follows
   strict hash-based CSP with no external scripts.
 - Branded landing page + hosted generic dashboard on GitHub Pages.
 
-[Unreleased]: https://github.com/patrick204nqh/triagekit/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/patrick204nqh/triagekit/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/patrick204nqh/triagekit/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/patrick204nqh/triagekit/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/patrick204nqh/triagekit/releases/tag/v0.1.0

@@ -178,7 +178,7 @@ export function renderTriageList(
   const r0 = catalog.readyKind(rows[0].kind)?.renderer;
   root.innerHTML = warnings + tableHtml(rows, r0?.columns)
     + `<div class="scrim" data-drawer-scrim></div>`
-    + `<aside class="drawer" hidden>
+    + `<aside class="drawer" hidden role="dialog" aria-modal="true" aria-label="Item detail">
          <div class="drawer-head"><div data-head></div><button class="drawer-close" aria-label="Close">×</button></div>
          <div class="drawer-content" data-body></div>
          <div class="drawer-foot" data-foot></div>
@@ -197,7 +197,7 @@ export function renderTriageList(
   scrim.addEventListener("click", closeDrawer);
 
   root.querySelectorAll<HTMLElement>(".alert-row").forEach(tr => {
-    tr.addEventListener("click", () => {
+    const openRow = () => {
       const r = rows[Number(tr.dataset.i)];
       const kr = catalog.readyKind(r.kind)?.renderer;
       const view: DetailView = kr?.detail ? kr.detail(r, ctx) : defaultDetailView(r);
@@ -221,6 +221,10 @@ export function renderTriageList(
       drawer.hidden = false;
       scrim.classList.add("open");
       dismiss.activate();
+    };
+    tr.addEventListener("click", openRow);
+    tr.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openRow(); }
     });
   });
 }

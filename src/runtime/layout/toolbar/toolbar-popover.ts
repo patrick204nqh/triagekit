@@ -6,9 +6,13 @@ import { dismissible } from "../../shell/dismissible";
 export function wirePopovers(host: HTMLElement): void {
   let activeHandle: ReturnType<typeof dismissible> | null = null;
   let activePop: HTMLElement | null = null;
+  function syncAria(btn: HTMLElement, pop: HTMLElement): void {
+    btn.setAttribute("aria-expanded", String(!pop.hidden));
+  }
   for (const which of ["filter", "sort"] as const) {
     const btn = host.querySelector<HTMLElement>(`[data-tb-${which}]`)!;
     const pop = host.querySelector<HTMLElement>(`[data-pop="${which}"]`)!;
+    syncAria(btn, pop);
     btn.addEventListener("click", () => {
       const opening = pop.hidden;
       if (activePop) activePop.hidden = true;
@@ -16,13 +20,14 @@ export function wirePopovers(host: HTMLElement): void {
       if (opening) {
         pop.hidden = false;
         activeHandle = dismissible(pop, {
-          onDismiss: () => { pop.hidden = true; activeHandle = null; activePop = null; },
-          closeOnOutsideClick: true,   // click anywhere off the popover closes it
-          outsideClickIgnore: btn,     // except the trigger, whose own click toggles
+          onDismiss: () => { pop.hidden = true; activeHandle = null; activePop = null; syncAria(btn, pop); },
+          closeOnOutsideClick: true,
+          outsideClickIgnore: btn,
         });
         activeHandle.activate();
         activePop = pop;
       }
+      syncAria(btn, pop);
     });
   }
 }

@@ -266,7 +266,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   // ── Command bar: brand + merged status chip + sync stamp + refresh + theme ──
   const bar = document.getElementById("appbar")!;
   const titleHtml = esc(config.branding.title).replace(/·/g, `<span class="dot">·</span>`);
-  bar.innerHTML = `<span class="brand">${BRAND_MARK}<span class="wordmark">${titleHtml}</span></span><div class="spacer"></div>`;
+  bar.innerHTML = `<h1 class="brand">${BRAND_MARK}<span class="wordmark">${titleHtml}</span></h1><div class="spacer"></div>`;
   const status = document.createElement("button"); status.className = "status-chip";
   const sync = document.createElement("span"); sync.className = "last-sync";
   const refresh = document.createElement("button"); refresh.className = "icon-btn"; refresh.setAttribute("aria-label", "Refresh now"); refresh.title = "Refresh now"; refresh.innerHTML = REFRESH;

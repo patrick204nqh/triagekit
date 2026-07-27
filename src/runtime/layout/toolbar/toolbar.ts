@@ -79,8 +79,8 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
   const filterFoot = fcount
     ? `<div class="pop-foot"><span class="count">${fcount} active</span><button class="clear" data-clear-all>Clear all</button></div>`
     : "";
-  const filterPop = `<div class="tb-pop" data-pop="filter" hidden><div class="pop-scroll">${filterBody}</div>${filterFoot}</div>`;
-  const sortPop = `<div class="tb-pop" data-pop="sort" hidden>`
+  const filterPop = `<div class="tb-pop" id="tb-pop-filter" data-pop="filter" hidden><div class="pop-scroll">${filterBody}</div>${filterFoot}</div>`;
+  const sortPop = `<div class="tb-pop" id="tb-pop-sort" data-pop="sort" hidden>`
     + sorts.map(s => `<button class="pop-sort${s.id === p.filters.sort ? " on" : ""}" data-sort="${esc(s.id)}">${esc(s.label)}</button>`).join("")
     + `</div>`;
 
@@ -93,8 +93,8 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
   <div class="fbar">
     <div data-repo-tabs></div>
     <div class="fbar-controls">
-      <div class="tb-ctl"><button class="tb-btn" data-tb-filter aria-haspopup="true">≡ Filter${fcount ? ` · ${fcount}` : ""}</button>${filterPop}</div>
-      <div class="tb-ctl"><button class="tb-btn" data-tb-sort aria-haspopup="true">↕ ${esc(curSort)}</button>${sortPop}</div>
+      <div class="tb-ctl"><button class="tb-btn" data-tb-filter aria-haspopup="true" aria-controls="tb-pop-filter">≡ Filter${fcount ? ` · ${fcount}` : ""}</button>${filterPop}</div>
+      <div class="tb-ctl"><button class="tb-btn" data-tb-sort aria-haspopup="true" aria-controls="tb-pop-sort">↕ ${esc(curSort)}</button>${sortPop}</div>
     </div>
   </div>`;
 

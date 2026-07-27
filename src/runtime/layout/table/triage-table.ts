@@ -6,7 +6,7 @@ export function tableHtml(rows: ScoredItem[], extra: KindRenderer["columns"]): s
   const head = `<tr><th>Location</th><th>Title</th>${eh}<th class="num">Signal</th><th class="num">Score</th><th>Tier</th></tr>`;
   const body = rows.map((r, i) => {
     const ec = (extra ?? []).map(c => `<td>${c.cell(r)}</td>`).join("");
-    return `<tr class="alert-row" data-i="${i}"><td>${esc(r.location)}</td><td>${esc(r.title)}</td>${ec}<td class="num">${r.signal}</td><td class="num">${r.score}</td><td><span class="tier tier-${r.tier}">${r.tier}</span></td></tr>`;
+    return `<tr class="alert-row" data-i="${i}" tabindex="0" role="button"><td>${esc(r.location)}</td><td>${esc(r.title)}</td>${ec}<td class="num">${r.signal}</td><td class="num">${r.score}</td><td><span class="tier tier-${r.tier}">${r.tier}</span></td></tr>`;
   }).join("");
   return `<table class="alerts"><thead>${head}</thead><tbody>${body}</tbody></table>`;
 }

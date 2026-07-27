@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-import { execFileSync, spawnSync } from "node:child_process";
+// Verifies that site/app/index.html matches a fresh generic build.
+// Does NOT rebuild — caller must run `build:pages` first.
+import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -15,15 +17,7 @@ export function assertPagesInSync(changed) {
 }
 
 export function checkPages() {
-  execFileSync("npm", ["run", "build:pages"], {
-    cwd: repo,
-    stdio: "inherit",
-  });
-  const comparison = spawnSync(
-    "git",
-    ["diff", "--quiet", "--", artifact],
-    { cwd: repo, stdio: "inherit" },
-  );
+  const comparison = spawnSync("git", ["diff", "--quiet", "--", artifact], { cwd: repo, stdio: "inherit" });
   if (comparison.error) throw comparison.error;
   assertPagesInSync(comparison.status !== 0);
   console.log(`✓ pages-sync: ${artifact} matches a fresh generic build`);
