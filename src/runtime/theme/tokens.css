@@ -195,13 +195,14 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
   box-shadow:-8px 0 32px var(--drawer-shadow), -1px 0 0 color-mix(in srgb,var(--accent) 22%,transparent); z-index:12; }
 .drawer[hidden] { display:none; }
 
-/* Header — shared identity row built by detailHeadHtml(): title + tier, then a
-   sub-row with the provider mark and an optional linked ref. Close sits inline. */
+/* Header — shared identity row built by detailHeadHtml(): title + tier + provider ref
+   in a single flex line. Close sits inline. */
 .drawer-head { flex:0 0 auto; display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
   padding:16px 18px 12px; border-bottom:1px solid var(--line); }
-.drawer-head h3 { margin:0; font-size:1.125rem; font-weight:600; font-family:var(--mono);
+.dh-line { display:flex; align-items:center; gap:12px; flex-wrap:wrap; min-width:0; }
+.dh-line h3 { margin:0; font-size:1.125rem; font-weight:600; font-family:var(--mono);
   display:flex; align-items:center; gap:10px; }
-.dh-ref { display:flex; align-items:center; gap:8px; margin-top:6px; font-family:var(--mono); font-size:13px; color:var(--muted); }
+.dh-ref { display:inline-flex; align-items:center; gap:8px; font-family:var(--mono); font-size:13px; color:var(--muted); }
 .dh-ref .prov-icon { color:var(--muted); }
 .dh-ref-link { color:var(--accent); text-decoration:none; }
 .dh-ref-link:hover { text-decoration:underline; }

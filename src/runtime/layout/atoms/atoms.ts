@@ -19,8 +19,8 @@ export function detailHeadHtml(header: DetailView["header"]): string {
         ? `<a class="dh-ref-link" href="${esc(header.ref.href)}" target="_blank" rel="noreferrer">${esc(header.ref.text)} ↗</a>`
         : `<span>${esc(header.ref.text)}</span>`)
     : "";
-  return `<div class="dh-title"><h3>${esc(header.title)} ${tierBadgeHtml(header.tier)}</h3></div>`
-    + `<div class="dh-ref">${providerIcon(header.provider)}${ref}</div>`;
+  return `<div class="dh-line"><h3>${esc(header.title)} ${tierBadgeHtml(header.tier)}</h3>`
+    + `<span class="dh-ref">${providerIcon(header.provider)}${ref}</span></div>`;
 }
 
 export function slaTagHtml(sla: Sla): string {
