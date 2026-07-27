@@ -3,7 +3,7 @@
 **Read this at every session start.** ↓ North Star (human, stable) stays above the line;
 ↓ Session State (AI-maintained) tracks active work.
 
-<NORTH_START>
+<NORTH_STAR>
 
 ## North Star — Project Identity
 

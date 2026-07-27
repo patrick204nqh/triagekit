@@ -7,7 +7,7 @@ by OpenCode (via `opencode.json` → `instructions`). Plain Markdown, per <https
 current work state, key files, and conventions that override defaults. Do not proceed
 with any task until CONTEXT.md has been read.
 
-The top half (North Star, wrapped in `<NORTH_START>`…`<NORTH_END>`) is human-authored
+The top half (North Star, wrapped in `<NORTH_STAR>`…`<NORTH_END>`) is human-authored
 and stable — project identity, design system, CSS conventions, test commands. The bottom
 half (Session State) is AI-maintained — update it when work shifts (new branch, new
 feature, changed priorities). Keep the North Star section clean; let the Session State
