@@ -1,10 +1,9 @@
 import { type ScoredItem, type KindRenderer } from "../../layout/table/kind-renderer";
 import { esc } from "../../layout/util";
 import { type CodeScanningDetails, CODE_SCANNING } from "../../dataset/kinds/code-scanning";
-import { registerView } from "../registry";
-import { type FilterAxis, registerSortKey } from "../../layout/toolbar/axis-registry";
-import { registerChart } from "../../layout/charts/registry";
-import "../../ingest/github/code-scanning-source";   // side-effect: register source
+import type { ViewModule } from "../registry";
+import type { FilterAxis, SortKey } from "../../layout/toolbar/axis-registry";
+import type { TriageChart } from "../../layout/charts/registry";
 import { detailsAs } from "../../dataset/details";
 import { uniqueValues } from "../../layout/toolbar/axis-utils";
 import type { DetailView } from "../../layout/table/detail-view";
@@ -38,7 +37,10 @@ export const codeScanningRenderer: KindRenderer = {
   ],
   detail: (r) => codeScanningDetailView(r),
 };
-registerView({ id: "code-scanning", kind: CODE_SCANNING });
+export const codeScanningView: ViewModule = {
+  id: "code-scanning",
+  kind: CODE_SCANNING,
+};
 
 // Axes are exported, not self-registered: the kind manifest (Task 2.5) passes them to registerKinds → registerFilterAxis.
 export const severityAxis: FilterAxis = {
@@ -63,7 +65,7 @@ export const stateAxis: FilterAxis = {
   test: (i, sel) => i.kind === CODE_SCANNING && sel.includes(cs(i).state),
 };
 
-registerSortKey({
+export const codeScanningSeveritySort: SortKey = {
   id: "cs-severity", label: "Severity",
   appliesTo: (ctx) => ctx.artifact.kinds.includes(CODE_SCANNING),   // scope to the code-scanning tab; otherwise it leaks onto every list
   compare: (a, b) => {
@@ -71,7 +73,7 @@ registerSortKey({
     const sb = b.kind === CODE_SCANNING ? (SEV_RANK[cs(b).securitySeverity] ?? 0) : 0;
     return (sb - sa) || (b.score - a.score);
   },
-});
+};
 
 export const renderOpenBySev = (rows: ScoredItem[], el: HTMLElement): void => {
   const csRows = rows.filter(r => r.kind === CODE_SCANNING);
@@ -81,10 +83,10 @@ export const renderOpenBySev = (rows: ScoredItem[], el: HTMLElement): void => {
   el.innerHTML = `<div class="bars">${counts.map(c =>
     `<div class="barrow"><span class="name">${c.s}</span><span class="track"><span style="width:${(100 * c.n / max).toFixed(1)}%"></span></span><span class="n">${c.n}</span></div>`).join("")}</div>`;
 };
-registerChart({
+export const codeScanningOpenBySeverityChart: TriageChart = {
   id: "cs-open-by-sev", title: "Open by severity", kinds: [CODE_SCANNING],
   render: renderOpenBySev,
-});
+};
 
 export const renderByTool = (rows: ScoredItem[], el: HTMLElement): void => {
   const csRows = rows.filter(r => r.kind === CODE_SCANNING);
@@ -95,7 +97,15 @@ export const renderByTool = (rows: ScoredItem[], el: HTMLElement): void => {
     return `<div class="barrow"><span class="name">${esc(t)}</span><span class="track"><span style="width:${(100 * n / total).toFixed(1)}%"></span></span><span class="n">${n}</span></div>`;
   }).join("")}</div>`;
 };
-registerChart({
+export const codeScanningByToolChart: TriageChart = {
   id: "cs-by-tool", title: "By tool", kinds: [CODE_SCANNING],
   render: renderByTool,
-});
+};
+
+export const codeScanningSorts: readonly SortKey[] = Object.freeze([
+  codeScanningSeveritySort,
+]);
+export const codeScanningCharts: readonly TriageChart[] = Object.freeze([
+  codeScanningOpenBySeverityChart,
+  codeScanningByToolChart,
+]);

@@ -6,12 +6,13 @@ import { registerKinds } from "../../src/runtime/core/register-kinds";
 import { changeRequestKind } from "../../src/runtime/kinds/change-request";
 import { issueKind } from "../../src/runtime/kinds/issue";
 registerKinds([changeRequestKind, issueKind]);   // registers change-request + issue kind renderers + axes
-import { getFilterAxis } from "../../src/runtime/layout/toolbar/axis-registry";
+import { runtimeDefaults } from "../../src/runtime/catalog/defaults";
 
-it("registers the assignee axis and exactly one (generic) labels axis — no duplicate", () => {
-  expect(getFilterAxis("assignee")).toBeDefined();
-  expect(getFilterAxis("labels")).toBeDefined();    // generic axis already covers review labels
-  expect(getFilterAxis("label")).toBeUndefined();   // the redundant review-specific "Label" axis is gone
+it("declares the assignee axis and exactly one generic labels axis", () => {
+  const axisIds = runtimeDefaults.filters.map((axis) => axis.id);
+  expect(axisIds).toContain("assignee");
+  expect(axisIds).toContain("labels");
+  expect(axisIds).not.toContain("label");
 });
 
 function pr(over: Partial<ScoredItem> = {}): ScoredItem {

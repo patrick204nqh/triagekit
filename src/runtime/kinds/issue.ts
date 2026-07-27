@@ -1,9 +1,8 @@
 // src/runtime/kinds/issue.ts
-import type { KindManifest } from "../core/manifest";
+import type { KindDeclaration, Scorer } from "../catalog/types";
 import type { FieldDef } from "../scoring/field-catalog";
-import type { Scorer } from "../scoring/registry";
 import { reviewScore } from "../scoring/review";
-import { issueRenderer, assigneeAxis } from "../views/code-review/view";
+import { issueRenderer, issueView } from "../views/code-review/view";
 
 // Honest detail-level keys on ReviewDetails (dataset/shapes/review.ts) that the
 // scorer + filter axes actually read:
@@ -18,11 +17,16 @@ export const reviewFields: FieldDef[] = [
   { name: "comments", type: "number", range: [0, 500] },
 ];
 
-export const issueKind: KindManifest = {
+export const issueKind: KindDeclaration = {
   kind: "issue",
   domain: "tracking",
+  label: "Issues",
+  status: "ready",
   fields: reviewFields,
   builtInScorer: reviewScore as Scorer,
   renderer: issueRenderer,
-  filters: [assigneeAxis],
+  filters: [],
+  sorts: [],
+  charts: [],
+  views: [issueView],
 };

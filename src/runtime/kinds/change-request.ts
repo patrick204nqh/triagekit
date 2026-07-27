@@ -1,9 +1,11 @@
 // src/runtime/kinds/change-request.ts
-import type { KindManifest } from "../core/manifest";
+import type { KindDeclaration, Scorer } from "../catalog/types";
 import type { FieldDef } from "../scoring/field-catalog";
-import type { Scorer } from "../scoring/registry";
 import { reviewScore } from "../scoring/review";
-import { changeRequestRenderer, assigneeAxis } from "../views/code-review/view";
+import {
+  changeRequestRenderer,
+  changeRequestView,
+} from "../views/code-review/view";
 import { reviewFields } from "./issue";
 
 // Change requests share the review fields and add `reviewers` — reviewScore nudges
@@ -14,11 +16,16 @@ export const changeRequestFields: FieldDef[] = [
   { name: "reviewers", type: "bool" },
 ];
 
-export const changeRequestKind: KindManifest = {
+export const changeRequestKind: KindDeclaration = {
   kind: "change-request",
   domain: "code-review",
+  label: "Change requests",
+  status: "ready",
   fields: changeRequestFields,
   builtInScorer: reviewScore as Scorer,
   renderer: changeRequestRenderer,
-  filters: [assigneeAxis],
+  filters: [],
+  sorts: [],
+  charts: [],
+  views: [changeRequestView],
 };

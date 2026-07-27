@@ -1,15 +1,24 @@
 // src/runtime/kinds/code-scanning.ts
-import type { KindManifest } from "../core/manifest";
-import type { Scorer } from "../scoring/registry";
+import type { KindDeclaration, Scorer } from "../catalog/types";
 import { codeScanningScore } from "../scoring/code-scanning";
-import { codeScanningRenderer, severityAxis, toolAxis, stateAxis } from "../views/code-security/code-scanning";
+import {
+  codeScanningCharts,
+  codeScanningRenderer,
+  codeScanningSorts,
+  codeScanningView,
+  severityAxis,
+  stateAxis,
+  toolAxis,
+} from "../views/code-security/code-scanning";
 
 // Fields + defaultModel live here in the manifest (the single source of truth).
 // scoring/code-scanning.ts is a pure score function; registerKinds wires
 // these into the registries.
-export const codeScanningKind: KindManifest = {
+export const codeScanningKind: KindDeclaration = {
   kind: "code-scanning",
   domain: "code-security",
+  label: "Code scanning",
+  status: "ready",
   fields: [
     { name: "securitySeverity", type: "enum", values: ["critical", "high", "medium", "low"] },
     { name: "state", type: "enum", values: ["open", "dismissed", "fixed"] },
@@ -27,4 +36,7 @@ export const codeScanningKind: KindManifest = {
   },
   renderer: codeScanningRenderer,
   filters: [severityAxis, toolAxis, stateAxis],
+  sorts: codeScanningSorts,
+  charts: codeScanningCharts,
+  views: [codeScanningView],
 };

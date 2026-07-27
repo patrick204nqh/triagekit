@@ -1,10 +1,9 @@
 import { type ScoredItem, type KindRenderer } from "../../layout/table/kind-renderer";
 import { esc } from "../../layout/util";
 import { type DependencyVulnDetails, DEPENDENCY_VULN } from "../../dataset/kinds/dependency-vuln";
-import { registerView } from "../registry";
-import "../../ingest/github/dependency-vuln-source";          // side-effect: register source
 import { detailsAs } from "../../dataset/details";
 import type { DetailView } from "../../layout/table/detail-view";
+import type { ViewModule } from "../registry";
 
 const det = (r: ScoredItem) => detailsAs<DependencyVulnDetails>(r)!;
 
@@ -41,10 +40,13 @@ export const dependencyVulnRenderer: KindRenderer = {
   ],
   detail: (r) => dependencyVulnDetailView(r),
 };
-registerView({ id: "code-security", kind: DEPENDENCY_VULN });
+export const dependencyVulnView: ViewModule = {
+  id: "code-security",
+  kind: DEPENDENCY_VULN,
+};
 
-import { registerChart } from "../../layout/charts/registry";
-import { type FilterAxis, registerSortKey } from "../../layout/toolbar/axis-registry";
+import type { TriageChart } from "../../layout/charts/registry";
+import type { FilterAxis, SortKey } from "../../layout/toolbar/axis-registry";
 
 const SEV_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, moderate: 2, low: 1 };
 
@@ -61,7 +63,7 @@ export const fixAvailableAxis: FilterAxis = {
   optionsFrom: () => [{ value: "yes", label: "Fix available" }, { value: "no", label: "No fix" }],
   test: (i, sel) => i.kind === DEPENDENCY_VULN && sel.includes(det(i).fixAvailable ? "yes" : "no"),
 };
-registerSortKey({
+export const dependencyVulnSeveritySort: SortKey = {
   id: "severity", label: "Severity",
   appliesTo: (ctx) => ctx.artifact.kinds.includes(DEPENDENCY_VULN),   // scope to the dependencies tab; otherwise it leaks onto every list
   compare: (a, b) => {
@@ -69,9 +71,9 @@ registerSortKey({
     const sb = b.kind === DEPENDENCY_VULN ? (SEV_RANK[det(b).severity] ?? 0) : 0;
     return (sb - sa) || (b.score - a.score);
   },
-});
+};
 
-registerChart({
+export const dependencyVulnFixableChart: TriageChart = {
   id: "dv-fixable", title: "Quick wins · fix available", kinds: [DEPENDENCY_VULN],
   render(rows, el) {
     const total = rows.length || 1, fixable = rows.filter(r => det(r).fixAvailable).length;
@@ -80,8 +82,8 @@ registerChart({
       <div class="track"><span style="width:${pct}%"></span></div>
       <div class="sub">${fixable} of ${rows.length} have a patched version available</div></div>`;
   },
-});
-registerChart({
+};
+export const dependencyVulnScopeChart: TriageChart = {
   id: "dv-scope", title: "Runtime vs development", kinds: [DEPENDENCY_VULN],
   render(rows, el) {
     const total = rows.length || 1, rt = rows.filter(r => det(r).scope === "runtime").length, dev = rows.length - rt;
@@ -89,4 +91,12 @@ registerChart({
       <div class="legend"><span class="it"><span class="sw" style="background:var(--accent)"></span>runtime <span class="n">${rt}</span></span>
       <span class="it"><span class="sw" style="background:var(--inert)"></span>development <span class="n">${dev}</span></span></div>`;
   },
-});
+};
+
+export const dependencyVulnSorts: readonly SortKey[] = Object.freeze([
+  dependencyVulnSeveritySort,
+]);
+export const dependencyVulnCharts: readonly TriageChart[] = Object.freeze([
+  dependencyVulnFixableChart,
+  dependencyVulnScopeChart,
+]);
