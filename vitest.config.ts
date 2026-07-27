@@ -8,5 +8,6 @@ export const testExclude = [
 export default defineConfig({
   test: {
     exclude: testExclude,
+    environment: "jsdom",
   },
 });
