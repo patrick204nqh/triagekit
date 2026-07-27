@@ -6,10 +6,12 @@ const repositoryFrom = (url: string): string => {
   return match?.[1] ?? "";
 };
 
+let alertId = 0;
 const dependencyAlert = (item: TriageItem) => {
+  alertId++;
   const details = item.details as Record<string, unknown>;
   return {
-    number: (item.providerRef as { number?: unknown }).number ?? item.id,
+    number: (item.providerRef as { number?: unknown }).number ?? alertId,
     security_advisory: {
       severity: details.severity,
       cvss: { score: details.cvss },

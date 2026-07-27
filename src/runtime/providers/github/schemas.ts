@@ -17,7 +17,7 @@ export const GithubSecurityAdvisory = z.object({
 });
 
 export const GithubSecurityVulnerability = z.object({
-  first_patched_version: z.object({ identifier: z.string() }).optional(),
+  first_patched_version: z.object({ identifier: z.string() }).nullable().optional(),
 });
 
 export const GithubDependency = z.object({
