@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { BriefSurface } from "../../src/runtime/handoff/brief-surface";
 import type { AgentHandoffV1 } from "../../src/runtime/handoff/types";
 

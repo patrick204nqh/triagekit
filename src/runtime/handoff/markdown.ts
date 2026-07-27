@@ -31,7 +31,7 @@ export function renderMarkdown(handoff: AgentHandoffV1): string {
 
   parts.push("## Outcome");
   parts.push("");
-  parts.push(handoff.intent.outcome);
+  parts.push(esc(handoff.intent.outcome));
   parts.push("");
 
   for (const target of handoff.targets) {

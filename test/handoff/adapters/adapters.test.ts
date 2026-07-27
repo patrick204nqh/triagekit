@@ -23,6 +23,11 @@ const handoff: AgentHandoffV1 = {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  Object.defineProperty(navigator, "clipboard", {
+    value: { writeText: vi.fn() },
+    writable: true,
+    configurable: true,
+  });
 });
 
 describe("copyMarkdown", () => {
