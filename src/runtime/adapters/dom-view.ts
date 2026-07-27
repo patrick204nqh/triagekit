@@ -7,6 +7,7 @@ import type { ScoreExplanation } from "../scoring/score-model";
 import type { RuntimeCatalog } from "../catalog/types";
 import type { Kind } from "../dataset/item";
 import type { ProviderDetailPort } from "../layout/table/kind-renderer";
+import type { HandoffController } from "../handoff/controller";
 import { renderTriageList } from "../layout/table/detail-panel";
 
 export interface DomViewDeps {
@@ -15,6 +16,7 @@ export interface DomViewDeps {
   providerId?: string;
   scoreExplain(i: ScoredItem): ScoreExplanation | null;
   catalog?: RuntimeCatalog;
+  handoffController?: HandoffController;
 }
 
 // Render-only list surface. Filtering/sorting is driven by the unified toolbar
@@ -56,7 +58,7 @@ export function createDomView(host: HTMLElement, deps: DomViewDeps): ViewPort {
         body,
         vm.shown,
         vm.errors,
-        { provider: providerDetail, scoreExplain: deps.scoreExplain },
+        { provider: providerDetail, scoreExplain: deps.scoreExplain, handoffController: deps.handoffController },
         deps.catalog,
       );
     },
