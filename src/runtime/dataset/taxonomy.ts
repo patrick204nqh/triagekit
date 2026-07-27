@@ -1,3 +1,4 @@
+import { NotFoundError } from "../core/errors.js";
 import type { Kind } from "./item";
 
 export type Class = "finding" | "work";
@@ -45,9 +46,9 @@ const byKind = new Map<Kind, Domain>(DOMAINS.flatMap(d => d.kinds.map(k => [k, d
 
 export function listDomains(): Domain[] { return DOMAINS; }
 export function getDomain(id: DomainId): Domain {
-  const d = byId.get(id); if (!d) throw new Error(`unknown domain: ${id}`); return d;
+  const d = byId.get(id); if (!d) throw new NotFoundError("domain", id); return d;
 }
 export function domainOf(kind: Kind): Domain {
-  const d = byKind.get(kind); if (!d) throw new Error(`kind has no domain: ${kind}`); return d;
+  const d = byKind.get(kind); if (!d) throw new NotFoundError("domain for kind", kind); return d;
 }
 export function classOf(kind: Kind): Class { return domainOf(kind).class; }

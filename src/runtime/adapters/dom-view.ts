@@ -1,4 +1,5 @@
 // src/runtime/adapters/dom-view.ts
+import { ProviderError } from "../core/errors.js";
 import type { ViewPort } from "../core/ports";
 import type { ViewModel } from "../core/view-model";
 import type { Artifact } from "../dataset/artifact";
@@ -37,14 +38,14 @@ export function createDomView(host: HTMLElement, deps: DomViewDeps): ViewPort {
       async enrich(kind, ref) {
         const provider = declarationFor(kind);
         if (!provider?.adapter?.enrich) {
-          throw new Error(`no Provider enrichment for "${kind}"`);
+          throw new ProviderError(kind, "enrich", "no adapter registered");
         }
         return provider.adapter.enrich(kind, ref, deps.token);
       },
       async execute(command) {
         const provider = declarationFor(command.kind);
         if (!provider?.adapter?.execute) {
-          throw new Error(`no Provider action adapter for "${command.kind}"`);
+          throw new ProviderError(command.kind, "execute", "no adapter registered");
         }
         await provider.adapter.execute(command, deps.token);
       },

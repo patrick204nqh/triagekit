@@ -6,10 +6,11 @@ import {
   type ReviewDetails,
   type ReviewState,
 } from "../../../dataset/shapes/review";
+import { GithubIssue } from "../schemas";
 import type { GithubKindIngest } from "../repository-ingest";
 
 const bots = ["dependabot", "renovate", "github-actions", "snyk"];
-const actor = (raw: any): Actor => {
+const actor = (raw: { login?: string; avatar_url?: string; type?: string } | undefined): Actor => {
   const login = raw?.login ?? "unknown";
   return {
     login,
@@ -19,7 +20,7 @@ const actor = (raw: any): Actor => {
       || bots.includes(login.toLowerCase()) ? "bot" : "human",
   };
 };
-const label = (raw: any): Label => ({
+const label = (raw: { name?: string; color?: string }): Label => ({
   name: raw?.name ?? "",
   color: raw?.color ?? "888888",
 });
@@ -27,41 +28,42 @@ const label = (raw: any): Label => ({
 export const reviewIngest: GithubKindIngest = {
   kinds: [CHANGE_REQUEST, ISSUE],
   async fetchRepository(http, repository, credential) {
-    const rows = await http.paginate<any>(
+    const rows = await http.paginate<unknown>(
       `/repos/${repository}/issues?state=open&per_page=100`,
       credential,
     );
     return rows.map((raw) => {
-      const isPullRequest = Boolean(raw.pull_request);
+      const parsed = GithubIssue.parse(raw);
+      const isPullRequest = Boolean(parsed.pull_request);
       const kind = isPullRequest ? CHANGE_REQUEST : ISSUE;
-      const number = raw.number;
-      const labels = (raw.labels ?? []).map(label);
-      const state: ReviewState = raw.draft ? "draft" : "open";
+      const number = parsed.number;
+      const labels = (parsed.labels ?? []).map(label);
+      const state: ReviewState = parsed.draft ? "draft" : "open";
       return {
-        id: `github:${repository}:${number}`,
+        id: `github:${repository}:${String(number)}`,
         provider: "github",
         providerRef: { repository, number },
         kind,
-        title: raw.title ?? "",
+        title: parsed.title ?? "",
         location: repository,
-        signal: Math.min(100, (raw.comments ?? 0) * 4 + labels.length * 12),
-        createdAt: raw.created_at ?? "",
-        url: raw.html_url ?? "",
+        signal: Math.min(100, (parsed.comments ?? 0) * 4 + labels.length * 12),
+        createdAt: parsed.created_at ?? "",
+        url: parsed.html_url ?? "",
         details: {
           number,
           state,
-          body: raw.body ?? "",
-          author: actor(raw.user),
-          assignees: (raw.assignees ?? []).map(actor),
+          body: parsed.body ?? "",
+          author: actor(parsed.user),
+          assignees: (parsed.assignees ?? []).map(actor),
           reviewers: [],
-          comments: raw.comments ?? 0,
+          comments: parsed.comments ?? 0,
           labels,
           checks: null,
           permalinks: [{
             provider: "github",
-            href: raw.html_url ?? "",
+            href: parsed.html_url ?? "",
             kind: isPullRequest ? "pr" : "issue",
-            label: `#${number}`,
+            label: `#${String(number)}`,
           }],
           relations: [],
         },

@@ -6,6 +6,7 @@ import {
   type CodeScanningState,
 } from "../../../dataset/kinds/code-scanning";
 import { GithubHttpError } from "../http";
+import { GithubCodeScanningAlert } from "../schemas";
 import type { GithubKindIngest } from "../repository-ingest";
 
 const severity: Record<string, CodeScanningSeverity> = {
@@ -21,9 +22,9 @@ const signal: Record<CodeScanningSeverity, number> = {
 export const codeScanningIngest: GithubKindIngest = {
   kinds: [CODE_SCANNING],
   async fetchRepository(http, repository, credential) {
-    let rows: readonly any[];
+    let rows: readonly unknown[];
     try {
-      rows = await http.paginate<any>(
+      rows = await http.paginate<unknown>(
         `/repos/${repository}/code-scanning/alerts?state=open&per_page=100`,
         credential,
       );
@@ -32,30 +33,31 @@ export const codeScanningIngest: GithubKindIngest = {
       throw error;
     }
     return rows.map((raw) => {
-      const securitySeverity = severity[raw.rule?.security_severity_level] ?? "low";
-      const location = raw.most_recent_instance?.location ?? {};
-      const number = raw.number;
+      const parsed = GithubCodeScanningAlert.parse(raw);
+      const securitySeverity = severity[parsed.rule?.security_severity_level ?? ""] ?? "low";
+      const location = parsed.most_recent_instance?.location ?? {};
+      const number = parsed.number;
       return {
-        id: `github:${repository}:cs:${number}`,
+        id: `github:${repository}:cs:${String(number)}`,
         provider: "github",
         providerRef: { repository, number },
         kind: CODE_SCANNING,
-        title: raw.rule?.name ?? raw.rule?.id ?? "",
+        title: parsed.rule?.name ?? parsed.rule?.id ?? "",
         location: repository,
         signal: signal[securitySeverity],
-        createdAt: raw.created_at ?? "",
-        url: raw.html_url ?? "",
+        createdAt: parsed.created_at ?? "",
+        url: parsed.html_url ?? "",
         details: {
-          ruleId: raw.rule?.id ?? "",
-          ruleName: raw.rule?.name ?? raw.rule?.id ?? "",
-          tool: raw.tool?.name ?? "",
+          ruleId: parsed.rule?.id ?? "",
+          ruleName: parsed.rule?.name ?? parsed.rule?.id ?? "",
+          tool: parsed.tool?.name ?? "",
           location: {
             path: location.path ?? "",
             line: location.start_line ?? 0,
           },
           securitySeverity,
-          state: state[raw.state] ?? "open",
-          permalink: raw.html_url ?? "",
+          state: state[parsed.state ?? ""] ?? "open",
+          permalink: parsed.html_url ?? "",
         },
       } satisfies TriageItem<CodeScanningDetails>;
     });

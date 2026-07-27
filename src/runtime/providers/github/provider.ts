@@ -1,9 +1,11 @@
+import { ProviderError } from "../../core/errors.js";
 import type { Kind } from "../../dataset/item";
 import type {
   ProviderCommand,
   ProviderDeclaration,
 } from "../../catalog/types";
 import { createGithubHttp, type GithubHttp } from "./http";
+import { GithubPullRequest, GithubCheckRunsResponse } from "./schemas";
 import {
   discoverGithubRepositories,
   refreshGithubKinds,
@@ -26,12 +28,12 @@ interface GithubReference {
 
 const reference = (value: unknown): GithubReference => {
   if (!value || typeof value !== "object") {
-    throw new Error("invalid GitHub Provider Reference");
+    throw new ProviderError("github", "reference", "expected object with repository and number");
   }
   const candidate = value as Partial<GithubReference>;
   if (typeof candidate.repository !== "string"
     || typeof candidate.number !== "number") {
-    throw new Error("invalid GitHub Provider Reference");
+    throw new ProviderError("github", "reference", "expected object with string repository and number number");
   }
   return candidate as GithubReference;
 };
@@ -48,32 +50,34 @@ async function enrichGithubItem(
   credential: string,
 ): Promise<unknown> {
   if (kind !== "change-request") {
-    throw new Error(`GitHub enrichment is not declared for "${kind}"`);
+    throw new ProviderError("github", "enrich", `enrichment is not declared for "${kind}"`);
   }
   const { repository, number } = reference(providerRef);
-  const pull = await http.get<any>(
+  const pullRaw = await http.get<unknown>(
     `/repos/${repository}/pulls/${number}`,
     credential,
   );
+  const pull = GithubPullRequest.parse(pullRaw);
   let checks = null;
   if (pull.head?.sha) {
-    const result = await http.get<any>(
+    const resultRaw = await http.get<unknown>(
       `/repos/${repository}/commits/${pull.head.sha}/check-runs`,
       credential,
     );
+    const result = GithubCheckRunsResponse.parse(resultRaw);
     const runs = result.check_runs ?? [];
     checks = {
-      state: runs.some((run: any) =>
+      state: runs.some((run) =>
         ["failure", "timed_out", "cancelled", "action_required"]
-          .includes(run.conclusion))
+          .includes(run.conclusion ?? ""))
         ? "fail"
-        : runs.some((run: any) => run.status !== "completed")
+        : runs.some((run) => run.status !== "completed")
           ? "pending" : "pass",
       conflicts: pull.mergeable === false || pull.mergeable_state === "dirty",
     };
   }
   return {
-    reviewers: (pull.requested_reviewers ?? []).map((reviewer: any) => ({
+    reviewers: (pull.requested_reviewers ?? []).map((reviewer) => ({
       login: reviewer.login ?? "unknown",
       avatarUrl: reviewer.avatar_url ?? "",
       kind: reviewer.type === "Bot" ? "bot" : "human",
@@ -89,9 +93,8 @@ async function executeGithubCommand(
 ): Promise<void> {
   const declared = actions[command.kind] ?? [];
   if (!declared.includes(command.action)) {
-    throw new Error(
-      `GitHub action "${command.action}" is not declared for "${command.kind}"`,
-    );
+    throw new ProviderError("github", "execute",
+      `action "${command.action}" is not declared for "${command.kind}"`);
   }
   const { repository, number } = reference(command.ref);
   const payload = command.payload ?? {};

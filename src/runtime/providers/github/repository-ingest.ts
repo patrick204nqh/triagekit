@@ -7,6 +7,7 @@ import type {
   TriageFailure,
 } from "../../catalog/types";
 import { GithubHttpError, type GithubHttp } from "./http";
+import { GithubRepository } from "./schemas";
 
 export interface GithubKindIngest {
   kinds: readonly Kind[];
@@ -17,25 +18,22 @@ export interface GithubKindIngest {
   ): Promise<readonly TriageItem[]>;
 }
 
-interface GithubRepository {
-  full_name: string;
-  name: string;
-  owner?: { login?: string };
-}
-
 export async function discoverGithubRepositories(
   http: GithubHttp,
   credential: string,
 ): Promise<readonly DiscoveryOption[]> {
-  const repositories = await http.paginate<GithubRepository>(
+  const repositories = await http.paginate<unknown>(
     "/user/repos?per_page=100&affiliation=owner,collaborator,organization_member&sort=full_name",
     credential,
   );
-  return repositories.map((repository) => ({
-    value: repository.full_name,
-    label: repository.name,
-    group: repository.owner?.login,
-  }));
+  return repositories.map((raw) => {
+    const repo = GithubRepository.parse(raw);
+    return {
+      value: repo.full_name,
+      label: repo.name,
+      group: repo.owner?.login,
+    };
+  });
 }
 
 const failureCategory = (error: unknown): FailureCategory => {
