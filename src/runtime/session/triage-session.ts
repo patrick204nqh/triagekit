@@ -75,6 +75,36 @@ export function createTriageSession(
   };
   const workFor = (candidate: Kind): WorkIntent =>
     catalog.kind(candidate)?.status === "upcoming" ? "present" : "refresh";
+  const viewExists = (candidate: Kind, view: string): boolean =>
+    view === "list"
+    || view === "insights"
+    || catalog.tabs().some((tab) => tab.id === view)
+    || catalog.viewsFor(candidate).some((candidateView) => candidateView.id === view);
+  const normalizeFilters = (
+    candidate: Kind,
+    filters: {
+      sort?: string;
+      axes?: Readonly<Record<string, readonly string[]>>;
+    },
+  ): ListState => {
+    const availableAxes = new Set(
+      catalog.filtersFor(candidate).map((axis) => axis.id),
+    );
+    const axes = Object.fromEntries(
+      Object.entries(filters.axes ?? {})
+        .filter(([id, values]) =>
+          availableAxes.has(id) && Boolean(values?.length)
+        )
+        .map(([id, values]) => [id, [...values]]),
+    );
+    return {
+      sort: filters.sort && catalog.sortsFor(candidate)
+        .some((sort) => sort.id === filters.sort)
+        ? filters.sort
+        : "priority",
+      axes,
+    };
+  };
 
   let state = frozenState({
     kind,
@@ -164,16 +194,47 @@ export function createTriageSession(
     },
 
     selectView(view) {
-      if (!view || view === state.view) return unchanged();
+      if (
+        !view
+        || view === state.view
+        || !viewExists(state.kind, view)
+      ) {
+        return unchanged();
+      }
       return update({ ...state, view }, "present");
     },
 
     changeFilters(filters) {
-      return update({ ...state, filters }, "rederive");
+      return update({
+        ...state,
+        filters: normalizeFilters(state.kind, filters),
+      }, "rederive");
     },
 
-    restore(_serialized) {
-      return unchanged();
+    restore(serialized) {
+      const requestedKind = serialized.kind as Kind | undefined;
+      const restoredKind = requestedKind && catalog.kind(requestedKind)
+        ? requestedKind
+        : catalog.kinds()[0]!.kind;
+      const restoredProvider = providerFor(
+        restoredKind,
+        serialized.provider,
+      );
+      const restoredView = serialized.view
+        && viewExists(restoredKind, serialized.view)
+        ? serialized.view
+        : "list";
+      return update({
+        kind: restoredKind,
+        provider: restoredProvider,
+        preferredRepository: serialized.repository ?? "",
+        effectiveRepository: "",
+        view: restoredView,
+        filters: normalizeFilters(restoredKind, {
+          sort: serialized.sort,
+          axes: serialized.axes,
+        }),
+      }, workFor(restoredKind));
     },
 
     reconcile(availability: SessionAvailability, _rows: readonly ScoredItem[]) {
@@ -182,8 +243,17 @@ export function createTriageSession(
         && availability.repositories.includes(preferred)
         ? preferred
         : "";
-      if (effective === state.effectiveRepository) return unchanged();
-      return update({ ...state, effectiveRepository: effective }, "rederive");
+      const view = availability.views.includes(state.view)
+        ? state.view
+        : "list";
+      const repositoryChanged = effective !== state.effectiveRepository;
+      const viewChanged = view !== state.view;
+      if (!repositoryChanged && !viewChanged) return unchanged();
+      return update({
+        ...state,
+        effectiveRepository: effective,
+        view,
+      }, repositoryChanged ? "rederive" : "present");
     },
   };
 }
