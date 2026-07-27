@@ -37,20 +37,20 @@ export function listSortKeys(): SortKey[] { return [...sorts.values()]; }
 const TIERS: Tier[] = ["P0", "P1", "P2", "P3"];
 
 // ── Built-in axes ──
-registerFilterAxis({
+export const tierAxis: FilterAxis = {
   id: "tier", label: "Priority", widget: "chips", quick: true,
   appliesTo: (rows) => rows.length > 0,
   optionsFrom: () => TIERS.map(t => ({ value: t, label: t })),
   test: (i, sel) => sel.includes(i.tier),
-});
-registerFilterAxis({
+};
+export const authorAxis: FilterAxis = {
   id: "author", label: "Author", widget: "chips", quick: true,
   appliesTo: (rows) => rows.length > 0 && rows.every(r => authorKindOf(r) !== undefined),
   optionsFrom: () => [{ value: "human", label: "Human" }, { value: "bot", label: "Bot" }],
   test: (i, sel) => { const k = authorKindOf(i); return k !== undefined && sel.includes(k); },
-});
+};
 
-registerFilterAxis({
+export const labelsAxis: FilterAxis = {
   id: "labels", label: "Labels", widget: "chips", quick: false,
   appliesTo: (rows) => rows.some(r => labelNamesOf(r).length > 0),
   optionsFrom: (rows) => {
@@ -59,8 +59,26 @@ registerFilterAxis({
     return [...firstColor.keys()].sort().map(name => ({ value: name, label: name, chip: { color: firstColor.get(name)! } }));
   },
   test: (i, sel) => labelNamesOf(i).some(n => sel.includes(n)),
-});
+};
 
 // ── Built-in sorts ──
-registerSortKey({ id: "priority", label: "Priority", compare: (a, b) => b.score - a.score });
-registerSortKey({ id: "recent", label: "Recent", compare: (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt) });
+export const prioritySort: SortKey = {
+  id: "priority",
+  label: "Priority",
+  compare: (a, b) => b.score - a.score,
+};
+export const recentSort: SortKey = {
+  id: "recent",
+  label: "Recent",
+  compare: (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
+};
+
+export const genericFilterAxes: readonly FilterAxis[] = Object.freeze([
+  tierAxis,
+  authorAxis,
+  labelsAxis,
+]);
+export const genericSortKeys: readonly SortKey[] = Object.freeze([
+  prioritySort,
+  recentSort,
+]);

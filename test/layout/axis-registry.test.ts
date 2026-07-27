@@ -1,9 +1,20 @@
 import { describe, it, expect } from "vitest";
 import {
-  listFilterAxes, getFilterAxis, listSortKeys, getSortKey, type AxisCtx,
+  genericFilterAxes, genericSortKeys, type AxisCtx,
+} from "../../src/runtime/layout/toolbar/axis-registry";
+import type {
+  FilterAxis,
+  SortKey,
 } from "../../src/runtime/layout/toolbar/axis-registry";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 import type { Artifact } from "../../src/runtime/dataset/artifact";
+
+const getFilterAxis = (id: string): FilterAxis | undefined =>
+  genericFilterAxes.find((axis) => axis.id === id);
+const getSortKey = (id: string): SortKey | undefined =>
+  genericSortKeys.find((sort) => sort.id === id);
+const listFilterAxes = (): readonly FilterAxis[] => genericFilterAxes;
+const listSortKeys = (): readonly SortKey[] => genericSortKeys;
 
 const reviewArtifact: Artifact = { id: "review", label: "Review", group: "work", kinds: ["change-request", "issue"] };
 const vulnArtifact: Artifact = { id: "vulnerabilities", label: "Vulnerabilities", group: "finding", kinds: ["dependency-vuln", "code-scanning"] };

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { runtimeDefaults } from "../../src/runtime/catalog/defaults";
 import { createRuntimeCatalog } from "../../src/runtime/catalog/runtime-catalog";
 import type {
   KindDeclaration,
@@ -52,6 +53,18 @@ describe("createRuntimeCatalog", () => {
     expect(Object.isFrozen(catalog.kinds())).toBe(true);
     expect(Object.isFrozen(catalog.artifacts())).toBe(true);
     expect(Object.isFrozen(catalog.providers())).toBe(true);
+  });
+
+  it("exposes generic runtime behavior from explicit defaults", () => {
+    const catalog = createRuntimeCatalog({
+      kinds: [issueKind()],
+      providers: [github()],
+      defaults: runtimeDefaults,
+    });
+
+    expect(catalog.filter("tier")?.label).toBe("Priority");
+    expect(catalog.sort("priority")?.label).toBe("Priority");
+    expect(catalog.tabs().map((tab) => tab.id)).toContain("due-soon");
   });
 
   it("rejects duplicate Kind identifiers", () => {
