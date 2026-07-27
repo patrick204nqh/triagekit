@@ -174,7 +174,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
           ...applicableCatalogTabs(catalog, active, vm.scored)
             .map((tab) => tab.id),
         ],
-      }, vm.scored);
+      });
       if (reconciliation.work !== "none") {
         sessionUrl.write(reconciliation.serialized);
         if (reconciliation.work === "rederive") {
@@ -197,19 +197,19 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       if (currentView() === "insights") { renderInsights(root, vm.scored, active.kinds, catalog); return; }
       if (currentView() !== "list") {
         const tab = catalog.tabs().find((candidate) => candidate.id === currentView());
-      if (tab) { tab.render(root, vm.scored); return; }
-    }
+        if (tab) { tab.render(root, vm.scored); return; }
+      }
       // createDomView is called per-render intentionally: artifact: active and token
       // both reflect the current artifact/credential at render time and go stale if
       // captured at construction (active is reassigned when the user switches artifacts).
       const token = creds.get(connectionKey(usableProviders()[0]))!;  // usableProviders filter guarantees a credential
-    env.createDomView(root, {
-      artifact: active,
-      token,
+      env.createDomView(root, {
+        artifact: active,
+        token,
         providerId: currentProvider(),
-      scoreExplain,
-      catalog: catalog,
-    }).render(vm);
+        scoreExplain,
+        catalog: catalog,
+      }).render(vm);
     },
   };
 
@@ -337,10 +337,10 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
         const live = readyProvidersFor(a).length > 0;
         const b = document.createElement("button");
         b.innerHTML = live ? esc(a.label) : `${esc(a.label)}<span class="rail-soon">soon</span>`;
-      b.className = [a.id === active.id ? "active" : "", live ? "" : "upcoming"].filter(Boolean).join(" ");
-      b.addEventListener("click", () => {
-        applySessionUpdate(session.selectKind(a.id));
-      });
+        b.className = [a.id === active.id ? "active" : "", live ? "" : "upcoming"].filter(Boolean).join(" ");
+        b.addEventListener("click", () => {
+          applySessionUpdate(session.selectKind(a.id));
+        });
         section.appendChild(b);
       }
       rail.appendChild(section);

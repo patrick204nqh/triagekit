@@ -5,7 +5,6 @@ import {
   pruneFilters,
   type ListState,
 } from "../layout/toolbar/filter-state";
-import type { ScoredItem } from "../layout/table/kind-renderer";
 import type {
   SerializedSession,
   SessionAvailability,
@@ -194,14 +193,9 @@ export function createTriageSession(
     },
 
     selectView(view) {
-      if (
-        !view
-        || view === state.view
-        || !viewExists(state.kind, view)
-      ) {
-        return unchanged();
-      }
-      return update({ ...state, view }, "present");
+      const nextView = view && viewExists(state.kind, view) ? view : "list";
+      if (nextView === state.view) return unchanged();
+      return update({ ...state, view: nextView }, "present");
     },
 
     changeFilters(filters) {
@@ -237,7 +231,7 @@ export function createTriageSession(
       }, workFor(restoredKind));
     },
 
-    reconcile(availability: SessionAvailability, _rows: readonly ScoredItem[]) {
+    reconcile(availability: SessionAvailability) {
       const preferred = state.preferredRepository;
       const effective = preferred
         && availability.repositories.includes(preferred)

@@ -96,13 +96,15 @@ describe("Triage Session restoration", () => {
 });
 
 describe("display and filter transitions", () => {
-  it("rejects unknown views and presents known views", () => {
+  it("falls back to List when selecting an unavailable view", () => {
     const session = createTriageSession({ catalog: testCatalog() });
 
-    expect(session.selectView("missing").work).toBe("none");
-    const update = session.selectView("due-soon");
+    expect(session.selectView("due-soon").state.view).toBe("due-soon");
+
+    const update = session.selectView("missing");
+
     expect(update.work).toBe("present");
-    expect(update.state.view).toBe("due-soon");
+    expect(update.state.view).toBe("list");
   });
 
   it("normalizes filters and never retains caller-owned values", () => {

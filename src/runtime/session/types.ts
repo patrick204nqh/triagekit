@@ -45,8 +45,5 @@ export interface TriageSession {
   selectView(view: string): SessionUpdate;
   changeFilters(filters: ListState): SessionUpdate;
   restore(serialized: SerializedSession): SessionUpdate;
-  reconcile(
-    availability: SessionAvailability,
-    rows: readonly ScoredItem[],
-  ): SessionUpdate;
+  reconcile(availability: SessionAvailability): SessionUpdate;
 }

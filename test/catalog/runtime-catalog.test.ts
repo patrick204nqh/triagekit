@@ -39,10 +39,9 @@ const github = (): ProviderDeclaration => ({
 
 describe("createRuntimeCatalog", () => {
   it("returns immutable Kind, Artifact, and Provider readers", () => {
-    const catalog = createRuntimeCatalog({
-      kinds: [issueKind()],
-      providers: [github()],
-    });
+    const kind = issueKind();
+    const provider = github();
+    const catalog = createRuntimeCatalog({ kinds: [kind], providers: [provider] });
 
     expect(catalog.kind("issue")?.label).toBe("Issues");
     expect(catalog.readyKind("issue")?.renderer.kind).toBe("issue");
@@ -53,6 +52,15 @@ describe("createRuntimeCatalog", () => {
     expect(Object.isFrozen(catalog.kinds())).toBe(true);
     expect(Object.isFrozen(catalog.artifacts())).toBe(true);
     expect(Object.isFrozen(catalog.providers())).toBe(true);
+    expect(Object.isFrozen(catalog.readyKind("issue"))).toBe(true);
+    expect(Object.isFrozen(catalog.readyKind("issue")?.fields)).toBe(true);
+    expect(Object.isFrozen(catalog.provider("github")?.capabilities)).toBe(true);
+
+    kind.label = "Mutated Kind";
+    provider.label = "Mutated Provider";
+
+    expect(catalog.kind("issue")?.label).toBe("Issues");
+    expect(catalog.provider("github")?.label).toBe("GitHub");
   });
 
   it("exposes generic runtime behavior from explicit defaults", () => {
@@ -87,5 +95,29 @@ describe("createRuntimeCatalog", () => {
       kinds: [issueKind()],
       providers: [withoutAdapter],
     })).toThrow(/github.*adapter/i);
+  });
+
+  it("rejects a ready Kind without a built-in scorer", () => {
+    const { builtInScorer: _, ...withoutScorer } = issueKind() as Extract<
+      KindDeclaration,
+      { status: "ready" }
+    >;
+
+    expect(() => createRuntimeCatalog({
+      kinds: [withoutScorer as KindDeclaration],
+      providers: [],
+    })).toThrow(/issue.*builtInScorer/i);
+  });
+
+  it("rejects a ready Kind without its field catalog", () => {
+    const { fields: _, ...withoutFields } = issueKind() as Extract<
+      KindDeclaration,
+      { status: "ready" }
+    >;
+
+    expect(() => createRuntimeCatalog({
+      kinds: [withoutFields as KindDeclaration],
+      providers: [],
+    })).toThrow(/issue.*fields/i);
   });
 });

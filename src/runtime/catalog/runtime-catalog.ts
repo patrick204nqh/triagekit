@@ -25,6 +25,36 @@ export interface RuntimeCatalogInput {
   defaults?: Partial<RuntimeDefaults>;
 }
 
+function immutableSnapshot<T>(
+  value: T,
+  seen = new WeakMap<object, unknown>(),
+): T {
+  if (value === null || typeof value !== "object") return value;
+  const existing = seen.get(value);
+  if (existing) return existing as T;
+
+  if (Array.isArray(value)) {
+    const copy: unknown[] = [];
+    seen.set(value, copy);
+    copy.push(...value.map((entry) => immutableSnapshot(entry, seen)));
+    return Object.freeze(copy) as T;
+  }
+
+  const copy = Object.create(Object.getPrototypeOf(value)) as Record<
+    PropertyKey,
+    unknown
+  >;
+  seen.set(value, copy);
+  for (const key of Reflect.ownKeys(value)) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key)!;
+    if ("value" in descriptor) {
+      descriptor.value = immutableSnapshot(descriptor.value, seen);
+    }
+    Object.defineProperty(copy, key, descriptor);
+  }
+  return Object.freeze(copy) as T;
+}
+
 function addUnique<T extends { id: string }>(
   map: Map<string, T>,
   value: T,
@@ -38,6 +68,30 @@ function addUnique<T extends { id: string }>(
 }
 
 function validateReadyKind(kind: ReadyKindDeclaration): void {
+  const requiredCollections = [
+    "fields",
+    "filters",
+    "sorts",
+    "charts",
+    "views",
+  ] as const;
+  for (const property of requiredCollections) {
+    if (!Array.isArray(kind[property])) {
+      throw new Error(
+        `kind "${kind.kind}": missing required ${property}`,
+      );
+    }
+  }
+  if (typeof kind.builtInScorer !== "function") {
+    throw new Error(
+      `kind "${kind.kind}": missing required builtInScorer`,
+    );
+  }
+  if (!kind.renderer || typeof kind.renderer !== "object") {
+    throw new Error(
+      `kind "${kind.kind}": missing required renderer`,
+    );
+  }
   if (kind.renderer.kind !== kind.kind) {
     throw new Error(
       `kind "${kind.kind}": renderer declares "${kind.renderer.kind}"`,
@@ -96,7 +150,8 @@ export function createRuntimeCatalog(
   input: RuntimeCatalogInput,
 ): RuntimeCatalog {
   const kindMap = new Map<Kind, KindDeclaration>();
-  for (const kind of input.kinds) {
+  for (const candidate of input.kinds) {
+    const kind = immutableSnapshot(candidate);
     if (kindMap.has(kind.kind)) {
       throw new Error(`duplicate kind identifier: ${kind.kind}`);
     }
@@ -105,7 +160,8 @@ export function createRuntimeCatalog(
   }
 
   const providerMap = new Map<string, ProviderDeclaration>();
-  for (const provider of input.providers) {
+  for (const candidate of input.providers) {
+    const provider = immutableSnapshot(candidate);
     if (providerMap.has(provider.id)) {
       throw new Error(`duplicate provider identifier: ${provider.id}`);
     }
@@ -114,10 +170,18 @@ export function createRuntimeCatalog(
   }
 
   const defaults: RuntimeDefaults = {
-    filters: input.defaults?.filters ?? EMPTY_DEFAULTS.filters,
-    sorts: input.defaults?.sorts ?? EMPTY_DEFAULTS.sorts,
-    charts: input.defaults?.charts ?? EMPTY_DEFAULTS.charts,
-    tabs: input.defaults?.tabs ?? EMPTY_DEFAULTS.tabs,
+    filters: immutableSnapshot(
+      input.defaults?.filters ?? EMPTY_DEFAULTS.filters,
+    ),
+    sorts: immutableSnapshot(
+      input.defaults?.sorts ?? EMPTY_DEFAULTS.sorts,
+    ),
+    charts: immutableSnapshot(
+      input.defaults?.charts ?? EMPTY_DEFAULTS.charts,
+    ),
+    tabs: immutableSnapshot(
+      input.defaults?.tabs ?? EMPTY_DEFAULTS.tabs,
+    ),
   };
 
   const filterMap = new Map<string, FilterAxis>();
@@ -139,7 +203,7 @@ export function createRuntimeCatalog(
 
   const kinds = Object.freeze([...kindMap.values()]);
   const providers = Object.freeze([...providerMap.values()]);
-  const artifacts = Object.freeze(kinds.map((kind) => Object.freeze({
+  const artifacts = immutableSnapshot(kinds.map((kind) => ({
     id: kind.kind,
     label: kind.label,
     group: getDomain(kind.domain).class,
@@ -148,7 +212,7 @@ export function createRuntimeCatalog(
   const artifactMap = new Map(
     artifacts.map((artifact) => [artifact.id as Kind, artifact]),
   );
-  const tabs = Object.freeze([...defaults.tabs]);
+  const tabs = defaults.tabs;
 
   const readyKind = (id: Kind): ReadyKindDeclaration | undefined => {
     const declaration = kindMap.get(id);

@@ -331,7 +331,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       btn.addEventListener("click", () => runDiscover(s, btn.dataset.discover!, true)));
     // Always surface the *selected* scope as chips (independent of discovery);
     // the "Find/Re-scan" button loads the option list to add more.
-      for (const f of scopeFieldsOf(s)) if (f.discoverable && getCred(prov)) {
+    for (const f of scopeFieldsOf(s)) if (f.discoverable && getCred(prov)) {
       const cached = discoverCache.get(`${prov}:${fingerprint(getCred(prov))}`) ?? [];
       mountMultiSelect(body.querySelector<HTMLElement>(`[data-list="${f.key}"]`)!, s, f.key, cached);
     }
@@ -354,11 +354,11 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     if (!force && discoverCache.has(cacheKey)) { mountMultiSelect(list, s, key, discoverCache.get(cacheKey)!); return; }
     list.innerHTML = `<div class="muted">Querying…</div>`;
     let options: DiscoveryOption[] = [];
-      try { options = (await discoverWith(s, getCred(prov))) ?? []; }
+    try { options = (await discoverWith(s, getCred(prov))) ?? []; }
     catch (e: any) { list.innerHTML = `<div class="error">${esc(e?.message ?? e)}</div>`; return; }
     discoverCache.set(cacheKey, options);
     const btn = conns.querySelector<HTMLElement>(`[data-discover="${key}"]`);
-      const f = scopeFieldsOf(s).find(x => x.key === key);
+    const f = scopeFieldsOf(s).find(x => x.key === key);
     if (btn && f) btn.textContent = `Re-scan ${f.label.toLowerCase()}`;
     mountMultiSelect(list, s, key, options);
   }

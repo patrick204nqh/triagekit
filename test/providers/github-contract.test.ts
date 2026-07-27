@@ -137,4 +137,28 @@ describe("GitHub Provider transport", () => {
       failures: [{ provider: "github", target: "acme-corp/broken" }],
     });
   });
+
+  it("classifies paginated SSO failures as authentication failures", async () => {
+    const github = createGithubProvider(async () =>
+      new Response(JSON.stringify({ message: "Resource protected by SAML SSO" }), {
+        status: 403,
+        headers: { "x-github-sso": "required" },
+      }));
+
+    const outcomes = await github.adapter!.refresh({
+      credential: "token",
+      scope: { repos: ["acme-corp/web"] },
+      kinds: ["dependency-vuln"],
+    });
+
+    expect(outcomes[0]).toMatchObject({
+      status: "failed",
+      failures: [{
+        provider: "github",
+        kind: "dependency-vuln",
+        target: "acme-corp/web",
+        category: "auth",
+      }],
+    });
+  });
 });

@@ -46,7 +46,7 @@ describe("repository reconciliation", () => {
     const fallback = session.reconcile({
       repositories: ["acme-corp/web"],
       views: ["list"],
-    }, [row("acme-corp/web")]);
+    });
 
     expect(fallback.work).toBe("rederive");
     expect(fallback.state.preferredRepository).toBe("acme-corp/api");
@@ -55,7 +55,7 @@ describe("repository reconciliation", () => {
     const restored = session.reconcile({
       repositories: ["acme-corp/api", "acme-corp/web"],
       views: ["list"],
-    }, [row("acme-corp/api"), row("acme-corp/web")]);
+    });
 
     expect(restored.work).toBe("rederive");
     expect(restored.state.preferredRepository).toBe("acme-corp/api");
