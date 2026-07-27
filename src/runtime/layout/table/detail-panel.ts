@@ -32,6 +32,8 @@ function showBriefInDrawer(
   ctrl: HandoffController,
   body: HTMLElement,
   foot: HTMLElement,
+  ctx: DetailCtx,
+  r: ScoredItem,
 ): void {
   const head = body.parentElement?.querySelector<HTMLElement>("[data-head]");
   if (!head) return;
@@ -135,6 +137,17 @@ function showBriefInDrawer(
     head.innerHTML = origHead;
     body.innerHTML = origBody;
     foot.innerHTML = origFoot;
+    back.remove();
+    if (ctx.handoffController) {
+      const btn = document.createElement("button");
+      btn.className = "act";
+      btn.textContent = "Generate brief";
+      btn.addEventListener("click", () => {
+        const h = ctx.handoffController!.generateFor(r);
+        showBriefInDrawer(h, ctx.handoffController!, body, foot, ctx, r);
+      });
+      foot.appendChild(btn);
+    }
   });
   head.parentElement?.insertBefore(back, head);
 }
@@ -197,7 +210,7 @@ export function renderTriageList(
         btn.textContent = "Generate brief";
         btn.addEventListener("click", () => {
           const handoff = ctx.handoffController!.generateFor(r);
-          showBriefInDrawer(handoff, ctx.handoffController!, body, foot);
+          showBriefInDrawer(handoff, ctx.handoffController!, body, foot, ctx, r);
         });
         foot.appendChild(btn);
       }
