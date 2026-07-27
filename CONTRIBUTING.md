@@ -8,13 +8,13 @@ triage tool — that constraint shapes everything below.
 Requires **Node ≥ 20**.
 
 ```bash
-npm install           # install dependencies
-rtk npm run check        # typecheck, test, anonymity lint, build smoke, Pages sync
-rtk npm test             # run only the Vitest suite
-rtk npm run typecheck    # check CLI/config and browser runtime TypeScript
-rtk npm run build:cli    # compile the CLI to dist-cli/
-rtk npm run lint:anon    # run only the anonymity guardrail
-rtk npm run check:release # ordinary checks plus tarball install/build smoke
+npm install             # install dependencies
+npm run check           # typecheck, test, anonymity lint, build smoke, Pages sync
+npm test                # run only the Vitest suite
+npm run typecheck       # check CLI/config and browser runtime TypeScript
+npm run build:cli       # compile the CLI to dist-cli/
+npm run lint:anon       # run only the anonymity guardrail
+npm run check:release   # ordinary checks plus tarball install/build smoke
 ```
 
 Build a dashboard locally to try a change end to end:
