@@ -1,16 +1,33 @@
 # Context
 
-**Read this at every session start.** The `<GOAL>`…`<GOAL_END>` block (top) is
-human-authored and stable — project identity, design system, CSS conventions, test
-commands. Below it is AI-maintained session state — update when work shifts.
+**Read this at every session start.** The `<GOAL>`…`<GOAL_END>` block is human-authored
+and stable — project identity, design system, code conventions. Below it: reference
+sections (tooling, PR guidelines) and AI-maintained session state.
 
 <GOAL>
 
-`triagekit` (MIT) · repo `patrick204nqh/triagekit` · author **Patrick (@patrick204nqh)**
-— single self-contained HTML dashboard for repo triage, runs entirely in the browser.
-TypeScript, compiled with `tsc`; tested with `vitest`.
+**triagekit** — single self-contained HTML dashboard for repo triage, browser-only
+(MIT · `patrick204nqh/triagekit` · Patrick). TypeScript, `tsc`, `vitest`.
 
-## Build and test commands
+## Design identity
+
+`PRODUCT.md` (voice, strategy) and `DESIGN.md` (visual system). Read both before
+UI work. `DESIGN.md` wins on visuals; `PRODUCT.md` wins on voice.
+
+- **Palette:** Void Zinc dark bg (`#1a1a1c`), Kelp Teal accent (`#2a7a6c`)
+- **Type:** Space Grotesk (UI) + JetBrains Mono (code)
+- **Priority ramp:** P0 (critical) → P3 (low)
+
+## Code conventions
+
+- **Never commit real names/tokens.** Examples: `acme-corp`.
+- **Use existing CSS classes first.** Button system: `.act` / `.act.primary` / `.act.danger`
+  (drawer foot), `.drawer-close` (drawer head), `.btn-primary` / `.btn-ghost` (settings).
+- **No trackers in build artifact.** Match surrounding code style.
+
+<GOAL_END>
+
+## Tooling
 
 | Command | Purpose |
 |---------|---------|
@@ -20,38 +37,17 @@ TypeScript, compiled with `tsc`; tested with `vitest`.
 | `npm run lint:anon` | anonymisation lint (run if you touched example data) |
 | `npm run pack:smoke` | npm pack smoke test |
 
-PR checklist: `npm test` must stay green; run `lint:anon` if you touched example data.
+Skills: `.claude/skills/` (git-ignored, shared with OpenCode). Primary design skill:
+**`impeccable`** (`npx skills add https://github.com/impeccable-software/impeccable`).
+OpenCode plugins: `superpowers`. Config: `.claude/settings.json` (committed),
+`settings.local.json` (personal), `opencode.json`.
 
-## Code style and conventions
+## PR guidelines
 
-- **Never commit real repo names or tokens.** Examples use fictional `acme-corp` data.
-- **No trackers in build artifact.** Analytics live only on the hosted landing/site.
-- **Use existing CSS classes first** — never write new CSS before checking what exists.
-  Button system: `.act` / `.act.primary` / `.act.danger` (drawer foot),
-  `.drawer-close` (drawer head), `.btn-primary` / `.btn-ghost` (settings panels).
-- Match surrounding code style; output is a single self-contained HTML file.
-
-## PR and commit guidelines
-
-- **No AI co-author attribution** — no `Co-Authored-By` or AI footers (also enforced
-  in `.claude/settings.json`).
-- Keep PRs scoped; note verification (e.g. `npm test` result) in the description.
-
-## Design context
-
-`PRODUCT.md` (register, users, brand personality, voice) and `DESIGN.md` (visual system:
-Void Zinc palette, Kelp Teal accent, Space Grotesk + JetBrains Mono, P0–P3 priority
-ramp, component specs). Read both before UI/design work. `DESIGN.md` wins on visual
-decisions; `PRODUCT.md` wins on strategic/voice decisions.
-
-## Skills and config
-
-- `.claude/skills/` is git-ignored; OpenCode shares the same directory.
-- Primary design skill: **`impeccable`** (`npx skills add https://github.com/impeccable-software/impeccable`).
-- OpenCode plugins: `superpowers` (github.com/obra/superpowers).
-- Config: `.claude/settings.json` (team, committed), `settings.local.json` (personal, ignored), `opencode.json`.
-
-<GOAL_END>
+- **No AI co-author attribution** — no `Co-Authored-By` or AI footers (also in
+  `.claude/settings.json`).
+- `npm test` must stay green; run `lint:anon` if you touched example data.
+- Keep PRs scoped; note verification in description.
 
 ---
 
