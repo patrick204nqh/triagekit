@@ -13,7 +13,10 @@ export function toCodeScanningItem(full: string, raw: any): TriageItem<CodeScann
   const loc = raw.most_recent_instance?.location ?? {};
   const sev = SEV[raw.rule?.security_severity_level] ?? "low";
   return {
-    id: `github:${full}:cs:${number}`, source: "github", kind: CODE_SCANNING,
+    id: `github:${full}:cs:${number}`,
+    provider: "github",
+    providerRef: { repo: full, number },
+    kind: CODE_SCANNING,
     title: raw.rule?.name ?? raw.rule?.id ?? "code scanning alert", location: full,
     signal: SIGNAL[sev],
     createdAt: raw.created_at ?? "", url: raw.html_url ?? "",

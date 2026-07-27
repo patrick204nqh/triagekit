@@ -16,7 +16,7 @@ it("declares vuln severity and fix-available axes and a severity sort", () => {
 describe("vuln detail in shared panel", () => {
   it("renders severity + fix into the drawer on row click", () => {
     const r = {
-      id: "v1", source: "github", kind: "dependency-vuln", title: "log4j", location: "acme/web",
+      id: "v1", provider: "github", providerRef: {}, kind: "dependency-vuln", title: "log4j", location: "acme/web",
       signal: 90, createdAt: "2026-01-01T00:00:00Z", url: "https://ghsa",
       details: { package: "log4j", severity: "critical", cvss: 9.8, scope: "runtime", fixAvailable: true, fixVersion: "2.17.1" },
       score: 140, tier: "P0",

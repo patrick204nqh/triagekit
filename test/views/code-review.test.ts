@@ -17,7 +17,7 @@ it("declares the assignee axis and exactly one generic labels axis", () => {
 
 function pr(over: Partial<ScoredItem> = {}): ScoredItem {
   return {
-    id: "github:acme/web:1", source: "github", kind: "change-request", title: "Fix it",
+    id: "github:acme/web:1", provider: "github", providerRef: {}, kind: "change-request", title: "Fix it",
     location: "acme/web", signal: 50, createdAt: "2026-01-01T00:00:00Z", url: "https://x",
     details: { number: 42, state: "open", body: "b", author: { login: "alice", avatarUrl: "", kind: "human" },
       assignees: [], reviewers: [], comments: 0, labels: [], checks: null, permalinks: [], relations: [] },

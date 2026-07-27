@@ -5,7 +5,7 @@ import type { TriageItem } from "../../src/runtime/dataset/item";
 import type { DependencyVulnDetails } from "../../src/runtime/dataset/kinds/dependency-vuln";
 
 const item = (d: Partial<DependencyVulnDetails>): TriageItem<DependencyVulnDetails> => ({
-  id: "github:web-app:1", source: "github", kind: "dependency-vuln",
+  id: "github:web-app:1", provider: "github", providerRef: {}, kind: "dependency-vuln",
   title: "lodash", location: "web-app", signal: 0, createdAt: new Date().toISOString(), url: "",
   details: { package: "lodash", severity: "critical", cvss: 9.8, scope: "runtime", fixAvailable: true, fixVersion: "1.0.0", ...d },
 });

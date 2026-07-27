@@ -19,7 +19,7 @@ describe("classifyAuthor", () => {
 
 describe("withBotPolicy", () => {
   const base: TriageItem = {
-    id: "x", source: "github", kind: "change-request", title: "t", location: "acme/web",
+    id: "x", provider: "github", providerRef: {}, kind: "change-request", title: "t", location: "acme/web",
     signal: 0, createdAt: "2026-01-01T00:00:00Z", url: "",
     details: { author: actor("internal-deploy", "human") },
   };
@@ -39,7 +39,7 @@ describe("withBotPolicy", () => {
 
 describe("adapterBotLogins", () => {
   const mk = (kind: Kind, login: string, akind: Actor["kind"]): TriageItem => ({
-    id: login + kind, source: "github", kind, title: "", location: "", signal: 0, createdAt: "", url: "",
+    id: login + kind, provider: "github", providerRef: {}, kind, title: "", location: "", signal: 0, createdAt: "", url: "",
     details: { author: { login, avatarUrl: "", kind: akind } },
   });
 

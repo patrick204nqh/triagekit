@@ -102,7 +102,7 @@ describe("mountShell artifact navigation", () => {
     // deterministically over two row-sets — far more reliable than the DOM path, which
     // only produces repo tabs given credentialed/scoped sources unavailable in this env.
     const row = (location: string): ScoredItem => ({
-      id: location + ":1", source: "github", kind: "issue", title: "t",
+      id: location + ":1", provider: "github", providerRef: {}, kind: "issue", title: "t",
       location, signal: 1, createdAt: "2026-01-01T00:00:00Z", url: "", details: {},
       score: 1, tier: "P3",
     });
@@ -131,7 +131,7 @@ describe("mountShell artifact navigation", () => {
     // repo tab list must still show all repos so the user can switch. Regression guard:
     // toolbar `rows` (options/count source) was previously the all-repos set.
     const row = (location: string): ScoredItem => ({
-      id: location + ":1", source: "github", kind: "issue", title: "t",
+      id: location + ":1", provider: "github", providerRef: {}, kind: "issue", title: "t",
       location, signal: 1, createdAt: "2026-01-01T00:00:00Z", url: "", details: {},
       score: 1, tier: "P3",
     });
@@ -213,7 +213,7 @@ describe("mountShell artifact navigation", () => {
     // Return a critical vuln item whose normal score would be P0 (~170) with default thresholds.
     const fetchSpy = vi.spyOn(githubSource, "fetch").mockResolvedValue({
       items: [{
-        id: "github:acme/web:1", source: "github", kind: "dependency-vuln",
+        id: "github:acme/web:1", provider: "github", providerRef: {}, kind: "dependency-vuln",
         title: "lodash", location: "acme/web", signal: 100,
         createdAt: new Date().toISOString(), url: "https://github.com/acme/web/security/dependabot/1",
         details: { package: "lodash", severity: "critical", cvss: 10, scope: "runtime", fixAvailable: true, fixVersion: "4.17.22" },
@@ -250,7 +250,7 @@ describe("mountShell artifact navigation", () => {
     // Item with cvss: 10 → normalised to 1.0 → score 100 → P0 under the stored model.
     const fetchSpy = vi.spyOn(githubSource, "fetch").mockResolvedValue({
       items: [{
-        id: "github:acme/web:2", source: "github", kind: "dependency-vuln",
+        id: "github:acme/web:2", provider: "github", providerRef: {}, kind: "dependency-vuln",
         title: "axios", location: "acme/web", signal: 100,
         createdAt: new Date().toISOString(), url: "https://github.com/acme/web/security/dependabot/2",
         details: { package: "axios", severity: "critical", cvss: 10, scope: "runtime", fixAvailable: true, fixVersion: "1.7.0" },

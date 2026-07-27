@@ -5,7 +5,7 @@ import type { TriageItem } from "../../src/runtime/dataset/item";
 import { DEFAULT_THRESHOLDS } from "../../src/runtime/scoring/tier";
 
 const item: TriageItem = {
-  id: "x", source: "github", kind: "dependency-vuln", title: "lodash", location: "acme/web",
+  id: "x", provider: "github", providerRef: {}, kind: "dependency-vuln", title: "lodash", location: "acme/web",
   signal: 42, createdAt: "2026-01-01T00:00:00Z", url: "",
   details: { severity: "critical", cvss: 10, fixAvailable: true, scope: "runtime" },
 };

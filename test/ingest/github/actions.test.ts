@@ -5,7 +5,7 @@ import type { ReviewItem } from "../../../src/runtime/dataset/shapes/review";
 
 function item(kind: ReviewItem["kind"] = "change-request"): ReviewItem {
   return {
-    id: "github:acme-corp/web-app:482", source: "github", kind,
+    id: "github:acme-corp/web-app:482", provider: "github", providerRef: {}, kind,
     title: "Bump axios", location: "acme-corp/web-app", signal: 1,
     createdAt: "", url: "", tier: "P1",
     details: {

@@ -21,7 +21,7 @@ const vulnArtifact: Artifact = { id: "vulnerabilities", label: "Vulnerabilities"
 
 function row(over: Partial<ScoredItem> & { details?: unknown }): ScoredItem {
   return {
-    id: "x", source: "github", kind: "change-request", title: "t", location: "acme/web",
+    id: "x", provider: "github", providerRef: {}, kind: "change-request", title: "t", location: "acme/web",
     signal: 0, createdAt: "2026-01-01T00:00:00Z", url: "", details: {}, score: 50, tier: "P2", ...over,
   } as ScoredItem;
 }

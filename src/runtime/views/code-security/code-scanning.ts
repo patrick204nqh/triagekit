@@ -15,7 +15,7 @@ const SEV_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low:
 export function codeScanningDetailView(r: ScoredItem): DetailView {
   const d = cs(r);
   return {
-    header: { title: d.ruleName, tier: r.tier, provider: r.source },
+    header: { title: d.ruleName, tier: r.tier, provider: r.provider },
     body: (host) => {
       host.innerHTML = `<dl>
         <dt>Severity</dt><dd>${esc(d.securitySeverity)}</dd>

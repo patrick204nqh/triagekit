@@ -9,7 +9,7 @@ import type {
 } from "../../src/runtime/layout/table/kind-renderer";
 
 const row = (): ScoredItem => ({
-  id: "x:1", source: "github", kind: "stub-kind", title: "Row one",
+  id: "x:1", provider: "github", providerRef: {}, kind: "stub-kind", title: "Row one",
   url: "https://example.com/1", createdAt: new Date().toISOString(),
   score: 10, tier: "P2", details: {},
 } as unknown as ScoredItem);
@@ -22,7 +22,7 @@ beforeEach(() => {
     kind: "stub-kind" as any,
     columns: [{ header: "Title", cell: (r) => r.title }],
     detail: (item) => ({
-      header: { title: item.title, tier: item.tier, provider: item.source, ref: { text: "#7", href: "https://e/7" } },
+        header: { title: item.title, tier: item.tier, provider: item.provider, ref: { text: "#7", href: "https://e/7" } },
       body: (host) => { host.innerHTML = `<p class="stub-body">hello body</p>`; },
       actions: (host) => { host.innerHTML = `<a data-action="open" href="${item.url}">Open ↗</a>`; },
     }),

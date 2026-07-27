@@ -4,7 +4,7 @@ import { detailsAs, authorKindOf, labelNamesOf, labelsOf, deadlineOf } from "../
 import type { TriageItem } from "../../src/runtime/dataset/item";
 
 const item = (details: unknown): TriageItem =>
-  ({ id: "x", source: "github", kind: "issue", title: "", location: "", signal: 0, createdAt: "", url: "", details } as TriageItem);
+  ({ id: "x", provider: "github", providerRef: {}, kind: "issue", title: "", location: "", signal: 0, createdAt: "", url: "", details } as TriageItem);
 
 describe("detailsAs", () => {
   it("returns the object for object details, null otherwise", () => {

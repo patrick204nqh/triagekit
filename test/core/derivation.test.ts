@@ -6,7 +6,7 @@ import type { TriageItem } from "../../src/runtime/dataset/item";
 import type { ScoreContext } from "../../src/runtime/scoring/configured";
 
 const item = (id: string, signal: number, kind: TriageItem["kind"] = "issue"): TriageItem => ({
-  id, source: "github", kind, title: id, location: "repo",
+  id, provider: "github", providerRef: {}, kind, title: id, location: "repo",
   signal, createdAt: "2026-01-01T00:00:00Z", url: "", details: {},
 });
 
@@ -54,8 +54,8 @@ describe("derive", () => {
 
   it("repo scope filters shown to a single location", () => {
     const items: TriageItem[] = [
-      { id: "a", source: "github", kind: "issue", title: "a", location: "acme/api", signal: 90, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
-      { id: "b", source: "github", kind: "issue", title: "b", location: "acme/web", signal: 80, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
+      { id: "a", provider: "github", providerRef: {}, kind: "issue", title: "a", location: "acme/api", signal: 90, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
+      { id: "b", provider: "github", providerRef: {}, kind: "issue", title: "b", location: "acme/web", signal: 80, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
     ];
     const out = derive({ items, activeKinds: ["issue"], botLogins: [], score, repoView: "acme/api", filters: emptyListState() });
     expect(out.shown.map(r => r.id)).toEqual(["a"]);
@@ -64,8 +64,8 @@ describe("derive", () => {
 
   it("empty repo scope shows all locations (filter-only result)", () => {
     const items: TriageItem[] = [
-      { id: "a", source: "github", kind: "issue", title: "a", location: "acme/api", signal: 90, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
-      { id: "b", source: "github", kind: "issue", title: "b", location: "acme/web", signal: 80, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
+      { id: "a", provider: "github", providerRef: {}, kind: "issue", title: "a", location: "acme/api", signal: 90, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
+      { id: "b", provider: "github", providerRef: {}, kind: "issue", title: "b", location: "acme/web", signal: 80, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
     ];
     const out = derive({ items, activeKinds: ["issue"], botLogins: [], score, repoView: "", filters: emptyListState() });
     expect(out.shown.map(r => r.id)).toEqual(["a", "b"]);
@@ -73,8 +73,8 @@ describe("derive", () => {
 
   it("repo scope absent from the set shows all (auto-fallback, not empty)", () => {
     const items: TriageItem[] = [
-      { id: "a", source: "github", kind: "issue", title: "a", location: "acme/api", signal: 90, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
-      { id: "b", source: "github", kind: "issue", title: "b", location: "acme/web", signal: 80, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
+      { id: "a", provider: "github", providerRef: {}, kind: "issue", title: "a", location: "acme/api", signal: 90, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
+      { id: "b", provider: "github", providerRef: {}, kind: "issue", title: "b", location: "acme/web", signal: 80, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
     ];
     const out = derive({ items, activeKinds: ["issue"], botLogins: [], score, repoView: "acme/NOPE", filters: emptyListState() });
     expect(out.shown.map(r => r.id)).toEqual(["a", "b"]); // falls back to all, not empty

@@ -8,7 +8,7 @@ import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 // Minimal manifest registration so the issue renderer exists.
 
 const row = (id: string, score: number): ScoredItem => ({
-  id, source: "github", kind: "issue", title: id, location: "r",
+  id, provider: "github", providerRef: {}, kind: "issue", title: id, location: "r",
   signal: score,
   createdAt: "2026-01-01T00:00:00Z",
   url: "",

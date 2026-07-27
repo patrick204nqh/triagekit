@@ -25,7 +25,7 @@ function scaffold() {
 }
 
 const vuln = (loc: string, n: number) => ({
-  id: `github:${loc}:${n}`, source: "github", kind: "dependency-vuln",
+  id: `github:${loc}:${n}`, provider: "github", providerRef: {}, kind: "dependency-vuln",
   title: `vuln-${loc}-${n}`, location: loc, signal: 100,
   createdAt: new Date().toISOString(), url: `https://github.com/${loc}/security/dependabot/${n}`,
   details: { package: "p", severity: "critical", cvss: 10, scope: "runtime", fixAvailable: true, fixVersion: "1.0.0" },

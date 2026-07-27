@@ -98,7 +98,7 @@ export function reviewDetailView(scored: ScoredItem, ctx: DetailCtx, opts: Revie
   }
 
   return {
-    header: { title: cur.title, tier: scored.tier, provider: scored.source, ref: { text: `#${cur.details.number}`, href: selfHref } },
+    header: { title: cur.title, tier: scored.tier, provider: scored.provider, ref: { text: `#${cur.details.number}`, href: selfHref } },
     body: (host) => { bodyHost = host; renderBody(); void expand(); },
     actions: (host) => {
       footHost = host; renderActions();

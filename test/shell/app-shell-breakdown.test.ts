@@ -22,7 +22,7 @@ function scaffold() {
 }
 
 const vulnItem = {
-  id: "github:acme/web:1", source: "github", kind: "dependency-vuln",
+  id: "github:acme/web:1", provider: "github", providerRef: {}, kind: "dependency-vuln",
   title: "lodash", location: "acme/web", signal: 50,
   createdAt: new Date().toISOString(), url: "https://example.test/1",
   details: { package: "lodash", severity: "critical", cvss: 10, scope: "runtime", fixAvailable: true, fixVersion: "1" },

@@ -65,7 +65,7 @@ describe("enrichReview", () => {
       throw new Error("unexpected " + url);
     });
     vi.stubGlobal("fetch", fetchMock);
-    const item = { id: "github:acme/web:7", source: "github", kind: "change-request", title: "", location: "acme/web",
+    const item = { id: "github:acme/web:7", provider: "github", providerRef: {}, kind: "change-request", title: "", location: "acme/web",
       signal: 0, createdAt: "", url: "", details: { number: 7 } } as unknown as TriageItem<ReviewDetails>;
     const patch = await enrichReview(item, "t");
     expect(patch.checks).toEqual({ state: "pass", conflicts: true });

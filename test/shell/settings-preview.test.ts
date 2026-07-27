@@ -16,7 +16,7 @@ const def: ScoreModel = {
   tiers: [{ name: "P0", min: 80 }, { name: "P3", min: 0 }],
 };
 const row = (id: string, cvss: number): ScoredItem => ({
-  id, source: "github", kind: KIND, title: `pkg-${id}`, location: "acme/web",
+  id, provider: "github", providerRef: {}, kind: KIND, title: `pkg-${id}`, location: "acme/web",
   signal: 0, createdAt: "2026-01-01T00:00:00Z", url: "", details: { cvss }, score: 0, tier: "P3",
 });
 

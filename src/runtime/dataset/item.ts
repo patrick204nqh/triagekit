@@ -21,8 +21,9 @@ export type Kind =
   | "task";             // work / tasks (roadmap)
 
 export interface TriageItem<D = unknown> {
-  id: string;          // `${source}:${native id}`
-  source: string;      // "github" | "aws" | "jira"
+  id: string;          // `${provider}:${native id}`
+  provider: string;    // "github" | "aws" | "jira"
+  providerRef: unknown;
   kind: Kind;
   title: string;       // package / resource / ticket summary
   location: string;    // repo / account:region / board

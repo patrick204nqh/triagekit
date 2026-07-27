@@ -5,7 +5,7 @@ import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 import { emptyListState } from "../../src/runtime/layout/toolbar/filter-state";
 
 const rows: ScoredItem[] = [{
-  id: "1", source: "github", kind: "change-request", title: "t", location: "acme/api",
+  id: "1", provider: "github", providerRef: {}, kind: "change-request", title: "t", location: "acme/api",
   signal: 0, createdAt: "2026-06-01T00:00:00Z", url: "", score: 10, tier: "P2",
   details: { author: { login: "x", avatarUrl: "", kind: "human" }, labels: [] } as any,
 } as ScoredItem];

@@ -13,7 +13,10 @@ function toItem(full: string, raw: any): TriageItem<DependencyVulnDetails> {
   const severity = normSeverity(adv.severity), cvss = adv.cvss?.score ?? 0;
   const pkg = raw.dependency?.package?.name ?? "";
   return {
-    id: `github:${full}:${raw.number ?? pkg}`, source: "github", kind: DEPENDENCY_VULN,
+    id: `github:${full}:${raw.number ?? pkg}`,
+    provider: "github",
+    providerRef: { repo: full, number: raw.number ?? pkg },
+    kind: DEPENDENCY_VULN,
     title: pkg, location: full, signal: severityToSignal(severity, cvss),
     createdAt: raw.created_at ?? "", url: raw.html_url ?? "",
     details: { package: pkg, severity, cvss, scope: normScope(raw.dependency?.scope),

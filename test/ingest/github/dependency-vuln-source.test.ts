@@ -12,7 +12,16 @@ describe("githubSource.fetch", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(raw), { status: 200 })));
     const { items, errors } = await githubSource.fetch({ repos: ["acme-corp/web-app"] }, "t");
     expect(errors).toEqual([]);
-    expect(items[0]).toMatchObject({ source: "github", kind: "dependency-vuln", location: "acme-corp/web-app", title: "axios" });
+    expect(items[0]).toMatchObject({
+      provider: "github",
+      providerRef: {
+        repo: "acme-corp/web-app",
+        number: 7,
+      },
+      kind: "dependency-vuln",
+      location: "acme-corp/web-app",
+      title: "axios",
+    });
     expect(items[0].details as DependencyVulnDetails).toMatchObject({ fixVersion: "1.2.3", severity: "high" });
   });
   it("surfaces a failed repo non-fatally with the full name as target", async () => {

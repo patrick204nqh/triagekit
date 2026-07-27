@@ -20,7 +20,7 @@ export function openLink(url: string, label: string): (host: HTMLElement) => voi
 export function dependencyVulnDetailView(r: ScoredItem): DetailView {
   const d = det(r);
   return {
-    header: { title: d.package, tier: r.tier, provider: r.source },
+    header: { title: d.package, tier: r.tier, provider: r.provider },
     body: (host) => {
       host.innerHTML = `<dl>
         <dt>Severity</dt><dd>${esc(d.severity)} (CVSS ${d.cvss})</dd>

@@ -5,7 +5,7 @@ import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 
 function pr(overrides: Partial<any> = {}): ScoredItem {
   return {
-    id: "github:pr:482", source: "github", kind: "change-request",
+    id: "github:pr:482", provider: "github", providerRef: {}, kind: "change-request",
     title: "Bump axios from 1.6.2 to 1.7.4", url: "https://github.com/x/y/pull/482",
     createdAt: new Date().toISOString(), score: 60, tier: "P1",
     details: {

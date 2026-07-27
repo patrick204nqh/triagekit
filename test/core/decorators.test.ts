@@ -4,7 +4,7 @@ import type { Kind, TriageItem } from "../../src/runtime/dataset/item";
 import type { Actor } from "../../src/runtime/dataset/shared";
 
 const item = (kind: Kind, details: unknown): TriageItem =>
-  ({ id: "x", source: "github", kind, title: "", location: "", signal: 0, createdAt: "", url: "", details } as TriageItem);
+  ({ id: "x", provider: "github", providerRef: {}, kind, title: "", location: "", signal: 0, createdAt: "", url: "", details } as TriageItem);
 
 describe("decorator registry", () => {
   it("ships the bot-policy built-in", () => {

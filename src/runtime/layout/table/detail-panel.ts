@@ -13,7 +13,7 @@ import type { DetailView } from "./detail-view";
 // Fallback detail for kinds without a renderer: identity header + a bare link.
 function defaultDetailView(r: ScoredItem): DetailView {
   return {
-    header: { title: r.title, tier: r.tier, provider: r.source, ref: undefined },
+    header: { title: r.title, tier: r.tier, provider: r.provider, ref: undefined },
     body: (host) => {
       host.innerHTML = r.url
         ? `<p><a href="${esc(r.url)}" target="_blank" rel="noreferrer">${esc(r.url)}</a></p>`

@@ -4,7 +4,7 @@ import { renderScoreBreakdown } from "../../src/runtime/layout/table/score-break
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 import type { ScoreExplanation } from "../../src/runtime/scoring/score-model";
 
-const item = { id: "x", source: "github", kind: "dependency-vuln", title: "lodash",
+const item = { id: "x", provider: "github", providerRef: {}, kind: "dependency-vuln", title: "lodash",
   location: "acme/web", signal: 0, createdAt: "", url: "", details: {}, score: 142, tier: "P0" } as ScoredItem;
 
 describe("renderScoreBreakdown", () => {

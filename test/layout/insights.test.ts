@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 import { renderInsights } from "../../src/runtime/layout/insights";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 
-const row: ScoredItem = { id: "x", source: "github", kind: "dependency-vuln", title: "p",
+const row: ScoredItem = { id: "x", provider: "github", providerRef: {}, kind: "dependency-vuln", title: "p",
   location: "acme/web", signal: 50, createdAt: new Date().toISOString(), url: "", details: {}, score: 100, tier: "P1" };
 
 describe("renderInsights", () => {

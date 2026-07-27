@@ -3,7 +3,7 @@ import { toolbarPropsFromShell } from "../../src/runtime/shell/app-shell";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 
 const row = (location: string): ScoredItem => ({
-  id: location + ":1", source: "github", kind: "issue", title: "t",
+  id: location + ":1", provider: "github", providerRef: {}, kind: "issue", title: "t",
   location, signal: 1, createdAt: "2026-01-01T00:00:00Z", url: "", details: {},
   score: 1, tier: "P3",
 });

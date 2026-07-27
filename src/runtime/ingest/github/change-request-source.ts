@@ -30,7 +30,10 @@ function toReviewItem(full: string, raw: any): TriageItem<ReviewDetails> {
   const state: ReviewState = isPr && raw.draft ? "draft" : "open";
   const labels = (raw.labels ?? []).map(toLabel);
   return {
-    id: `github:${full}:${number}`, source: "github", kind,
+    id: `github:${full}:${number}`,
+    provider: "github",
+    providerRef: { repo: full, number },
+    kind,
     title: raw.title ?? "", location: full,
     // cheap cross-source proxy only; the review scorer computes real priority from details.
     signal: Math.min(100, (raw.comments ?? 0) * 4 + labels.length * 12),

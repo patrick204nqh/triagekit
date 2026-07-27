@@ -5,7 +5,7 @@ import { reviewDetailView } from "../../src/runtime/layout/review-card/review-ca
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 
 const item = {
-  id: "github:acme/api:7", source: "github", kind: "change-request",
+  id: "github:acme/api:7", provider: "github", providerRef: {}, kind: "change-request",
   title: "Fix token refresh", location: "acme/api", signal: 0,
   createdAt: "2026-06-01T00:00:00Z", url: "https://github.com/acme/api/pull/7", score: 90, tier: "P1",
   details: {

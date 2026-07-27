@@ -48,19 +48,19 @@ function scaffold() {
 // Fixed, unsorted input: cvss values [10, 2, 6] → expected desc sort → [10, 6, 2]
 const ITEMS = [
   {
-    id: "github:acme/web:10", source: "github", kind: "dependency-vuln",
+    id: "github:acme/web:10", provider: "github", providerRef: {}, kind: "dependency-vuln",
     title: "critical-pkg", location: "acme/web", signal: 100,
     createdAt: new Date().toISOString(), url: "https://example.test/10",
     details: { package: "critical-pkg", severity: "critical", cvss: 10, scope: "runtime", fixAvailable: true, fixVersion: "2.0.0" },
   },
   {
-    id: "github:acme/web:2", source: "github", kind: "dependency-vuln",
+    id: "github:acme/web:2", provider: "github", providerRef: {}, kind: "dependency-vuln",
     title: "low-pkg", location: "acme/web", signal: 20,
     createdAt: new Date().toISOString(), url: "https://example.test/2",
     details: { package: "low-pkg", severity: "low", cvss: 2, scope: "runtime", fixAvailable: false, fixVersion: "" },
   },
   {
-    id: "github:acme/web:6", source: "github", kind: "dependency-vuln",
+    id: "github:acme/web:6", provider: "github", providerRef: {}, kind: "dependency-vuln",
     title: "medium-pkg", location: "acme/web", signal: 60,
     createdAt: new Date().toISOString(), url: "https://example.test/6",
     details: { package: "medium-pkg", severity: "medium", cvss: 6, scope: "runtime", fixAvailable: true, fixVersion: "1.1.0" },

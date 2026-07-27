@@ -12,7 +12,7 @@ export interface StoreStats {
   byKind: Record<string, number>;
 }
 
-// Provider-agnostic identity. Defaults to the item id (`source:native_id`),
+// Provider-agnostic identity. Defaults to the item id (`provider:native_id`),
 // which is already stable per provider. A per-kind/custom fingerprint enables
 // future cross-tool merge — not used by production wiring yet.
 export type Fingerprint = (item: TriageItem) => string;

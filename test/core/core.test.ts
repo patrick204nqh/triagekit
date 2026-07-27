@@ -9,7 +9,7 @@ import type { TriageItem } from "../../src/runtime/dataset/item";
 import type { ScoreContext } from "../../src/runtime/scoring/configured";
 
 const item = (id: string, signal: number): TriageItem => ({
-  id, source: "github", kind: "issue", title: id, location: "r",
+  id, provider: "github", providerRef: {}, kind: "issue", title: id, location: "r",
   signal, createdAt: "2026-01-01T00:00:00Z", url: "", details: {},
 });
 const score: ScoreContext = { getModel: () => null, getFields: () => [], getThresholds: () => ({ p0: 80, p1: 50, p2: 20 }), override: (i) => i.signal };

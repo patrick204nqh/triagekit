@@ -18,7 +18,7 @@ const withRenderer = (renderer: KindRenderer): RuntimeCatalog => ({
 
 function row(over: Partial<ScoredItem>): ScoredItem {
   return {
-    id: "x", source: "t", kind: "dependency-vuln", title: "log4j", location: "acme/web",
+    id: "x", provider: "t", providerRef: {}, kind: "dependency-vuln", title: "log4j", location: "acme/web",
     signal: 10, createdAt: "2026-01-01T00:00:00Z", url: "https://x", details: {},
     score: 100, tier: "P1", ...over,
   } as ScoredItem;
@@ -40,8 +40,8 @@ describe("renderTriageList + DetailPanel", () => {
       kind: "secret-scanning",
       detail: (i, ctx: DetailCtx) => {
         seen.title = i.title; seen.token = ctx.token;
-        return {
-          header: { title: i.title, tier: i.tier, provider: i.source },
+          return {
+            header: { title: i.title, tier: i.tier, provider: i.provider },
           body: (host) => { host.innerHTML = `<p class="probe">${i.title}</p>`; },
         };
       },
