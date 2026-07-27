@@ -1,7 +1,7 @@
 # Developer Experience Hardening Design
 
 **Date:** 2026-07-27  
-**Status:** Awaiting review  
+**Status:** Approved  
 **Branch:** `patrick/dx-hardening`  
 **Base:** `main` after merge of PR #10 (`runtime-architecture-deepening`)
 
