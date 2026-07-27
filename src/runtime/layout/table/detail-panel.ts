@@ -138,9 +138,10 @@ function showBriefInDrawer(
     body.innerHTML = origBody;
     foot.innerHTML = origFoot;
     back.remove();
-    if (ctx.handoffController) {
+    if (ctx.handoffController && !foot.querySelector("[data-brief-gen]")) {
       const btn = document.createElement("button");
       btn.className = "act";
+      btn.setAttribute("data-brief-gen", "");
       btn.textContent = "Generate brief";
       btn.addEventListener("click", () => {
         const h = ctx.handoffController!.generateFor(r);
@@ -207,6 +208,7 @@ export function renderTriageList(
       if (ctx.handoffController) {
         const btn = document.createElement("button");
         btn.className = "act";
+        btn.setAttribute("data-brief-gen", "");
         btn.textContent = "Generate brief";
         btn.addEventListener("click", () => {
           const handoff = ctx.handoffController!.generateFor(r);
