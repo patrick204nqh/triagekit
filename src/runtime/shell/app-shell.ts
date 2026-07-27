@@ -215,6 +215,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     env.createDomView(root, {
       artifact: active,
       token,
+      providerId: activeProvider,
       scoreExplain,
       catalog: runtimeCatalog,
     }).render(vm);

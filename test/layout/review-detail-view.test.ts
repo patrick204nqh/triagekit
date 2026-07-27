@@ -1,7 +1,11 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
 import { reviewDetailView } from "../../src/runtime/layout/review-card/review-card";
-import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
+import type {
+  ProviderDetailPort,
+  ScoredItem,
+} from "../../src/runtime/layout/table/kind-renderer";
+import type { ProviderCommand } from "../../src/runtime/catalog/types";
 
 function pr(overrides: Partial<any> = {}): ScoredItem {
   return {
@@ -62,5 +66,38 @@ describe("reviewDetailView", () => {
   it("keeps a malicious title raw in the header data (the frame escapes on render)", () => {
     const evil = reviewDetailView({ ...pr(), title: "<script>alert(1)</script>" } as ScoredItem, {});
     expect(evil.header.title).toContain("<script>");
+  });
+
+  it("routes actions through the Provider detail port", async () => {
+    const scoredIssue = {
+      ...pr(),
+      providerRef: { repository: "acme-corp/web", number: 7 },
+      kind: "issue",
+      location: "acme-corp/web",
+      signal: 10,
+      details: { ...pr().details, number: 7, checks: null },
+    } as ScoredItem;
+    const executed: ProviderCommand[] = [];
+    const provider: ProviderDetailPort = {
+      supports: (_kind, action) => action === "comment",
+      enrich: async () => ({ reviewers: [] }),
+      execute: async (command) => { executed.push(command); },
+    };
+    const detail = reviewDetailView(scoredIssue, { provider });
+    detail.actions!(foot);
+
+    foot.querySelector<HTMLElement>('[data-action="comment"]')!.click();
+    foot.querySelector<HTMLTextAreaElement>("[data-input]")!.value = "ship it";
+    foot.querySelector<HTMLElement>("[data-confirm]")!.click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(executed[0]).toMatchObject({
+      kind: "issue",
+      action: "comment",
+      ref: scoredIssue.providerRef,
+      payload: { body: "ship it" },
+    });
+    expect(foot.querySelector('[data-action="assign"]')).toBeNull();
   });
 });

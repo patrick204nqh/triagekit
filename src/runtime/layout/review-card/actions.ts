@@ -13,7 +13,11 @@ function selfHref(item: ReviewItem): string {
   return item.details.permalinks.find(p => p.kind === "pr" || p.kind === "issue")?.href ?? item.url;
 }
 
-export function actionBarHtml(item: ReviewItem, st: CardState): string {
+export function actionBarHtml(
+  item: ReviewItem,
+  st: CardState,
+  supports?: (action: string) => boolean,
+): string {
   if (st.busy) {
     return `<button class="act primary" disabled><span class="spin"></span> Working…</button>`;
   }
@@ -36,7 +40,9 @@ export function actionBarHtml(item: ReviewItem, st: CardState): string {
     return `${field}<button class="act primary" data-confirm>${ACTION_LABEL[st.armed]}</button>
       <button class="act" data-cancel>Cancel</button>`;
   }
-  const buttons = actionsFor(item.kind).map(id => {
+  const buttons = actionsFor(item.kind)
+    .filter((id) => id === "open" || !supports || supports(id))
+    .map(id => {
     if (id === "open") {
       return `<a class="act" data-action="open" href="${esc(selfHref(item))}" target="_blank" rel="noreferrer">Open ↗</a>`;
     }
@@ -46,7 +52,7 @@ export function actionBarHtml(item: ReviewItem, st: CardState): string {
       return `<button class="act primary" data-action="merge"${attr}>Merge</button>`;
     }
     return `<button class="act" data-action="${id}">${ACTION_LABEL[id]}</button>`;
-  }).join("");
+    }).join("");
   const err = st.error ? `<div class="rc-error">✗ ${esc(st.error)}</div>` : "";
   return `${buttons}${err}`;
 }
