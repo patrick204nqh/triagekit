@@ -2,7 +2,8 @@
 
 **Read this at every session start.** The `<GOAL>`…`<GOAL_END>` block is human-authored
 and stable — project identity, design system, code conventions. Below it: reference
-sections (tooling, PR guidelines) and AI-maintained session state.
+sections (tooling, PR guidelines). This file tracks stable context only — active work
+state lives in the current conversation.
 
 <GOAL>
 
@@ -43,20 +44,6 @@ Config: `opencode.json`, `.claude/settings.json`.
 - `npm test` must stay green; run `lint:anon` if you touched example data.
 - Keep PRs scoped; note verification in description.
 
----
 
-## Session State — Current Work
-
-| Property | Value |
-|----------|-------|
-| **Branch** | `feat/agent-handoff` |
-| **PR** | [#14](https://github.com/patrick204nqh/triagekit/pull/14) |
-| **Status** | Feature implementation complete, iterative UX polish |
-
-### Active work
-
-**Agent Handoff** — "Generate brief" produces a reviewable handoff (Markdown + JSON)
-inline inside the existing detail drawer. Mode switch: brief replaces body/foot,
-`‹` back button restores the original detail view.
 
 
