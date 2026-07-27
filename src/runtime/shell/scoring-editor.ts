@@ -1,13 +1,14 @@
 import type { Kind, TriageItem } from "../dataset/item";
 import { type ScoreModel, validateModel } from "../scoring/score-model";
-import { fieldsFor } from "../scoring/field-catalog";
-import { listDefaultModels, defaultModelFor } from "../scoring/default-model";
+import type { RuntimeCatalog } from "../catalog/types";
+import { runtimeCatalog } from "../catalog/built-in";
 import { weightsToFormula, formulaToWeights } from "../scoring/weights";
 import { renderSignalEditor } from "./signal-editor";
 import { previewRerank } from "../scoring/preview";
 import { esc } from "../layout/util";
 
 export interface ScoringEditorOpts {
+  catalog?: RuntimeCatalog;
   getDraft(kind: string): ScoreModel | null;
   setDraft(kind: string, model: ScoreModel): void;
   clearDraft(kind: string): void;
@@ -16,12 +17,16 @@ export interface ScoringEditorOpts {
 }
 
 export function mountScoringEditor(host: HTMLElement, opts: ScoringEditorOpts) {
-  const kinds = listDefaultModels().map(([k]) => k);
+  const catalog = opts.catalog ?? runtimeCatalog;
+  const kinds = catalog.kinds()
+    .filter((kind) => kind.status === "ready" && kind.defaultModel)
+    .map((kind) => kind.kind);
   let activeKind: Kind | null = kinds[0] ?? null;
   let mode: "simple" | "advanced" = "simple";
 
   // Active model = staged draft, else the published default.
-  const modelOf = (kind: Kind): ScoreModel => opts.getDraft(kind) ?? defaultModelFor(kind)!;
+  const modelOf = (kind: Kind): ScoreModel =>
+    opts.getDraft(kind) ?? catalog.readyKind(kind)!.defaultModel!;
   // Stage an edit WITHOUT re-rendering (caller decides whether to re-render).
   const stage = (m: ScoreModel) => { opts.setDraft(activeKind!, m); opts.onChange?.(); };
   // Stage + full re-render (for structural changes).
@@ -46,7 +51,7 @@ export function mountScoringEditor(host: HTMLElement, opts: ScoringEditorOpts) {
         <button class="btn-ghost" data-customize>Customize scoring</button>
       </div>`;
       host.querySelector<HTMLButtonElement>("[data-customize]")?.addEventListener("click", () => {
-        commit(defaultModelFor(activeKind!)!);
+        commit(catalog.readyKind(activeKind!)!.defaultModel!);
       });
       wireHead();
       return;
@@ -116,14 +121,14 @@ export function mountScoringEditor(host: HTMLElement, opts: ScoringEditorOpts) {
     body.querySelector<HTMLInputElement>("[data-scale]")!.addEventListener("change", (e) =>
       commit({ ...model, scale: Number((e.target as HTMLInputElement).value) || 0 }));
     body.querySelector<HTMLButtonElement>("[data-add-signal]")!.addEventListener("click", () => {
-      const base = fieldsFor(activeKind!)[0]?.name ?? "signal";
+      const base = catalog.fieldsFor(activeKind!)[0]?.name ?? "signal";
       let n = "signal"; let i = 1;
       while (Object.prototype.hasOwnProperty.call(model.signals, n)) n = `signal${++i}`;
       commit({ ...model, signals: { ...model.signals, [n]: { from: base, transform: { type: "bool" } } } });
     });
 
     const signalsHost = body.querySelector<HTMLElement>("[data-signals]")!;
-    const fields = fieldsFor(activeKind!);
+      const fields = catalog.fieldsFor(activeKind!);
     for (const [name, signal] of Object.entries(model.signals)) {
       const row = document.createElement("div");
       signalsHost.appendChild(row);
@@ -196,7 +201,7 @@ export function mountScoringEditor(host: HTMLElement, opts: ScoringEditorOpts) {
       box.innerHTML = `<label class="set-label">Preview</label><p class="muted">No loaded ${esc(activeKind)} items to preview.</p>`;
       return;
     }
-    if (validateModel(model, fieldsFor(activeKind)).length) {
+    if (validateModel(model, catalog.fieldsFor(activeKind)).length) {
       box.innerHTML = `<label class="set-label">Preview</label><p class="muted">Fix the errors above to preview.</p>`;
       return;
     }
@@ -207,7 +212,7 @@ export function mountScoringEditor(host: HTMLElement, opts: ScoringEditorOpts) {
   }
 
   function renderErrors(model: ScoreModel, simpleAvailable: boolean): void {
-    const errs = validateModel(model, fieldsFor(activeKind!));
+    const errs = validateModel(model, catalog.fieldsFor(activeKind!));
     const box = host.querySelector<HTMLElement>("[data-errors]")!;
     box.innerHTML = errs.map(e => `<p class="se-error">${esc(e)}</p>`).join("");
     if (!simpleAvailable) {

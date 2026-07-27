@@ -2,10 +2,8 @@
 import { describe, it, expect } from "vitest";
 import { renderTriageList } from "../../src/runtime/layout/table/detail-panel";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
-import { registerKinds } from "../../src/runtime/core/register-kinds";
 import { changeRequestKind } from "../../src/runtime/kinds/change-request";
 import { issueKind } from "../../src/runtime/kinds/issue";
-registerKinds([changeRequestKind, issueKind]);   // registers change-request + issue kind renderers + axes
 import { runtimeDefaults } from "../../src/runtime/catalog/defaults";
 
 it("declares the assignee axis and exactly one generic labels axis", () => {

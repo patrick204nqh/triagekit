@@ -12,9 +12,7 @@ export interface ProviderSwitchProps {
 // exactly 1 -> static brand chip; 0 -> nothing (shell shows an empty state).
 export function renderProviderSwitch(host: HTMLElement, p: ProviderSwitchProps): void {
   if (p.providers.length === 0) { host.innerHTML = ""; return; }
-  // Brand glyph keys off the PROVIDER (pr.label), not pr.id: a source id can differ
-  // from its provider (the "github-review" source has provider "github"), and the
-  // mark identifies the provider. pr.id stays the source-id selection key (data-prov).
+  // The stable Provider id remains the selection key; label controls display.
   if (p.providers.length === 1) {
     const only = p.providers[0];
     host.innerHTML = `<span class="prov-chip">${providerIcon(only.label, 14)}${esc(only.label)}</span>`;

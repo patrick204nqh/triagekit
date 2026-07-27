@@ -4,10 +4,9 @@ import { mountSettings } from "../../src/runtime/shell/settings";
 import { CredStore } from "../../src/runtime/shell/cred-store";
 import { ScopeStore } from "../../src/runtime/shell/scope-store";
 import { PolicyStore } from "../../src/runtime/shell/policy-store";
-import type { Source } from "../../src/runtime/ingest/source";
+import { provider } from "../helpers/provider";
 
-const src = { id: "github-review", provider: "github", domain: "tracking", kinds: ["issue"],
-  connectSrc: [], status: "ready", scopeSchema: [], setup: { hint: "h" } } as unknown as Source;
+const src = provider({ kinds: ["issue"] });
 
 function host() { const h = document.createElement("div"); document.body.appendChild(h); return h; }
 
@@ -15,7 +14,7 @@ describe("connection token field", () => {
   it("renders a show/hide toggle for the credential", () => {
     const h = host();
     const creds = new CredStore(); creds.set("github", "tok");
-    const s = mountSettings(h, { sources: [src], creds, scopes: new ScopeStore(), policy: new PolicyStore(), onChange: () => {} });
+    const s = mountSettings(h, { providers: [src], creds, scopes: new ScopeStore(), policy: new PolicyStore(), onChange: () => {} });
     s.open("github");
     const toggle = h.querySelector<HTMLElement>("[data-cred-toggle]");
     const input = h.querySelector<HTMLInputElement>("[data-cred]")!;

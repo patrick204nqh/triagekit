@@ -2,13 +2,12 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { mountSettings } from "../../src/runtime/shell/settings";
 import { PolicyStore } from "../../src/runtime/shell/policy-store";
-import type { Source } from "../../src/runtime/ingest/source";
 
 function setup() {
   const host = document.createElement("div"); document.body.appendChild(host);
   const policy = new PolicyStore();
   const api = mountSettings(host, {
-    sources: [] as Source[], creds: { get: () => "", set: () => {} } as any,
+    providers: [], creds: { get: () => "", set: () => {} } as any,
     scopes: { get: () => ({}), set: () => {} } as any,
     policy, onChange: () => {},
   });
@@ -27,7 +26,7 @@ function setupAuto(autoBots: string[]) {
   const host = document.createElement("div"); document.body.appendChild(host);
   const policy = new PolicyStore();
   const api = mountSettings(host, {
-    sources: [] as Source[], creds: { get: () => "", set: () => {} } as any,
+    providers: [], creds: { get: () => "", set: () => {} } as any,
     scopes: { get: () => ({}), set: () => {} } as any,
     policy, onChange: () => {}, getAutoBots: () => autoBots,
   });

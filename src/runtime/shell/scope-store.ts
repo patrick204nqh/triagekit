@@ -1,4 +1,4 @@
-import type { Scope } from "../ingest/source";
+import type { Scope } from "../catalog/types";
 // Per-source scope bag — non-secret, localStorage, survives sessions.
 const KEY = (id: string) => `triagekit.scope.${id}`;
 export class ScopeStore {

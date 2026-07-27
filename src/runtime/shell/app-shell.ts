@@ -1,10 +1,11 @@
 import type { TriageConfigT } from "../../config/schema";
 import { isCompiledConfig } from "./mode";
-import { getSource, listSources, providerOf, type Source } from "../ingest/source";
+import type {
+  ProviderDeclaration,
+  RuntimeCatalog,
+  Scorer,
+} from "../catalog/types";
 import { GROUP_LABEL, GROUP_ORDER, type Artifact } from "../dataset/artifact";
-import { runtimeCatalog } from "../catalog/built-in";
-import type { Scorer } from "../scoring/registry";
-import { fieldsFor } from "../scoring/field-catalog";
 import { explainScoreModel, validateModel, type ScoreExplanation } from "../scoring/score-model";
 import { renderTableSkeleton } from "../layout/table/triage-table";
 import { esc } from "../layout/util";
@@ -29,6 +30,7 @@ import type { CoreDeps, Core } from "../core/core";
 import type { DomViewDeps } from "../adapters/dom-view";
 
 export interface ShellEnv {
+  catalog: RuntimeCatalog;
   store: DatasetStore;
   timer: TimerPort;
   createCore: (deps: CoreDeps) => Core;
@@ -36,11 +38,16 @@ export interface ShellEnv {
   scoreOverride?: Scorer;
 }
 
-const applicableCatalogTabs = (artifact: Artifact, rows: ScoredItem[]) =>
-  runtimeCatalog.tabs()
+const applicableCatalogTabs = (
+  catalog: RuntimeCatalog,
+  artifact: Artifact,
+  rows: ScoredItem[],
+) =>
+  catalog.tabs()
     .filter((tab) => tab.appliesTo(artifact, rows))
     .sort((a, b) => a.order - b.order);
 
+const connectionKey = (provider: ProviderDeclaration): string => provider.id;
 // Product mark: a funnel (many signals in → a triaged few out) whose drip is the
 // teal accent, echoing the "·" in the wordmark.
 const BRAND_MARK = `<svg class="brand-mark" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 5.5H20.5L13 14.5V18H11V14.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="20.8" r="1.7" fill="var(--accent)"/></svg>`;
@@ -54,7 +61,7 @@ const REFRESH = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" str
 export interface ToolbarPropsInput {
   artifact: Artifact; rows: ScoredItem[]; filters: ListState;
   hasInsights: boolean; activeView: string;
-  sources: { id: string; provider: string; status: string }[];
+  providers: { id: string; provider: string; status: string }[];
   activeProvider: string;
   activeRepo: string;
   extraTabs: { id: string; label: string }[];
@@ -66,7 +73,7 @@ export function toolbarPropsFromShell(i: ToolbarPropsInput): Omit<ToolbarProps, 
   const viewModes = [{ id: "list", label: "List" }];
   if (i.hasInsights) viewModes.push({ id: "insights", label: "Insights" });
   for (const t of i.extraTabs) viewModes.push({ id: t.id, label: t.label });
-  const providers = i.sources.map(s => ({
+  const providers = i.providers.map(s => ({
     id: s.id, label: s.provider, on: s.id === i.activeProvider, live: s.status === "ready",
   }));
   // Repo display-scope options: distinct row locations, count-descending.
@@ -87,21 +94,25 @@ export function toolbarPropsFromShell(i: ToolbarPropsInput): Omit<ToolbarProps, 
 }
 
 export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
+  const catalog = env.catalog;
   const creds = new CredStore();
   const scopes = new ScopeStore();
   const policy = new PolicyStore();
-  const liveSource = getSource(config.source);
-  if (isCompiledConfig(config)) scopes.set(providerOf(liveSource), config.scope!);
+  if (isCompiledConfig(config)) {
+    scopes.set(config.source, config.scope!);
+  }
   const hasInsights = config.views.includes("insights");
 
-  const sourcesFor = (a: Artifact) => listSources().filter(s => s.kinds.some(k => a.kinds.includes(k)));
-  const liveSourcesFor = (a: Artifact) => sourcesFor(a).filter(s => s.status === "ready");
-  const artifacts = runtimeCatalog.artifacts().filter(a => sourcesFor(a).length > 0);
-  const primarySource = (a: Artifact): Source => liveSourcesFor(a)[0] ?? sourcesFor(a)[0];
+  const providersForArtifact = (a: Artifact) =>
+    catalog.providersFor(a.kinds[0]);
+  const readyProvidersFor = (a: Artifact) => providersForArtifact(a).filter(s => s.status === "ready");
+  const artifacts = catalog.artifacts().filter(a => providersForArtifact(a).length > 0);
+  const primaryProvider = (a: Artifact): ProviderDeclaration =>
+    readyProvidersFor(a)[0] ?? providersForArtifact(a)[0];
 
-  let active: Artifact = artifacts.find(a => liveSourcesFor(a).length) ?? artifacts[0];
+  let active: Artifact = artifacts.find(a => readyProvidersFor(a).length) ?? artifacts[0];
   let view: string = "list";
-  let activeProvider: string = (liveSourcesFor(active)[0] ?? sourcesFor(active)[0])?.id ?? "";
+  let activeProvider: string = (readyProvidersFor(active)[0] ?? providersForArtifact(active)[0])?.id ?? "";
   let repoView = "";   // "" = All; sticky across artifact switches, reset on provider change
   let lastRows: ScoredItem[] = [];
   let filterState: ListState = emptyListState();
@@ -116,7 +127,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   // location set won't rebuild — tolerating cosmetic tab-order lag to keep popovers open.
   const navRowSig = () =>
     [...new Set(lastRows.map(r => r.location))].sort().join(",") +
-    "|" + applicableCatalogTabs(active, lastRows).map(t => t.id).sort().join(",");
+    "|" + applicableCatalogTabs(catalog, active, lastRows).map(t => t.id).sort().join(",");
   let lastNavRowSig = "";
 
   // --- Apply URL state on load (artifact → provider → repo → view → sort/axes) ---
@@ -133,8 +144,9 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     }
 
     // provider: only if it's a source id within the (resolved) artifact's sources
-    if (u.provider) {
-      const ok = sourcesFor(active).some(s => s.id === u.provider);
+  if (u.provider) {
+      const ok = providersForArtifact(active)
+        .some(provider => provider.id === u.provider);
       if (ok) activeProvider = u.provider;
     }
 
@@ -147,31 +159,33 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     // an extra-tab id may fall back to "list" — acceptable degradation; it self-heals
     // once data loads and the user re-selects the tab.
     if (u.view) {
-    const isExtra = applicableCatalogTabs(active, []).some(t => t.id === u.view);
+    const isExtra = applicableCatalogTabs(catalog, active, []).some(t => t.id === u.view);
       if (u.view === "list" || (u.view === "insights" && hasInsights) || isExtra) view = u.view;
     }
 
     // sort: only if the sort key exists
-    if (u.sort && runtimeCatalog.sort(u.sort)) filterState = { ...filterState, sort: u.sort };
+    if (u.sort && catalog.sort(u.sort)) filterState = { ...filterState, sort: u.sort };
 
     // axes: only axis ids that exist (values not deep-validated — unknown values match nothing)
     if (u.axes) {
       const axes: Record<string, string[]> = { ...filterState.axes };
       for (const [id, vals] of Object.entries(u.axes)) {
-        if (runtimeCatalog.filter(id) && vals.length) axes[id] = vals;
+        if (catalog.filter(id) && vals.length) axes[id] = vals;
       }
       filterState = { ...filterState, axes };
     }
   }
 
   // The credentialed, scoped sources for the active artifact's active provider.
-  const usableSources = () => liveSourcesFor(active).filter(s =>
-    s.id === activeProvider && creds.get(providerOf(s)) && Object.keys(scopes.get(providerOf(s))).length);
+  const usableProviders = () => readyProvidersFor(active).filter(provider =>
+    provider.id === activeProvider
+    && creds.get(connectionKey(provider))
+    && Object.keys(scopes.get(connectionKey(provider))).length);
 
   // Per-item score breakdown for the list drawer (lifted from renderListWithFilters).
   const scoreExplain = (i: ScoredItem): ScoreExplanation | null => {
     const m = policy.getScoreModel(i.kind);
-    if (!m || validateModel(m, fieldsFor(i.kind)).length !== 0) return null;
+    if (!m || validateModel(m, catalog.fieldsFor(i.kind)).length !== 0) return null;
     try { return explainScoreModel(m, i); } catch { return null; }
   };
 
@@ -203,21 +217,21 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       // Rebuild the toolbar when that row-derived set actually changes — but not on
       // every paint, so a background refresh doesn't tear down an open filter popover.
       if (navRowSig() !== lastNavRowSig) buildNav();
-    if (view === "insights") { renderInsights(root, vm.scored, active.kinds, runtimeCatalog); return; }
+    if (view === "insights") { renderInsights(root, vm.scored, active.kinds, catalog); return; }
     if (view !== "list") {
-      const tab = runtimeCatalog.tabs().find((candidate) => candidate.id === view);
+      const tab = catalog.tabs().find((candidate) => candidate.id === view);
       if (tab) { tab.render(root, vm.scored); return; }
     }
       // createDomView is called per-render intentionally: artifact: active and token
       // both reflect the current artifact/credential at render time and go stale if
       // captured at construction (active is reassigned when the user switches artifacts).
-      const token = creds.get(providerOf(usableSources()[0]))!;  // usableSources filter guarantees a credential
+      const token = creds.get(connectionKey(usableProviders()[0]))!;  // usableProviders filter guarantees a credential
     env.createDomView(root, {
       artifact: active,
       token,
       providerId: activeProvider,
       scoreExplain,
-      catalog: runtimeCatalog,
+      catalog: catalog,
     }).render(vm);
     },
   };
@@ -225,18 +239,18 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   const core = env.createCore({
     store: env.store,
     view: dispatchView,
-    jobsFor: () => usableSources().map(s => ({
-      provider: providerOf(s),
-      scopeKey: scopeKey(scopes.get(providerOf(s))),
-      scope: scopes.get(providerOf(s)),
-      token: creds.get(providerOf(s))!,
-      port: s,
+    jobsFor: () => usableProviders().map(s => ({
+      provider: s,
+      scopeKey: scopeKey(scopes.get(connectionKey(s))),
+      scope: scopes.get(connectionKey(s)),
+      credential: creds.get(connectionKey(s))!,
+      kinds: active.kinds.filter(kind => s.kinds.includes(kind)),
     })),
     activeKinds: () => active.kinds,
     botLogins: () => policy.getBotLogins(),
     scoreContext: () => ({
       getModel: (k) => policy.getScoreModel(k),
-      getFields: (k) => fieldsFor(k),
+      getFields: (k) => catalog.fieldsFor(k),
       getThresholds: () => policy.getTiers(),
       override: env.scoreOverride,
     }),
@@ -257,14 +271,15 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
 
   const settingsHost = document.getElementById("settings-host")!;
   const settings = mountSettings(settingsHost, {
-    sources: listSources(), creds, scopes, policy,
+    catalog,
+    providers: [...catalog.providers()], creds, scopes, policy,
     onChange: () => { lastRows = []; refreshBar(); render(); },
     onThemeChange: () => syncTheme(),
     onRefreshChange: () => applyRefreshTimer(),
     getRows: () => lastRows,
     getAutoBots: () => adapterBotLogins(env.store.snapshot(), active.kinds),
   });
-  const openSettings = () => settings.open(providerOf(primarySource(active)));
+  const openSettings = () => settings.open(primaryProvider(active).id);
   status.addEventListener("click", openSettings);
   gear.addEventListener("click", openSettings);
   refresh.addEventListener("click", () => { lastRows = []; render(); });
@@ -280,17 +295,17 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
 
   // Status chip shows the single active provider scope.
   function refreshBar() {
-    const live = liveSourcesFor(active);
-    const lead = live.find(s => s.id === activeProvider) ?? primarySource(active);
+    const live = readyProvidersFor(active);
+    const lead = live.find(s => s.id === activeProvider) ?? primaryProvider(active);
     let cls = "warn", tail: string;
     if (!live.length) { tail = "upcoming"; }
     else {
       const missing = healthOf(lead, creds) !== "connected";
       cls = missing ? "warn" : "ok";
-      tail = missing ? "no token" : scopeSummary(lead, scopes.get(providerOf(lead)));
+      tail = missing ? "no token" : scopeSummary(lead, scopes.get(connectionKey(lead)));
     }
     status.className = "status-chip " + cls;
-    status.innerHTML = `${providerIcon(providerOf(lead), 15)}<span class="sid">${esc(providerOf(lead))}</span><span class="sep">·</span><span class="muted">${esc(tail)}</span>`;
+    status.innerHTML = `${providerIcon(lead.id, 15)}<span class="sid">${esc(lead.id)}</span><span class="sep">·</span><span class="muted">${esc(tail)}</span>`;
   }
 
   function updateSync() {
@@ -299,7 +314,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   function applyRefreshTimer() {
     if (cancelRefresh) cancelRefresh();
     const secs = getRefreshInterval();
-    if (secs > 0) cancelRefresh = env.timer.every(secs * 1000, () => { if (liveSourcesFor(active).length) render(true); });
+    if (secs > 0) cancelRefresh = env.timer.every(secs * 1000, () => { if (readyProvidersFor(active).length) render(true); });
   }
 
   // ── Navigation: grouped artifact rail (Findings / Work) → list/insights + filter ──
@@ -316,12 +331,12 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       const heading = document.createElement("span"); heading.className = "rail-group-label"; heading.textContent = GROUP_LABEL[g];
       section.appendChild(heading);
       for (const a of items) {
-        const live = liveSourcesFor(a).length > 0;
+        const live = readyProvidersFor(a).length > 0;
         const b = document.createElement("button");
         b.innerHTML = live ? esc(a.label) : `${esc(a.label)}<span class="rail-soon">soon</span>`;
         b.className = [a.id === active.id ? "active" : "", live ? "" : "upcoming"].filter(Boolean).join(" ");
         b.addEventListener("click", () => {
-          active = a; view = "list"; activeProvider = (liveSourcesFor(a)[0] ?? sourcesFor(a)[0])?.id ?? "";
+          active = a; view = "list"; activeProvider = (readyProvidersFor(a)[0] ?? providersForArtifact(a)[0])?.id ?? "";
           lastRows = []; filterState = emptyListState(); lastFetchedAt = null;
           syncUrl();
           buildRail(); buildNav(); refreshBar(); render();
@@ -335,19 +350,19 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   function buildNav() {
     lastNavRowSig = navRowSig();   // track the row-derived inputs this build reflects
     nav.innerHTML = "";
-    if (!liveSourcesFor(active).length) return;   // upcoming artifact: no toolbar
+    if (!readyProvidersFor(active).length) return;   // upcoming artifact: no toolbar
     const base = toolbarPropsFromShell({
       artifact: active, rows: lastRows, filters: filterState,
       hasInsights, activeView: view,
-      sources: sourcesFor(active).map(s => ({ id: s.id, provider: providerOf(s), status: s.status })),
+      providers: providersForArtifact(active).map(s => ({ id: s.id, provider: s.id, status: s.status })),
       activeProvider,
       activeRepo: repoView,
-      extraTabs: applicableCatalogTabs(active, lastRows)
+      extraTabs: applicableCatalogTabs(catalog, active, lastRows)
         .map(t => ({ id: t.id, label: t.label })),
     });
     renderToolbar(nav, {
       ...base,
-      catalog: runtimeCatalog,
+      catalog: catalog,
       onFilterChange,
       onViewChange: (id) => { view = id; syncUrl(); buildNav(); render(); },
       onProviderSelect: (id) => {
@@ -368,7 +383,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
           filterState,
           scoped,
           { artifact: active },
-          runtimeCatalog,
+          catalog,
         );
         syncUrl();
         core.rerender();      // client-side re-derive, no refetch
@@ -379,9 +394,9 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
 
   // silent: an auto-refresh tick re-fetches in place (no skeleton flash).
   const render = (silent = false) => {
-    const live = liveSourcesFor(active);
+    const live = readyProvidersFor(active);
     if (!live.length) {   // upcoming artifact placeholder
-      const provs = sourcesFor(active).map(s => `<li>${providerIcon(providerOf(s), 14)} ${esc(providerOf(s))}</li>`).join("");
+      const provs = providersForArtifact(active).map(s => `<li>${providerIcon(s.id, 14)} ${esc(s.id)}</li>`).join("");
       root.innerHTML = `<div class="upcoming"><h2>${esc(active.label)} <span class="badge">upcoming</span></h2>
         <p class="muted">On the roadmap. Will triage from:</p><ul class="prov-roadmap">${provs}</ul></div>`;
       lastFetchedAt = null; updateSync();
@@ -389,12 +404,12 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     }
     if (!silent && view === "insights" && lastRows.length) { renderInsights(root, lastRows, active.kinds); return; }
     if (!silent && view !== "list" && view !== "insights" && lastRows.length) {
-      const tab = runtimeCatalog.tabs().find((candidate) => candidate.id === view);
+      const tab = catalog.tabs().find((candidate) => candidate.id === view);
       if (tab) { tab.render(root, lastRows); return; }
     }
 
-    if (!usableSources().length) {
-      const needScope = live.some(s => s.id === activeProvider && creds.get(providerOf(s)) && !Object.keys(scopes.get(providerOf(s))).length);
+    if (!usableProviders().length) {
+      const needScope = live.some(s => s.id === activeProvider && creds.get(connectionKey(s)) && !Object.keys(scopes.get(connectionKey(s))).length);
       root.innerHTML = `<p class="muted">Open Settings to ${needScope ? "choose your scope" : "connect a token"}.</p>`;
       lastFetchedAt = null; updateSync();
       return;

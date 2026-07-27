@@ -25,15 +25,6 @@ export interface SortKey {
   appliesTo?(ctx: AxisCtx): boolean;   // omitted = always
 }
 
-const axes = new Map<string, FilterAxis>();
-const sorts = new Map<string, SortKey>();
-export function registerFilterAxis(a: FilterAxis): void { axes.set(a.id, a); }
-export function registerSortKey(s: SortKey): void { sorts.set(s.id, s); }
-export function getFilterAxis(id: string): FilterAxis | undefined { return axes.get(id); }
-export function getSortKey(id: string): SortKey | undefined { return sorts.get(id); }
-export function listFilterAxes(): FilterAxis[] { return [...axes.values()]; }
-export function listSortKeys(): SortKey[] { return [...sorts.values()]; }
-
 const TIERS: Tier[] = ["P0", "P1", "P2", "P3"];
 
 // ── Built-in axes ──

@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { bootstrap } from "../../src/runtime/bootstrap";
 import { toolbarPropsFromShell } from "../../src/runtime/shell/app-shell";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
-import { githubSource } from "../../src/runtime/ingest/github/dependency-vuln-source";
+import { mockGithubItems } from "../helpers/github-fetch";
 import { readUrlState } from "../../src/runtime/shell/url-state";
 import type { TriageConfigT } from "../../src/config/schema";
 
@@ -59,8 +59,7 @@ describe("mountShell artifact navigation", () => {
     // A ready source with a satisfied cred + scope reaches the rendered-rows path.
     sessionStorage.setItem("triagekit.cred.github", "tok");
     localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: [] }));
-    const fetchSpy = vi.spyOn(githubSource, "fetch")
-      .mockResolvedValue({ items: [], errors: [] });
+    const fetchSpy = mockGithubItems([]);
     try {
       bootstrap(config);
       await flush();
@@ -71,13 +70,13 @@ describe("mountShell artifact navigation", () => {
       expect(body).toBeTruthy();
       expect(document.querySelector("#root .facet-bar")).toBeNull();   // retired renderer's DOM stays out of the surface
       expect(document.querySelector("#root .surface-body table.alerts, #root .surface-body .empty")).toBeTruthy();
-      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(fetchSpy).toHaveBeenCalledTimes(0);
 
       // (b) a filter change (sort) via the toolbar re-renders the body without refetching.
       const sortBtn = document.querySelector<HTMLElement>("#viewswitch [data-sort='recent']")!;
       sortBtn.click();
       expect(document.querySelector("#root .surface-body")).toBeTruthy();
-      expect(fetchSpy).toHaveBeenCalledTimes(1);   // no refetch
+      expect(fetchSpy).toHaveBeenCalledTimes(0);   // no refetch
     } finally {
       fetchSpy.mockRestore();
     }
@@ -109,7 +108,7 @@ describe("mountShell artifact navigation", () => {
     const base = {
       artifact: { id: "issue", label: "Issues", group: "work" as const, kinds: ["issue" as const] },
       filters: { axes: {}, sort: "priority" }, hasInsights: false, activeView: "list",
-      sources: [{ id: "github", provider: "github", status: "ready" }],
+      providers: [{ id: "github", provider: "github", status: "ready" }],
       activeProvider: "github", extraTabs: [],
     };
 
@@ -138,7 +137,7 @@ describe("mountShell artifact navigation", () => {
     const base = {
       artifact: { id: "issue", label: "Issues", group: "work" as const, kinds: ["issue" as const] },
       filters: { axes: {}, sort: "priority" }, hasInsights: false, activeView: "list",
-      sources: [{ id: "github", provider: "github", status: "ready" }],
+      providers: [{ id: "github", provider: "github", status: "ready" }],
       activeProvider: "github", extraTabs: [],
     };
     const rows = [row("acme/api"), row("acme/api"), row("acme/web")];
@@ -167,14 +166,14 @@ describe("mountShell artifact navigation", () => {
 
   it("applies a valid URL state on load", async () => {
     // artifact id === kind; "issue" is a real artifact (kind `issue`). Its source id
-    // is "github-review" (provider github, kinds [change-request, issue]) — NOT "github"
+    // is "github" (provider github, kinds [change-request, issue]) — NOT "github"
     // (that id feeds dependency-vuln only), so the provider must be the real source id.
-    history.replaceState(null, "", "/?artifact=issue&provider=github-review&view=list&sort=recent");
+    history.replaceState(null, "", "/?artifact=issue&provider=github&view=list&sort=recent");
     bootstrap(config);
     await flush();
     const state = readUrlState(location.search);
     expect(state.artifact).toBe("issue");
-    expect(state.provider).toBe("github-review");
+    expect(state.provider).toBe("github");
     expect(state.sort).toBe("recent");
     // The applied artifact leads the rail as the active button.
     const active = document.querySelector("#domainRail button.active");
@@ -211,15 +210,12 @@ describe("mountShell artifact navigation", () => {
     localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: ["acme/web"] }));
 
     // Return a critical vuln item whose normal score would be P0 (~170) with default thresholds.
-    const fetchSpy = vi.spyOn(githubSource, "fetch").mockResolvedValue({
-      items: [{
+    const fetchSpy = mockGithubItems([{
         id: "github:acme/web:1", provider: "github", providerRef: {}, kind: "dependency-vuln",
         title: "lodash", location: "acme/web", signal: 100,
         createdAt: new Date().toISOString(), url: "https://github.com/acme/web/security/dependabot/1",
         details: { package: "lodash", severity: "critical", cvss: 10, scope: "runtime", fixAvailable: true, fixVersion: "4.17.22" },
-      }],
-      errors: [],
-    } as any);
+      }]);
 
     try {
       bootstrap(config);
@@ -248,15 +244,12 @@ describe("mountShell artifact navigation", () => {
     localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: ["acme/web"] }));
 
     // Item with cvss: 10 → normalised to 1.0 → score 100 → P0 under the stored model.
-    const fetchSpy = vi.spyOn(githubSource, "fetch").mockResolvedValue({
-      items: [{
+    const fetchSpy = mockGithubItems([{
         id: "github:acme/web:2", provider: "github", providerRef: {}, kind: "dependency-vuln",
         title: "axios", location: "acme/web", signal: 100,
         createdAt: new Date().toISOString(), url: "https://github.com/acme/web/security/dependabot/2",
         details: { package: "axios", severity: "critical", cvss: 10, scope: "runtime", fixAvailable: true, fixVersion: "1.7.0" },
-      }],
-      errors: [],
-    } as any);
+      }]);
 
     try {
       bootstrap(config);

@@ -16,7 +16,7 @@ function props(over: Partial<ToolbarProps> = {}): ToolbarProps {
     rows, filters: emptyListState(),
     viewModes: [{ id: "list", label: "List" }, { id: "insights", label: "Insights" }],
     activeView: "list",
-    providers: [{ id: "github-review", label: "github", on: true, live: true }],
+    providers: [{ id: "github", label: "github", on: true, live: true }],
     repos: [], activeRepo: "",
     onFilterChange: () => {}, onViewChange: () => {}, onProviderSelect: () => {}, onRepoSelect: () => {},
     ...over,

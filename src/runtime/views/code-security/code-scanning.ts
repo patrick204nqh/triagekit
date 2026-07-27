@@ -42,7 +42,7 @@ export const codeScanningView: ViewModule = {
   kind: CODE_SCANNING,
 };
 
-// Axes are exported, not self-registered: the kind manifest (Task 2.5) passes them to registerKinds → registerFilterAxis.
+// Axes are exported for the Kind declaration; importing this module has no side effects.
 export const severityAxis: FilterAxis = {
   id: "cs-severity", label: "Severity", widget: "chips", quick: false,
   appliesTo: (rows) => rows.some(r => r.kind === CODE_SCANNING),

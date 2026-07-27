@@ -10,8 +10,8 @@ import {
   severityAxis,
 } from "../views/code-security/view";
 
-// Fields + defaultModel live here in the manifest (the single source of truth).
-// scoring/dependency-vuln.ts is now a pure score function; registerKinds wires
+// Fields and defaultModel live in this declaration, the single source of truth.
+// scoring/dependency-vuln.ts remains a pure score function.
 // these into the registries.
 export const dependencyVulnKind: KindDeclaration = {
   kind: "dependency-vuln",

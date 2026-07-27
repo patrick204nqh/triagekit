@@ -2,9 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { renderTriageList } from "../../src/runtime/layout/table/detail-panel";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
-import { registerKinds } from "../../src/runtime/core/register-kinds";
 import { dependencyVulnKind } from "../../src/runtime/kinds/dependency-vuln";
-registerKinds([dependencyVulnKind]);   // registers vuln renderer + severity/fix axes
 
 it("declares vuln severity and fix-available axes and a severity sort", () => {
   expect(dependencyVulnKind.filters.map((axis) => axis.id))

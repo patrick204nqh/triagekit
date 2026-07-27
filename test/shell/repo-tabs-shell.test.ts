@@ -4,7 +4,7 @@
 // derive from lastRows, which is [] at initial buildNav() and only populated post-fetch).
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { bootstrap } from "../../src/runtime/bootstrap";
-import { githubSource } from "../../src/runtime/ingest/github/dependency-vuln-source";
+import { mockGithubItems } from "../helpers/github-fetch";
 import type { TriageConfigT } from "../../src/config/schema";
 
 const flush = () => new Promise<void>(r => setTimeout(r, 0));
@@ -39,15 +39,12 @@ describe("repo tabs render end-to-end after data loads", () => {
     localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: ["acme/web", "acme/api", "acme/cli", "acme/docs"] }));
 
     // web x4, api x3, cli x2, docs x1 → 4 distinct repos, count-descending web > api > cli > docs.
-    const fetchSpy = vi.spyOn(githubSource, "fetch").mockResolvedValue({
-      items: [
+    const fetchSpy = mockGithubItems([
         vuln("acme/web", 1), vuln("acme/web", 2), vuln("acme/web", 3), vuln("acme/web", 4),
         vuln("acme/api", 1), vuln("acme/api", 2), vuln("acme/api", 3),
         vuln("acme/cli", 1), vuln("acme/cli", 2),
         vuln("acme/docs", 1),
-      ],
-      errors: [],
-    } as any);
+      ]);
 
     try {
       bootstrap(config);
@@ -70,10 +67,10 @@ describe("repo tabs render end-to-end after data loads", () => {
   it("renders no repo tabs when loaded rows are confined to a single repo", async () => {
     sessionStorage.setItem("triagekit.cred.github", "tok");
     localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: ["acme/web"] }));
-    const fetchSpy = vi.spyOn(githubSource, "fetch").mockResolvedValue({
-      items: [vuln("acme/web", 1), vuln("acme/web", 2)],
-      errors: [],
-    } as any);
+    const fetchSpy = mockGithubItems([
+      vuln("acme/web", 1),
+      vuln("acme/web", 2),
+    ]);
     try {
       bootstrap(config);
       await flush();

@@ -16,20 +16,20 @@ describe("toolbarPropsFromShell", () => {
       artifact: { id: "issue", label: "Issues", group: "work", kinds: ["issue"] },
       rows: [], filters: { axes: {}, sort: "priority" },
       hasInsights: true, activeView: "list",
-      sources: [{ id: "github-review", provider: "github", status: "ready" } as any],
-      activeProvider: "github-review",
+      providers: [{ id: "github", provider: "github", status: "ready" } as any],
+      activeProvider: "github",
       activeRepo: "",
       extraTabs: [],
     });
     expect(p.viewModes.map(v => v.id)).toContain("insights");
-    expect(p.providers[0]).toMatchObject({ id: "github-review", on: true, live: true });
+    expect(p.providers[0]).toMatchObject({ id: "github", on: true, live: true });
   });
 
   it("marks exactly one provider active (single-select scope)", () => {
     const props = toolbarPropsFromShell({
       artifact: { id: "dependency-vuln", label: "Dependencies", group: "finding", kinds: ["dependency-vuln"] },
       rows: [], filters: { axes: {}, sort: "priority" }, hasInsights: false, activeView: "list",
-      sources: [
+      providers: [
         { id: "github", provider: "github", status: "ready" },
         { id: "gitlab", provider: "gitlab", status: "upcoming" },
       ],
@@ -47,7 +47,7 @@ describe("toolbarPropsFromShell", () => {
       rows: [row("a"), row("a"), row("b")],   // a x2, b x1
       filters: { axes: {}, sort: "priority" },
       hasInsights: false, activeView: "list",
-      sources: [{ id: "github", provider: "github", status: "ready" }],
+      providers: [{ id: "github", provider: "github", status: "ready" }],
       activeProvider: "github",
       activeRepo: "a",
       extraTabs: [],
@@ -62,7 +62,7 @@ describe("toolbarPropsFromShell", () => {
       rows: [row("a"), row("a"), row("b")],   // only a, b present
       filters: { axes: {}, sort: "priority" },
       hasInsights: false, activeView: "list",
-      sources: [{ id: "github", provider: "github", status: "ready" }],
+      providers: [{ id: "github", provider: "github", status: "ready" }],
       activeProvider: "github",
       activeRepo: "ghost/repo",   // sticky from another artifact, not in this set
       extraTabs: [],

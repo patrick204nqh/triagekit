@@ -1,31 +1,51 @@
-import "./views/code-security/view";        // register dependency-vuln view + source + charts + sort-key
-import "./views/code-review/view";          // register review surface + github-review source
-import "./views/code-security/code-scanning"; // register code-scanning view + source + charts
-import "./ingest/upcoming";              // register roadmap sources
-import "./layout/due-soon";              // register the Due soon tab
 import type { TriageConfigT } from "../config/schema";
-import type { Scorer } from "./scoring/registry";
-import type { Core } from "./core/core";
-import { registerKinds } from "./core/register-kinds";
-import { registerProvider } from "./core/provider-registry";
-import { createStore } from "./core/store";
-import { createCore } from "./core/core";
 import { createDomView } from "./adapters/dom-view";
 import { createTimer } from "./adapters/timer";
-import { dependencyVulnKind } from "./kinds/dependency-vuln";
+import { runtimeDefaults } from "./catalog/defaults";
+import { createRuntimeCatalog } from "./catalog/runtime-catalog";
+import type { RuntimeCatalog, Scorer } from "./catalog/types";
+import type { Core } from "./core/core";
+import { createCore } from "./core/core";
+import { createStore } from "./core/store";
 import { codeScanningKind } from "./kinds/code-scanning";
 import { changeRequestKind } from "./kinds/change-request";
+import { dependencyVulnKind } from "./kinds/dependency-vuln";
 import { issueKind } from "./kinds/issue";
-import { github } from "./providers/github";
-import { mountShell } from "./shell/app-shell";
+import { upcomingKinds } from "./kinds/upcoming";
 import { installAvatarFallback } from "./layout/atoms/avatar-fallback";
+import { createGithubProvider } from "./providers/github/provider";
+import { upcomingProviders } from "./providers/upcoming";
+import { mountShell } from "./shell/app-shell";
 
-// The one wiring point: register kinds from manifests, build adapters + store, mount the shell as a driving adapter.
+export function createProductionCatalog(
+  fetchImpl: typeof fetch,
+): RuntimeCatalog {
+  return createRuntimeCatalog({
+    kinds: [
+      dependencyVulnKind,
+      codeScanningKind,
+      changeRequestKind,
+      issueKind,
+      ...upcomingKinds,
+    ],
+    providers: [createGithubProvider(fetchImpl), ...upcomingProviders],
+    defaults: runtimeDefaults,
+  });
+}
+
+// The one wiring point: compose the catalog, build adapters + store, and mount the shell.
 export function bootstrap(config: TriageConfigT, scoreOverride?: Scorer): Core {
   installAvatarFallback();
-  registerProvider(github);
-  registerKinds([dependencyVulnKind, codeScanningKind, changeRequestKind, issueKind]);
   const store = createStore();
   const timer = createTimer();
-  return mountShell(config, { store, timer, createCore, createDomView, scoreOverride });
+  const catalog = createProductionCatalog(fetch);
+
+  return mountShell(config, {
+    store,
+    timer,
+    createCore,
+    createDomView,
+    scoreOverride,
+    catalog,
+  });
 }

@@ -1,10 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
 import { mountScoringEditor } from "../../src/runtime/shell/scoring-editor";
-import { registerDefaultModel, _resetDefaultModels } from "../../src/runtime/scoring/default-model";
-import { registerFieldCatalog } from "../../src/runtime/scoring/field-catalog";
 import type { ScoreModel } from "../../src/runtime/scoring/score-model";
 import type { TriageItem } from "../../src/runtime/dataset/item";
+import { scoringCatalog } from "../helpers/scoring-catalog";
 
 const KIND = "dependency-vuln";
 const def: ScoreModel = {
@@ -22,6 +21,9 @@ function harness(rows: TriageItem[], initialDrafts: Record<string, ScoreModel> =
   const drafts = new Map<string, ScoreModel>(Object.entries(initialDrafts));
   const host = document.createElement("div");
   const editor = mountScoringEditor(host, {
+    catalog: scoringCatalog(def, [
+      { name: "cvss", type: "number", range: [0, 10] },
+    ]),
     getDraft: (k) => drafts.get(k) ?? null,
     setDraft: (k, m) => { drafts.set(k, m); },
     clearDraft: () => {},
@@ -33,11 +35,6 @@ function harness(rows: TriageItem[], initialDrafts: Record<string, ScoreModel> =
 }
 
 describe("scoring editor — live preview", () => {
-  beforeEach(() => {
-    _resetDefaultModels();
-    registerFieldCatalog(KIND, [{ name: "cvss", type: "number", range: [0, 10] }]);
-    registerDefaultModel(KIND, def);
-  });
 
   it("lists loaded rows re-ranked by the model (highest score first)", () => {
     const { host } = harness([item("low", 2), item("high", 9)]);

@@ -11,8 +11,8 @@ import {
   toolAxis,
 } from "../views/code-security/code-scanning";
 
-// Fields + defaultModel live here in the manifest (the single source of truth).
-// scoring/code-scanning.ts is a pure score function; registerKinds wires
+// Fields and defaultModel live in this declaration, the single source of truth.
+// scoring/code-scanning.ts remains a pure score function.
 // these into the registries.
 export const codeScanningKind: KindDeclaration = {
   kind: "code-scanning",

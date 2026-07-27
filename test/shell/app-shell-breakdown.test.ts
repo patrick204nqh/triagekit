@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { bootstrap } from "../../src/runtime/bootstrap";
-import { githubSource } from "../../src/runtime/ingest/github/dependency-vuln-source";
+import { mockGithubItems } from "../helpers/github-fetch";
 import type { TriageConfigT } from "../../src/config/schema";
 
 const flush = () => new Promise<void>(r => setTimeout(r, 0));
@@ -39,7 +39,7 @@ describe("app-shell score breakdown in drawer", () => {
     }));
     sessionStorage.setItem("triagekit.cred.github", "tok");
     localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: ["acme/web"] }));
-    const spy = vi.spyOn(githubSource, "fetch").mockResolvedValue({ items: [vulnItem], errors: [] } as any);
+    const spy = mockGithubItems([vulnItem]);
     try {
       bootstrap(config);
       await flush();
@@ -52,7 +52,7 @@ describe("app-shell score breakdown in drawer", () => {
   it("shows the built-in note when no model is stored", async () => {
     sessionStorage.setItem("triagekit.cred.github", "tok");
     localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: ["acme/web"] }));
-    const spy = vi.spyOn(githubSource, "fetch").mockResolvedValue({ items: [vulnItem], errors: [] } as any);
+    const spy = mockGithubItems([vulnItem]);
     try {
       bootstrap(config);
       await flush();

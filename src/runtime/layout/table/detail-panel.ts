@@ -1,4 +1,4 @@
-import type { TriageError } from "../../ingest/source";
+import type { TriageFailure } from "../../catalog/types";
 import { runtimeCatalog } from "../../catalog/built-in";
 import type { RuntimeCatalog } from "../../catalog/types";
 import type { ScoredItem, DetailCtx } from "./kind-renderer";
@@ -29,7 +29,7 @@ function defaultDetailView(r: ScoredItem): DetailView {
 export function renderTriageList(
   root: HTMLElement,
   rows: ScoredItem[],
-  errors: TriageError[],
+  errors: TriageFailure[],
   ctx: DetailCtx = {},
   catalog: RuntimeCatalog = runtimeCatalog,
 ): void {

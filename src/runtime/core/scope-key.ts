@@ -1,5 +1,5 @@
 // src/runtime/core/scope-key.ts
-import type { Scope } from "../ingest/source";
+import type { Scope } from "../catalog/types";
 
 // Stable identity for one provider's scope selection. Sorting top-level keys makes
 // it order-independent; nested arrays/objects keep their own order (selections are

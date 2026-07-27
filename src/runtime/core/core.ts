@@ -1,17 +1,20 @@
 // src/runtime/core/core.ts
 import type { Kind } from "../dataset/item";
-import type { TriageError } from "../ingest/source";
+import type { TriageFailure } from "../catalog/types";
 import type { ScoreContext } from "../scoring/configured";
 import type { ListState } from "../layout/toolbar/filter-state";
 import { derive } from "./derivation";
-import { refresh, type ProviderJob } from "./orchestrator";
+import {
+  refreshProviders,
+  type ProviderRefreshJob,
+} from "./orchestrator";
 import type { DatasetStore } from "./store";
 import type { ViewPort } from "./ports";
 
 export interface CoreDeps {
   store: DatasetStore;
   view: ViewPort;
-  jobsFor(): ProviderJob[];        // current provider jobs (scope/cred resolved by the driving adapter)
+  jobsFor(): ProviderRefreshJob[];
   activeKinds(): Kind[];
   botLogins(): string[];
   scoreContext(): ScoreContext;
@@ -20,7 +23,7 @@ export interface CoreDeps {
 }
 
 export function createCore(deps: CoreDeps) {
-  let lastErrors: TriageError[] = [];
+  let lastErrors: TriageFailure[] = [];
 
   function paint(): void {
     const { scored, shown } = derive({
@@ -35,8 +38,8 @@ export function createCore(deps: CoreDeps) {
   }
 
   async function refreshNow(): Promise<void> {
-    const { errors } = await refresh(deps.jobsFor(), deps.store);
-    lastErrors = errors;
+    const { failures } = await refreshProviders(deps.jobsFor(), deps.store);
+    lastErrors = failures;
     paint();
   }
 

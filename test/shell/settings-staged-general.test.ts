@@ -14,7 +14,7 @@ describe("settings stages theme", () => {
 
   it("previews a theme change but reverts on discard", () => {
     const h = host();
-    const s = mountSettings(h, { sources: [], creds: new CredStore(), scopes: new ScopeStore(), policy: new PolicyStore(), onChange: () => {}, onThemeChange: () => {} });
+    const s = mountSettings(h, { providers: [], creds: new CredStore(), scopes: new ScopeStore(), policy: new PolicyStore(), onChange: () => {}, onThemeChange: () => {} });
     s.open();
     h.querySelector<HTMLElement>("[data-category='general']")!.click();
     h.querySelector<HTMLElement>('[data-theme="dark"]')!.click();
@@ -25,7 +25,7 @@ describe("settings stages theme", () => {
 
   it("keeps the theme change on save", () => {
     const h = host();
-    const s = mountSettings(h, { sources: [], creds: new CredStore(), scopes: new ScopeStore(), policy: new PolicyStore(), onChange: () => {}, onThemeChange: () => {} });
+    const s = mountSettings(h, { providers: [], creds: new CredStore(), scopes: new ScopeStore(), policy: new PolicyStore(), onChange: () => {}, onThemeChange: () => {} });
     s.open();
     h.querySelector<HTMLElement>("[data-category='general']")!.click();
     h.querySelector<HTMLElement>('[data-theme="dark"]')!.click();
@@ -40,7 +40,7 @@ describe("settings stages auto-refresh", () => {
 
   it("previews a refresh change but reverts on discard", () => {
     const h = host();
-    const s = mountSettings(h, { sources: [], creds: new CredStore(), scopes: new ScopeStore(), policy: new PolicyStore(), onChange: () => {}, onRefreshChange: () => {} });
+    const s = mountSettings(h, { providers: [], creds: new CredStore(), scopes: new ScopeStore(), policy: new PolicyStore(), onChange: () => {}, onRefreshChange: () => {} });
     s.open();
     h.querySelector<HTMLElement>("[data-category='general']")!.click();
     const newValue = REFRESH_OPTIONS[1].value; // 300
@@ -52,7 +52,7 @@ describe("settings stages auto-refresh", () => {
 
   it("keeps the refresh change on save", () => {
     const h = host();
-    const s = mountSettings(h, { sources: [], creds: new CredStore(), scopes: new ScopeStore(), policy: new PolicyStore(), onChange: () => {}, onRefreshChange: () => {} });
+    const s = mountSettings(h, { providers: [], creds: new CredStore(), scopes: new ScopeStore(), policy: new PolicyStore(), onChange: () => {}, onRefreshChange: () => {} });
     s.open();
     h.querySelector<HTMLElement>("[data-category='general']")!.click();
     const newValue = REFRESH_OPTIONS[1].value; // 300

@@ -1,21 +1,10 @@
-// src/runtime/core/orchestrator.ts
-import type { Scope, TriageError } from "../ingest/source";
 import type {
   ProviderDeclaration,
+  Scope,
   TriageFailure,
 } from "../catalog/types";
 import type { Kind } from "../dataset/item";
-import type { ProviderPort } from "./ports";
 import type { DatasetStore } from "./store";
-
-export interface ProviderJob {
-  provider: string;   // providerOf(source)
-  scopeKey: string;   // scopeKey(scope)
-  scope: Scope;
-  token: string;
-  port: ProviderPort;
-}
-export interface RefreshResult { errors: TriageError[]; }
 
 export interface ProviderRefreshJob {
   provider: ProviderDeclaration;
@@ -35,6 +24,7 @@ export async function refreshProviders(
   now: () => number = Date.now,
 ): Promise<ProviderRefreshResult> {
   const failures: TriageFailure[] = [];
+
   await Promise.all(jobs.map(async (job) => {
     const adapter = job.provider.adapter;
     if (!adapter) {
@@ -45,12 +35,14 @@ export async function refreshProviders(
       });
       return;
     }
+
     try {
       const outcomes = await adapter.refresh({
         credential: job.credential,
         scope: job.scope,
         kinds: job.kinds,
       });
+
       for (const outcome of outcomes) {
         failures.push(...outcome.failures);
         if (outcome.status === "success" || outcome.status === "partial") {
@@ -71,26 +63,6 @@ export async function refreshProviders(
       });
     }
   }));
-  return { failures };
-}
 
-// Parallel fetch, partial-failure tolerant. Fulfilled → replace that slice;
-// rejected → keep the prior slice and record the error. Mirrors the per-source
-// resilience of app-shell.ts:205-210, but now merging into the store.
-export async function refresh(
-  jobs: ProviderJob[], store: DatasetStore, now: () => number = Date.now,
-): Promise<RefreshResult> {
-  const settled = await Promise.allSettled(jobs.map(j => j.port.fetch(j.scope, j.token)));
-  const errors: TriageError[] = [];
-  settled.forEach((res, i) => {
-    const job = jobs[i];
-    if (res.status === "fulfilled") {
-      store.replaceScope(job.provider, job.scopeKey, res.value.items, now());
-      errors.push(...res.value.errors);
-    } else {
-      const reason = res.reason as { message?: string };
-      errors.push({ target: job.provider, message: reason?.message ?? String(res.reason) });
-    }
-  });
-  return { errors };
+  return { failures };
 }

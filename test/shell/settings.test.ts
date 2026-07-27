@@ -4,20 +4,35 @@ import { mountSettings } from "../../src/runtime/shell/settings";
 import { CredStore } from "../../src/runtime/shell/cred-store";
 import { ScopeStore } from "../../src/runtime/shell/scope-store";
 import { PolicyStore } from "../../src/runtime/shell/policy-store";
-import type { Source } from "../../src/runtime/ingest/source";
+import { provider } from "../helpers/provider";
 
-const github: Source = {
-  id: "github", domain: "code-security", kinds: ["dependency-vuln"], connectSrc: [], status: "ready",
-  scopeSchema: [{ key: "repos", label: "Repositories", type: "multiselect", discoverable: true }],
-  discover: async () => [{ value: "acme/web", label: "web", group: "acme" }],
-  fetch: async () => ({ items: [], errors: [] }),
-};
+const github = provider({
+  scopeFields: [{
+    key: "repos",
+    label: "Repositories",
+    type: "multiselect",
+    discoverable: true,
+  }],
+  capabilities: {
+    discoverScope: true,
+    enrich: [],
+    actions: {},
+  },
+  adapter: {
+    refresh: async () => [],
+    discoverScope: async () => [{
+      value: "acme/web",
+      label: "web",
+      group: "acme",
+    }],
+  },
+});
 
 function mount(extra?: Partial<Parameters<typeof mountSettings>[1]>) {
   vi.stubGlobal("matchMedia", (q: string) => ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} }) as any);
   const host = document.createElement("div"); document.body.appendChild(host);
   const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
-  const s = mountSettings(host, { sources: [github], creds, scopes, policy, onChange: () => {}, ...extra });
+  const s = mountSettings(host, { providers: [github], creds, scopes, policy, onChange: () => {}, ...extra });
   return { host, creds, scopes, policy, s };
 }
 
@@ -103,11 +118,14 @@ describe("mountSettings", () => {
       { value: "acme/web", label: "web", group: "acme" },
       { value: "acme/api", label: "api", group: "acme" },
     ]);
-    const src: Source = { ...github, discover };
+    const src = {
+      ...github,
+      adapter: { ...github.adapter!, discoverScope: discover },
+    };
     const host = document.createElement("div"); document.body.appendChild(host);
     const creds = new CredStore(); const scopes = new ScopeStore();
     creds.set("github", "ghp_x");
-    const s = mountSettings(host, { sources: [src], creds, scopes, policy: new PolicyStore(), onChange: () => {} });
+    const s = mountSettings(host, { providers: [src], creds, scopes, policy: new PolicyStore(), onChange: () => {} });
     s.open("github");
 
     host.querySelector<HTMLElement>('[data-discover="repos"]')!.click();
@@ -145,36 +163,44 @@ describe("mountSettings", () => {
     expect(host.querySelectorAll(".ms-chip").length).toBe(1);               // saved selection shown
   });
 
-  it("shows one connection row per provider and saves the credential under the provider key", () => {
-    vi.stubGlobal("matchMedia", (q: string) => ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} }) as any);
-    const alerts: Source = {
-      id: "github", domain: "code-security", kinds: ["dependency-vuln"], connectSrc: [], status: "ready",
-      scopeSchema: [{ key: "repos", label: "Repositories", type: "multiselect", discoverable: true }],
-      discover: async () => [{ value: "acme/web", label: "web", group: "acme" }],
-      fetch: async () => ({ items: [], errors: [] }),
-    };
-    const reviews: Source = { ...alerts, id: "github-review", provider: "github", kinds: ["change-request"] };
-    const host = document.createElement("div"); document.body.appendChild(host);
-    const creds = new CredStore(); const scopes = new ScopeStore();
-    const s = mountSettings(host, { sources: [alerts, reviews], creds, scopes, policy: new PolicyStore(), onChange: () => {} });
-    s.open("github");
+  it("saves credentials under the stable provider id", () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: true,
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+    }) as any);
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const creds = new CredStore();
+    const settings = mountSettings(host, {
+      providers: [github],
+      creds,
+      scopes: new ScopeStore(),
+      policy: new PolicyStore(),
+      onChange: () => {},
+    });
 
-    // one row for the shared provider, not two
-    expect(host.querySelectorAll(".conn-item").length).toBe(1);
+    settings.open("github");
     const input = host.querySelector<HTMLInputElement>("[data-cred]")!;
-    input.value = "ghp_x"; input.dispatchEvent(new Event("input"));
+    input.value = "ghp_x";
+    input.dispatchEvent(new Event("input"));
     host.querySelector<HTMLElement>("[data-save]")!.click();
-    expect(creds.get("github")).toBe("ghp_x");        // saved under provider, shared by both sources
-  });
 
+    expect(host.querySelectorAll(".conn-item")).toHaveLength(1);
+    expect(creds.get("github")).toBe("ghp_x");
+  });
   it("shows saved repos as chips on open, before any discovery", () => {
     const discover = vi.fn(async () => [{ value: "acme/web", label: "web", group: "acme" }]);
-    const src: Source = { ...github, discover };
+    const src = {
+      ...github,
+      adapter: { ...github.adapter!, discoverScope: discover },
+    };
     const host = document.createElement("div"); document.body.appendChild(host);
     const creds = new CredStore(); const scopes = new ScopeStore();
     creds.set("github", "tok");
     scopes.set("github", { repos: ["acme/web", "acme/api"] });
-    const s = mountSettings(host, { sources: [src], creds, scopes, policy: new PolicyStore(), onChange: () => {} });
+    const s = mountSettings(host, { providers: [src], creds, scopes, policy: new PolicyStore(), onChange: () => {} });
     s.open("github");
     const chips = [...host.querySelectorAll(".ms-chip .repo")].map(c => c.textContent);
     expect(chips).toEqual(expect.arrayContaining(["acme/web", "acme/api"]));
@@ -182,9 +208,16 @@ describe("mountSettings", () => {
   });
 
   it("surfaces provider setup guidance (row ⓘ + form link)", () => {
-    const src: Source = { ...github, setup: { hint: "Use a fine-grained PAT.", url: "https://example.test/pat" } };
+    const src = {
+      ...github,
+      connection: {
+        ...github.connection,
+        setupHint: "Use a fine-grained PAT.",
+        setupUrl: "https://example.test/pat",
+      },
+    };
     const host = document.createElement("div"); document.body.appendChild(host);
-    const s = mountSettings(host, { sources: [src], creds: new CredStore(), scopes: new ScopeStore(), policy: new PolicyStore(), onChange: () => {} });
+    const s = mountSettings(host, { providers: [src], creds: new CredStore(), scopes: new ScopeStore(), policy: new PolicyStore(), onChange: () => {} });
     s.open("github");
     expect(host.querySelector(".conn-item .info")?.getAttribute("title")).toBe("Use a fine-grained PAT.");
     const link = host.querySelector<HTMLAnchorElement>(".set-link");
@@ -197,7 +230,7 @@ describe("mountSettings", () => {
     document.body.innerHTML = `<div id="h3"></div>`;
     const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
     const host = document.getElementById("h3")!;
-    const s = mountSettings(host, { sources: [github], creds, scopes, policy, onChange: () => {} });
+    const s = mountSettings(host, { providers: [github], creds, scopes, policy, onChange: () => {} });
     s.open("github");
     // switch to Scoring & priority
     host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
@@ -212,7 +245,7 @@ describe("mountSettings", () => {
     document.body.innerHTML = `<div id="h2"></div>`;
     const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
     const host = document.getElementById("h2")!;
-    const s = mountSettings(host, { sources: [github], creds, scopes, policy, onChange: () => {} });
+    const s = mountSettings(host, { providers: [github], creds, scopes, policy, onChange: () => {} });
     s.open("github");
     // switch to Scoring & priority
     host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
@@ -228,7 +261,7 @@ describe("mountSettings", () => {
     const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
     let changed = 0;
     const host = document.getElementById("h")!;
-    const s = mountSettings(host, { sources: [github], creds, scopes, policy, onChange: () => { changed++; } });
+    const s = mountSettings(host, { providers: [github], creds, scopes, policy, onChange: () => { changed++; } });
     s.open("github");
     // switch to Scoring & priority
     host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
@@ -245,7 +278,7 @@ describe("mountSettings", () => {
     document.body.innerHTML = `<div id="hbid"></div>`;
     const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
     const host = document.getElementById("hbid")!;
-    const s = mountSettings(host, { sources: [github], creds, scopes, policy, onChange: () => {} });
+    const s = mountSettings(host, { providers: [github], creds, scopes, policy, onChange: () => {} });
     s.open("github");
     host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
     expect(host.querySelector<HTMLElement>("[data-cat-pane='scoring']")!.textContent).toContain("built-in scoring");
@@ -256,7 +289,7 @@ describe("mountSettings", () => {
     document.body.innerHTML = `<div id="hgv"></div>`;
     const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
     const host = document.getElementById("hgv")!;
-    const s = mountSettings(host, { sources: [github], creds, scopes, policy, onChange: () => {} });
+    const s = mountSettings(host, { providers: [github], creds, scopes, policy, onChange: () => {} });
     s.open("github");
     host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
     const pane = host.querySelector<HTMLElement>("[data-cat-pane='scoring']")!;
@@ -276,7 +309,7 @@ describe("mountSettings", () => {
     document.body.innerHTML = `<div id="hgv2"></div>`;
     const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
     const host = document.getElementById("hgv2")!;
-    const s = mountSettings(host, { sources: [github], creds, scopes, policy, onChange: () => {} });
+    const s = mountSettings(host, { providers: [github], creds, scopes, policy, onChange: () => {} });
     s.open("github");
     host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
     const pane = host.querySelector<HTMLElement>("[data-cat-pane='scoring']")!;
