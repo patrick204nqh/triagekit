@@ -1,45 +1,70 @@
 # Context
 
-This file is the North Star for coding agents. Read it at session start — it contains
-active project state, current work, and critical conventions not covered by AGENTS.md.
+**Read this at every session start.** ↓ North Star (human, stable) stays above the line;
+↓ Session State (AI-maintained) tracks active work.
 
-## Active branch
-- `feat/agent-handoff` — Agent Handoff feature for triage items
-- PR #14 open at https://github.com/patrick204nqh/triagekit/pull/14
+---
 
-## Feature summary
-"Generate brief" produces a reviewable agent handoff (Markdown + JSON) for a triage item.
-The brief renders inline inside the existing detail drawer (mode switch, no stacked panel).
+## North Star — Project Identity
 
-### UX flow
-1. Click a row → detail drawer slides in
-2. Click "Generate brief" → drawer body/foot replaced with brief content
-3. A `‹` back button in the drawer head restores the original detail view
-4. Actions: Copy Markdown (primary), Download .md, Download .json
+`triagekit` compiles into a single self-contained HTML dashboard for repo triage that runs
+entirely in the browser — no backend, no build server, no third-party scripts. GitHub is
+the first provider; it groups triage into **Findings** (Dependabot alerts, code scanning)
+and **Work** (pull requests, issues), each scored, tiered, and sortable.
 
-### Architecture
-Four-unit handoff pipeline: projector → validator → markdown renderer → transport
-(controller wires them). Per-kind intent defaults in `handoff/intent.ts`.
-
-## Key files
-- `src/runtime/handoff/controller.ts` — data/transport methods, no surface management
-- `src/runtime/layout/table/detail-panel.ts` — `showBriefInDrawer()` inline render
-- `src/runtime/layout/table/kind-renderer.ts` — `HandoffController` field on `DetailCtx`
-- `src/runtime/shell/app-shell.ts` — controller instantiation
-
-## CSS conventions
-- Buttons: `.act` / `.act.primary` / `.act.danger` (drawer foot), `.btn-primary` / `.btn-ghost` (settings)
-- Icon buttons in drawer head: `.drawer-close`
-- Toolbar icon buttons: `.icon-btn`
-- Never write new CSS before checking existing classes
+- TypeScript, compiled with `tsc`; tested with `vitest`
+- Package `triagekit` (MIT) · repo `patrick204nqh/triagekit` · author Patrick (@patrick204nqh)
 
 ## Design
-- Void Zinc palette, Kelp Teal accent
-- Space Grotesk (UI) + JetBrains Mono (code)
-- P0–P3 priority ramp
-- See `PRODUCT.md` and `DESIGN.md` for full design system
 
-## Tests
-- `npm test` — full vitest suite (~450 tests)
-- 81 pre-existing localStorage failures (unrelated to this work)
-- All handoff+dashboard tests pass
+- **Palette:** Void Zinc (dark bg: `#1a1a1c`), Kelp Teal accent (`#2a7a6c`)
+- **Type:** Space Grotesk (UI) + JetBrains Mono (code)
+- **Priority ramp:** P0 (critical) → P1 (high) → P2 (medium) → P3 (low)
+- Full system: `PRODUCT.md` (strategy/voice) and `DESIGN.md` (visual specs)
+
+## CSS conventions
+
+Never write new CSS before checking existing classes. Button system:
+- Drawer foot actions → `.act` / `.act.primary` / `.act.danger`
+- Drawer head icon buttons → `.drawer-close`
+- Settings panels → `.btn-primary` / `.btn-ghost` / `.btn-ghost.mini`
+- Toolbar → `.icon-btn`
+
+## Key test commands
+
+- `npm test` — full vitest suite (~450 tests, 81 pre-existing localStorage failures)
+- `npm run build:cli` — compile `tsc`
+- `npm run lint:anon` — anonymisation guard (run if you touch example data)
+- `npm run build:pages` — rebuild demo HTML + Pages site
+
+---
+
+## Session State — Current Work
+
+| Property | Value |
+|----------|-------|
+| **Branch** | `feat/agent-handoff` |
+| **PR** | [#14](https://github.com/patrick204nqh/triagekit/pull/14) |
+| **Status** | Feature implementation complete, iterative UX polish |
+
+### Active work
+
+**Agent Handoff** — "Generate brief" produces a reviewable handoff (Markdown + JSON)
+inline inside the existing detail drawer. Mode switch: brief replaces body/foot,
+`‹` back button restores the original detail view.
+
+### Architecture snapshot
+
+Four-unit pipeline: projector → validator → markdown renderer → transport (controller
+wires them). Per-kind intent defaults in `handoff/intent.ts`. `kind-renderer.ts` carries
+`HandoffController` on `DetailCtx`. `app-shell.ts` instantiates the controller.
+
+### Recent commits (newest → oldest)
+
+| Commit | What |
+|--------|------|
+| 2edfb1f | add CONTEXT.md as north star file, enforce reading at session start |
+| c9be210 | back button: use drawer-close class + text entity, remove custom CSS |
+| 2872b9c | fix brief button consistency: use .act system to match drawer footer pattern |
+| 511717f | brief: add back arrow to restore original detail view |
+| 8d7d56a | agent handoff: inline brief in detail drawer, remove separate brief-surface panel |

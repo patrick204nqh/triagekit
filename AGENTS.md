@@ -7,6 +7,11 @@ by OpenCode (via `opencode.json` → `instructions`). Plain Markdown, per <https
 current work state, key files, and conventions that override defaults. Do not proceed
 with any task until CONTEXT.md has been read.
 
+The top half (North Star) is human-authored and stable — project identity, design system,
+CSS conventions, test commands. The bottom half (Session State) is AI-maintained —
+update it when work shifts (new branch, new feature, changed priorities). Keep the North
+Star section clean; let the Session State section carry transient context.
+
 ## Project overview
 
 `triagekit` compiles into a single, self-contained HTML dashboard for repo triage that runs
