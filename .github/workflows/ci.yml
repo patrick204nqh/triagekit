@@ -15,26 +15,5 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - name: Unit tests
-        run: npm test
-      - name: Anonymity lint
-        run: npm run lint:anon
-      - name: Build smoke test
-        run: |
-          npm run build:cli
-          node dist-cli/cli/index.js build -c triage.config.example.yml
-          test -f dist/triage.html
-          if grep -q 'src="http' dist/triage.html; then
-            echo "✗ built HTML references an external script — single-file invariant broken"
-            exit 1
-          fi
-          echo "✓ dist/triage.html is self-contained"
-      - name: Pages artifact in sync
-        run: |
-          npm run build:pages
-          if ! git diff --quiet -- site/app/index.html; then
-            echo "✗ site/app/index.html is stale — run 'npm run build:pages' and commit the result"
-            git diff -- site/app/index.html | head -40
-            exit 1
-          fi
-          echo "✓ site/app/index.html matches a fresh generic build"
+      - name: Verify
+        run: npm run check
