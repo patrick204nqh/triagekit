@@ -37,7 +37,7 @@ Never write new CSS before checking existing classes. Button system:
 - `npm run lint:anon` — anonymisation guard (run if you touch example data)
 - `npm run build:pages` — rebuild demo HTML + Pages site
 
-<NORTH_END>
+<NORTH_STAR_END>
 
 ---
 
