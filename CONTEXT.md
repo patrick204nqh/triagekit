@@ -3,7 +3,7 @@
 **Read this at every session start.** ↓ North Star (human, stable) stays above the line;
 ↓ Session State (AI-maintained) tracks active work.
 
----
+<NORTH_START>
 
 ## North Star — Project Identity
 
@@ -36,6 +36,8 @@ Never write new CSS before checking existing classes. Button system:
 - `npm run build:cli` — compile `tsc`
 - `npm run lint:anon` — anonymisation guard (run if you touch example data)
 - `npm run build:pages` — rebuild demo HTML + Pages site
+
+<NORTH_END>
 
 ---
 
