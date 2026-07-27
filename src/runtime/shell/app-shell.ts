@@ -328,7 +328,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   const root = document.getElementById("root")!;
   const handoffHost = document.createElement("div");
   handoffHost.id = "handoff-host";
-  root.appendChild(handoffHost);
+  document.body.appendChild(handoffHost);
   const handoffController = new HandoffController({
     session: () => session.snapshot(),
     scoreExplain,
