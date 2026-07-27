@@ -6,37 +6,50 @@ commands. Below it is AI-maintained session state — update when work shifts.
 
 <GOAL>
 
-## North Star — Project Identity
+`triagekit` (MIT) · repo `patrick204nqh/triagekit` · author **Patrick (@patrick204nqh)**
+— single self-contained HTML dashboard for repo triage, runs entirely in the browser.
+TypeScript, compiled with `tsc`; tested with `vitest`.
 
-`triagekit` compiles into a single self-contained HTML dashboard for repo triage that runs
-entirely in the browser — no backend, no build server, no third-party scripts. GitHub is
-the first provider; it groups triage into **Findings** (Dependabot alerts, code scanning)
-and **Work** (pull requests, issues), each scored, tiered, and sortable.
+## Build and test commands
 
-- TypeScript, compiled with `tsc`; tested with `vitest`
-- Package `triagekit` (MIT) · repo `patrick204nqh/triagekit` · author Patrick (@patrick204nqh)
+| Command | Purpose |
+|---------|---------|
+| `npm run build:cli` | compile CLI (`tsc`) |
+| `npm run build:pages` | build demo HTML and Pages site |
+| `npm test` | full vitest suite (~450 tests, 81 pre-existing localStorage failures) |
+| `npm run lint:anon` | anonymisation lint (run if you touched example data) |
+| `npm run pack:smoke` | npm pack smoke test |
 
-## Design
+PR checklist: `npm test` must stay green; run `lint:anon` if you touched example data.
 
-- **Palette:** Void Zinc (dark bg: `#1a1a1c`), Kelp Teal accent (`#2a7a6c`)
-- **Type:** Space Grotesk (UI) + JetBrains Mono (code)
-- **Priority ramp:** P0 (critical) → P1 (high) → P2 (medium) → P3 (low)
-- Full system: `PRODUCT.md` (strategy/voice) and `DESIGN.md` (visual specs)
+## Code style and conventions
 
-## CSS conventions
+- **Never commit real repo names or tokens.** Examples use fictional `acme-corp` data.
+- **No trackers in build artifact.** Analytics live only on the hosted landing/site.
+- **Use existing CSS classes first** — never write new CSS before checking what exists.
+  Button system: `.act` / `.act.primary` / `.act.danger` (drawer foot),
+  `.drawer-close` (drawer head), `.btn-primary` / `.btn-ghost` (settings panels).
+- Match surrounding code style; output is a single self-contained HTML file.
 
-Never write new CSS before checking existing classes. Button system:
-- Drawer foot actions → `.act` / `.act.primary` / `.act.danger`
-- Drawer head icon buttons → `.drawer-close`
-- Settings panels → `.btn-primary` / `.btn-ghost` / `.btn-ghost.mini`
-- Toolbar → `.icon-btn`
+## PR and commit guidelines
 
-## Key test commands
+- **No AI co-author attribution** — no `Co-Authored-By` or AI footers (also enforced
+  in `.claude/settings.json`).
+- Keep PRs scoped; note verification (e.g. `npm test` result) in the description.
 
-- `npm test` — full vitest suite (~450 tests, 81 pre-existing localStorage failures)
-- `npm run build:cli` — compile `tsc`
-- `npm run lint:anon` — anonymisation guard (run if you touch example data)
-- `npm run build:pages` — rebuild demo HTML + Pages site
+## Design context
+
+`PRODUCT.md` (register, users, brand personality, voice) and `DESIGN.md` (visual system:
+Void Zinc palette, Kelp Teal accent, Space Grotesk + JetBrains Mono, P0–P3 priority
+ramp, component specs). Read both before UI/design work. `DESIGN.md` wins on visual
+decisions; `PRODUCT.md` wins on strategic/voice decisions.
+
+## Skills and config
+
+- `.claude/skills/` is git-ignored; OpenCode shares the same directory.
+- Primary design skill: **`impeccable`** (`npx skills add https://github.com/impeccable-software/impeccable`).
+- OpenCode plugins: `superpowers` (github.com/obra/superpowers).
+- Config: `.claude/settings.json` (team, committed), `settings.local.json` (personal, ignored), `opencode.json`.
 
 <GOAL_END>
 
