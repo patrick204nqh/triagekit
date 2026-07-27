@@ -8,6 +8,10 @@ const pkg = JSON.parse(
   readFileSync(resolve(root, "package.json"), "utf8"),
 ) as { scripts: Record<string, string> };
 const ci = readFileSync(resolve(root, ".github/workflows/ci.yml"), "utf8");
+const release = readFileSync(
+  resolve(root, ".github/workflows/release.yml"),
+  "utf8",
+);
 
 describe("developer verification commands", () => {
   it("runs the complete ordinary check sequentially", () => {
@@ -26,5 +30,12 @@ describe("developer verification commands", () => {
     expect(ci).toContain("run: npm run check");
     expect(ci).not.toContain("node dist-cli/cli/index.js build");
     expect(ci).not.toContain("git diff --quiet");
+  });
+
+  it("delegates release validation to the release check", () => {
+    expect(release).toContain("run: npm run check:release");
+    expect(release).not.toContain("run: npm test");
+    expect(release).not.toContain("run: npm run lint:anon");
+    expect(release).not.toContain("run: npm run pack:smoke");
   });
 });

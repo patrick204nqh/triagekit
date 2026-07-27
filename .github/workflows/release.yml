@@ -30,22 +30,8 @@ jobs:
             exit 1
           fi
           echo "✓ tag $REF matches package.json version"
-      - name: Unit tests
-        run: npm test
-      - name: Anonymity lint
-        run: npm run lint:anon
-      - name: Build smoke test
-        run: |
-          npm run build:cli
-          node dist-cli/cli/index.js build -c triage.config.example.yml
-          test -f dist/triage.html
-          if grep -q 'src="http' dist/triage.html; then
-            echo "✗ built HTML references an external script — single-file invariant broken"
-            exit 1
-          fi
-          echo "✓ dist/triage.html is self-contained"
-      - name: Tarball smoke test
-        run: npm run pack:smoke
+      - name: Verify release
+        run: npm run check:release
       - name: Publish to npm (with provenance)
         run: npm publish --provenance --access public
         env:
