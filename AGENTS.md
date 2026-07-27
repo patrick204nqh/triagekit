@@ -3,6 +3,10 @@
 Guidance for coding agents working in **triagekit**. Read automatically by Claude Code and
 by OpenCode (via `opencode.json` → `instructions`). Plain Markdown, per <https://agents.md>.
 
+**IMPORTANT: Read `CONTEXT.md` at every session start.** It contains the active branch,
+current work state, key files, and conventions that override defaults. Do not proceed
+with any task until CONTEXT.md has been read.
+
 ## Project overview
 
 `triagekit` compiles into a single, self-contained HTML dashboard for repo triage that runs

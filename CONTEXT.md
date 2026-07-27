@@ -1,41 +1,45 @@
-# Triage
+# Context
 
-Triagekit normalizes repository work and findings so they can be assessed consistently without losing their provider identity.
+This file is the North Star for coding agents. Read it at session start — it contains
+active project state, current work, and critical conventions not covered by AGENTS.md.
 
-## Language
+## Active branch
+- `feat/agent-handoff` — Agent Handoff feature for triage items
+- PR #14 open at https://github.com/patrick204nqh/triagekit/pull/14
 
-**Triage Item**:
-A normalized finding or piece of work that can be scored, filtered, and acted upon.
-_Avoid_: Record, entry
+## Feature summary
+"Generate brief" produces a reviewable agent handoff (Markdown + JSON) for a triage item.
+The brief renders inline inside the existing detail drawer (mode switch, no stacked panel).
 
-**Kind**:
-A provider-neutral category of Triage Item with shared meaning, fields, scoring, and presentation.
-_Avoid_: Type, resource
+### UX flow
+1. Click a row → detail drawer slides in
+2. Click "Generate brief" → drawer body/foot replaced with brief content
+3. A `‹` back button in the drawer head restores the original detail view
+4. Actions: Copy Markdown (primary), Download .md, Download .json
 
-**Provider**:
-An external repository system that supplies Triage Items and may support actions on them.
-_Avoid_: Source, integration
+### Architecture
+Four-unit handoff pipeline: projector → validator → markdown renderer → transport
+(controller wires them). Per-kind intent defaults in `handoff/intent.ts`.
 
-**Provider Reference**:
-An opaque provider-owned identity retained with a Triage Item so the Provider can later enrich or act on it. Triagekit stores and returns it but does not interpret it.
-_Avoid_: Provider metadata, raw payload
+## Key files
+- `src/runtime/handoff/controller.ts` — data/transport methods, no surface management
+- `src/runtime/layout/table/detail-panel.ts` — `showBriefInDrawer()` inline render
+- `src/runtime/layout/table/kind-renderer.ts` — `HandoffController` field on `DetailCtx`
+- `src/runtime/shell/app-shell.ts` — controller instantiation
 
-**Triage Session**:
-A focused period in which an operator selects what to triage and narrows the visible Triage Items while preserving useful navigation choices.
-_Avoid_: Workspace, page state
+## CSS conventions
+- Buttons: `.act` / `.act.primary` / `.act.danger` (drawer foot), `.btn-primary` / `.btn-ghost` (settings)
+- Icon buttons in drawer head: `.drawer-close`
+- Toolbar icon buttons: `.icon-btn`
+- Never write new CSS before checking existing classes
 
-**Agent Handoff**:
-A portable, human-approved request that gives an agent one bounded outcome, its Triage Item targets, and enough supporting context to continue the work outside triagekit.
-_Avoid_: Prompt, export, agent session
+## Design
+- Void Zinc palette, Kelp Teal accent
+- Space Grotesk (UI) + JetBrains Mono (code)
+- P0–P3 priority ramp
+- See `PRODUCT.md` and `DESIGN.md` for full design system
 
-**Handoff Target**:
-A Triage Item the agent is explicitly expected to act on as part of an Agent Handoff. The first handoff workflow has exactly one Handoff Target.
-_Avoid_: Selected item, task
-
-**Handoff Context**:
-Supporting information included in an Agent Handoff that helps the agent understand the target but does not independently authorize work on another Triage Item.
-_Avoid_: Extra targets, page state
-
-**Agent Brief**:
-The human-readable projection of an Agent Handoff that an operator reviews before copying, downloading, or sending it.
-_Avoid_: Agent mode, prompt preview
+## Tests
+- `npm test` — full vitest suite (~450 tests)
+- 81 pre-existing localStorage failures (unrelated to this work)
+- All handoff+dashboard tests pass
