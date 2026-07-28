@@ -31,6 +31,15 @@ export const issueKind: KindDeclaration = {
   sorts: [],
   charts: [],
   views: [issueView],
+  insights: {
+    owned: (item) =>
+      Boolean((item.details as ReviewDetails | undefined)?.assignees?.length),
+    evidenced: (item) =>
+      Boolean(
+        item.title
+        && (item.details as ReviewDetails | undefined)?.state,
+      ),
+  },
   projectTarget: (item) => {
     const d = item.details as ReviewDetails | undefined;
     return {

@@ -43,6 +43,20 @@ export const dependencyVulnKind: KindDeclaration = {
   sorts: dependencyVulnSorts,
   charts: dependencyVulnCharts,
   views: [dependencyVulnView],
+  insights: {
+    actionable: (item) =>
+      (item.details as DependencyVulnDetails | undefined)?.fixAvailable === true,
+    evidenced: (item) => {
+      const details = item.details as DependencyVulnDetails | undefined;
+      return Boolean(details?.package && details.severity);
+    },
+    dedupeKey: (item) => {
+      const details = item.details as DependencyVulnDetails | undefined;
+      return details?.package
+        ? `${item.location}:${details.package}`
+        : undefined;
+    },
+  },
   projectTarget: (item) => {
     const d = item.details as DependencyVulnDetails | undefined;
     return {

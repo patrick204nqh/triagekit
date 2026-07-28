@@ -41,6 +41,22 @@ export const codeScanningKind: KindDeclaration = {
   sorts: codeScanningSorts,
   charts: codeScanningCharts,
   views: [codeScanningView],
+  insights: {
+    evidenced: (item) => {
+      const details = item.details as CodeScanningDetails | undefined;
+      return Boolean(
+        details?.ruleId
+        && details.tool
+        && details.securitySeverity,
+      );
+    },
+    dedupeKey: (item) => {
+      const details = item.details as CodeScanningDetails | undefined;
+      return details?.ruleId
+        ? `${item.location}:${details.ruleId}:${details.location?.path ?? ""}`
+        : undefined;
+    },
+  },
   projectTarget: (item) => {
     const d = item.details as CodeScanningDetails | undefined;
     return {

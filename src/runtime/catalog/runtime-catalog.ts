@@ -223,6 +223,7 @@ export function createRuntimeCatalog(
   return Object.freeze({
     kind: (id: Kind) => kindMap.get(id),
     readyKind,
+    insightsFor: (kind: Kind) => readyKind(kind)?.insights,
     kinds: () => kinds,
     artifact: (id: Kind) => artifactMap.get(id),
     artifacts: () => artifacts,
