@@ -144,14 +144,7 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 .empty h3 { margin:0; font-weight:600; font-size:1.0625rem; }
 .empty p { margin:0; color:var(--muted); max-width:42ch; }
 
-/* ── Insights (separated charts surface) ───────────────────────────── */
-.insights { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
-.chart { background:var(--carbon); border:1px solid var(--line); border-radius:14px; padding:18px 20px; display:flex; flex-direction:column; gap:16px; }
-.chart.span2 { grid-column:1 / -1; }
-.chart-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
-.chart-title { font:600 12px var(--sans); color:var(--muted); letter-spacing:.04em; text-transform:uppercase; }
-.chart-title .k { font:500 10px var(--mono); color:var(--muted); background:var(--slate); border:1px solid var(--line); border-radius:999px; padding:1px 7px; margin-left:8px; text-transform:none; letter-spacing:0; }
-.chart-meta { font:500 12px var(--mono); color:var(--muted); white-space:nowrap; } .chart-meta b { color:var(--fg); font-weight:600; }
+/* ── Kind-contributed chart primitives ─────────────────────────────── */
 
 .tierbar { display:flex; height:12px; border-radius:999px; overflow:hidden; background:var(--slate); }
 .tierbar span { display:block; height:100%; width:0; transition:width .6s var(--spring); }
@@ -180,6 +173,247 @@ table.alerts tbody td.num { text-align:right; font-family:var(--mono); font-vari
 .ratio .track { height:12px; border-radius:999px; background:var(--slate); overflow:hidden; }
 .ratio .track span { display:block; height:100%; width:0; background:var(--accent); transition:width .6s var(--spring); }
 .ratio .sub { font-size:12px; color:var(--muted); }
+
+/* ── Insights operator briefing ────────────────────────────────────── */
+.insight-briefing {
+  max-width:1200px;
+  margin:0 auto;
+}
+.insight-heading {
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:24px;
+  padding:8px 0 22px;
+}
+.insight-heading h1,
+.insight-loading h1 {
+  font-size:1.25rem;
+  font-weight:600;
+  letter-spacing:-.02em;
+}
+.insight-heading p {
+  margin:3px 0 0;
+  color:var(--muted);
+}
+.insight-freshness {
+  color:var(--muted);
+  white-space:nowrap;
+}
+.insight-partial {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:18px;
+  margin-bottom:24px;
+  padding:10px 12px;
+  border:1px solid color-mix(in srgb,var(--p1) 50%,var(--line));
+  border-radius:8px;
+  background:color-mix(in srgb,var(--p1) 7%,transparent);
+}
+.insight-failures {
+  margin:0;
+  padding:0;
+  list-style:none;
+  color:var(--muted);
+  font-size:12px;
+}
+.insight-attention {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:end;
+  gap:8px 24px;
+  padding:22px 0 28px;
+  border-top:1px solid var(--line-strong);
+}
+.insight-attention h2,
+.insight-attention p {
+  grid-column:1;
+}
+.insight-attention .act {
+  grid-column:2;
+  grid-row:1 / span 2;
+}
+.insight-briefing h2 {
+  margin:0 0 4px;
+  font-size:1.0625rem;
+  font-weight:600;
+}
+.insight-briefing section > p {
+  margin:0;
+  max-width:70ch;
+}
+.insight-columns {
+  display:grid;
+  grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);
+  gap:40px;
+  padding:28px 0;
+  border-top:1px solid var(--line);
+}
+.insight-ranking,
+.insight-diagnostics {
+  margin:16px 0 0;
+  padding:0;
+  list-style:none;
+}
+.insight-rank-row {
+  width:100%;
+  min-height:44px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  padding:9px 8px;
+  border:0;
+  border-top:1px solid var(--line);
+  background:transparent;
+  color:var(--fg);
+  text-align:left;
+  font:inherit;
+  cursor:pointer;
+}
+.insight-rank-row:hover {
+  background:var(--carbon);
+}
+.insight-rank-name {
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.insight-rank-tiers {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  color:var(--muted);
+  font:500 12px var(--mono);
+  white-space:nowrap;
+}
+.insight-rank-tiers strong {
+  color:var(--fg);
+}
+.insight-age {
+  margin:16px 0 10px;
+}
+.insight-age > div,
+.insight-coverage-row {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:baseline;
+  gap:6px 18px;
+  padding:8px 0;
+  border-top:1px solid var(--line);
+}
+.insight-age dt {
+  color:var(--muted);
+}
+.insight-age dd {
+  margin:0;
+  font:600 13px var(--mono);
+  font-variant-numeric:tabular-nums;
+}
+.insight-briefing > section:not(.insight-attention) {
+  padding:28px 0;
+  border-top:1px solid var(--line);
+}
+.insight-coverage {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:28px;
+  margin-top:14px;
+}
+.insight-coverage-row {
+  grid-template-columns:minmax(0,1fr) auto;
+}
+.insight-coverage-row .muted {
+  grid-column:1 / -1;
+  font-size:12px;
+}
+.insight-diagnostic {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:24px;
+  padding:12px 0;
+  border-top:1px solid var(--line);
+}
+.insight-diagnostic p {
+  margin:2px 0 0;
+  color:var(--muted);
+}
+.insight-empty h1 {
+  font-size:1.0625rem;
+  font-weight:600;
+}
+.insight-loading {
+  max-width:1200px;
+  margin:0 auto;
+}
+.insight-loading [role="status"] {
+  color:var(--muted);
+}
+.insight-skeleton {
+  height:260px;
+  margin-top:24px;
+  border-radius:12px;
+  background:linear-gradient(90deg,var(--slate) 0%,var(--carbon) 40%,var(--slate) 80%);
+  background-size:200% 100%;
+  animation:shimmer 1.3s linear infinite;
+}
+.tb-view:focus-visible,
+.insight-rank-row:focus-visible,
+.insight-briefing .act:focus-visible {
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+}
+@media (max-width:960px) {
+  .insight-columns {
+    grid-template-columns:1fr;
+    gap:28px;
+  }
+  .insight-coverage {
+    grid-template-columns:1fr;
+    gap:0;
+  }
+}
+@media (max-width:600px) {
+  .insight-heading,
+  .insight-partial,
+  .insight-diagnostic {
+    align-items:stretch;
+    flex-direction:column;
+  }
+  .insight-attention {
+    grid-template-columns:1fr;
+  }
+  .insight-attention .act {
+    grid-column:1;
+    grid-row:auto;
+    width:100%;
+    min-height:44px;
+  }
+  .insight-rank-row {
+    align-items:flex-start;
+    flex-direction:column;
+    gap:5px;
+  }
+  .insight-rank-tiers {
+    flex-wrap:wrap;
+  }
+}
+@media (pointer:coarse) {
+  .tb-view,
+  .tb-btn,
+  .repo-tab,
+  .insight-briefing button {
+    min-height:44px;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  .insight-skeleton {
+    animation:none;
+  }
+}
 
 /* ── Slide-over base (table drawer + settings panel) ───────────────── */
 .scrim { position:fixed; inset:0; background:var(--scrim); opacity:0; pointer-events:none; transition:opacity .25s; z-index:10; }
@@ -413,7 +647,6 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
   .rail-group + .rail-group { margin:0 0 0 10px; padding:0 0 0 12px;
                               border-top:0; border-left:1px solid var(--line); }
   #appbar, .domains, .viewswitch, main { padding-left:16px; padding-right:16px; }
-  .insights { grid-template-columns:1fr; }
   .barrow { grid-template-columns:110px 1fr 28px; gap:10px; }
   /* Settings panel goes full-width and collapses to a single column. */
   .panel { left:0; right:0; width:auto; }

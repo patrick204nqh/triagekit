@@ -117,6 +117,39 @@ describe("renderToolbar", () => {
     const active = host.querySelector(".tb-view.active");
     expect(active?.textContent).toBe("List");
   });
+
+  it("uses accessible tab semantics for dashboard views", () => {
+    const host = document.createElement("div");
+    renderToolbar(host, props());
+
+    const tablist = host.querySelector(".tb-left");
+    const tabs = host.querySelectorAll<HTMLElement>(".tb-view");
+    expect(tablist?.getAttribute("role")).toBe("tablist");
+    expect(tablist?.getAttribute("aria-label")).toBe("Dashboard view");
+    expect(tabs[0].getAttribute("role")).toBe("tab");
+    expect(tabs[0].getAttribute("aria-selected")).toBe("true");
+    expect(tabs[0].getAttribute("tabindex")).toBe("0");
+    expect(tabs[0].getAttribute("aria-controls")).toBe("root");
+    expect(tabs[1].getAttribute("aria-selected")).toBe("false");
+    expect(tabs[1].getAttribute("tabindex")).toBe("-1");
+  });
+
+  it("moves and activates view tabs with arrow keys", () => {
+    const host = document.createElement("div");
+    document.body.append(host);
+    const onViewChange = vi.fn();
+    renderToolbar(host, props({ onViewChange }));
+    const tabs = host.querySelectorAll<HTMLElement>(".tb-view");
+
+    tabs[0].dispatchEvent(new KeyboardEvent("keydown", {
+      key: "ArrowRight",
+      bubbles: true,
+    }));
+
+    expect(onViewChange).toHaveBeenCalledWith("insights");
+    expect(document.activeElement).toBe(tabs[1]);
+  });
+
   it("renders Filter and Sort buttons", () => {
     const host = document.createElement("div");
     renderToolbar(host, props());

@@ -60,8 +60,10 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
   const shown = applyFilters(p.rows, p.filters, catalog).length;
   const countLabel = shown === total ? `${total}` : `${shown} / ${total}`;
 
-  const views = p.viewModes.map(v =>
-    `<button class="tb-view${v.id === p.activeView ? " active" : ""}" data-view="${esc(v.id)}">${esc(v.label)}</button>`).join("");
+  const views = p.viewModes.map(v => {
+    const active = v.id === p.activeView;
+    return `<button id="view-tab-${esc(v.id)}" class="tb-view${active ? " active" : ""}" data-view="${esc(v.id)}" role="tab" aria-selected="${active}" aria-controls="root" tabindex="${active ? "0" : "-1"}">${esc(v.label)}</button>`;
+  }).join("");
 
   const axisGroup = (a: FilterAxis) => {
     const opts = a.optionsFrom(p.rows, ctx);
@@ -87,7 +89,7 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
   // Row 1: view tabs + provider scope switch (top-right)
   // Row 2 (.fbar): Filter + Sort controls, right-aligned, directly above the table
   host.innerHTML = `<div class="toolbar">
-    <div class="tb-left">${views}<span class="tb-count">${countLabel}</span></div>
+      <div class="tb-left" role="tablist" aria-label="Dashboard view">${views}<span class="tb-count">${countLabel}</span></div>
     <div class="tb-right"><div data-provider-switch></div></div>
   </div>
   <div class="fbar">
@@ -106,8 +108,23 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
   renderRepoTabs(repoHost, { repos: p.repos, active: p.activeRepo, onSelect: p.onRepoSelect });
 
   // View tabs
-  host.querySelectorAll<HTMLElement>(".tb-view").forEach(b =>
-    b.addEventListener("click", () => p.onViewChange(b.dataset.view!)));
+  const viewButtons = [
+    ...host.querySelectorAll<HTMLElement>(".tb-view"),
+  ];
+  viewButtons.forEach((button, index) => {
+    button.addEventListener("click", () =>
+      p.onViewChange(button.dataset.view!));
+    button.addEventListener("keydown", (event) => {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      event.preventDefault();
+      const offset = event.key === "ArrowRight" ? 1 : -1;
+      const next = viewButtons[
+        (index + offset + viewButtons.length) % viewButtons.length
+      ];
+      next.focus();
+      p.onViewChange(next.dataset.view!);
+    });
+  });
 
   // Emit helper for filter mutations (clone like filter-state does).
   const emit = (mut: (s: ListState) => void) => {
