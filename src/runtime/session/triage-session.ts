@@ -1,6 +1,7 @@
 import { ConfigError } from "../core/errors.js";
 import type { RuntimeCatalog } from "../catalog/types";
 import type { Kind } from "../dataset/item";
+import type { ResolvedInsightRoute } from "../insights/routes";
 import {
   emptyListState,
   pruneFilters,
@@ -207,6 +208,19 @@ export function createTriageSession(
       return update({
         ...state,
         filters: normalizeFilters(state.kind, filters),
+      }, "rederive");
+    },
+
+    openInsightRoute(
+      route: Extract<ResolvedInsightRoute, { destination: "list" }>,
+    ) {
+      return update({
+        kind: route.kind,
+        provider: providerFor(route.kind, state.provider),
+        preferredRepository: route.preferredRepository,
+        effectiveRepository: route.preferredRepository,
+        view: "list",
+        filters: normalizeFilters(route.kind, route.filters),
       }, "rederive");
     },
 
