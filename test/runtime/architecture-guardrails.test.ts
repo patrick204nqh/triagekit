@@ -45,6 +45,7 @@ describe("runtime architecture guardrails", () => {
       "providers/github.ts",
       "scoring/registry.ts",
       "scoring/default-model.ts",
+      "layout/charts/generic.ts",
     ];
 
     for (const relative of retired) {

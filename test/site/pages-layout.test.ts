@@ -40,5 +40,9 @@ describe("site/ Pages layout", () => {
     const html = readFileSync(app, "utf8");
     expect(html).not.toContain("goatcounter");
     expect(html).not.toMatch(/src=["']https?:/);
+    expect(html).toContain("Attention now");
+    expect(html).not.toContain("No items to chart yet");
+    expect(html).not.toMatch(/<script[^>]+src=["']https?:/i);
+    expect(html).not.toMatch(/<link[^>]+href=["']https?:[^>]+(?:font|stylesheet)/i);
   });
 });

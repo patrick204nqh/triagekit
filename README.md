@@ -19,12 +19,12 @@ the browser — no backend, no build server, no third-party scripts, and no toke
 (you paste your own at runtime). GitHub is the first provider: it groups what you triage
 into **Findings** (Dependabot alerts, code scanning) and **Work** (pull requests, issues),
 each scored, tiered, and sortable from a data-driven toolbar. PRs and issues open a review
-panel with avatars and full-Markdown bodies; an optional **Insights** view swaps the table
-for compositional charts.
+panel with avatars and full-Markdown bodies; **Insights** adds a cross-dashboard operator
+briefing beside List.
 
 <p align="center">
   <a href="https://patrick204nqh.github.io/triagekit/app/">
-    <img alt="triagekit walkthrough — Dependencies findings, Insights charts, Code scanning, and the PR review panel" src="site/screenshots/walkthrough.gif" width="820" />
+    <img alt="triagekit walkthrough — Dependencies findings, Insights operator briefing, Code scanning, and the PR review panel" src="site/screenshots/walkthrough.gif" width="820" />
   </a>
   <br />
   <em><a href="https://patrick204nqh.github.io/triagekit/">Live demo →</a> · screenshots use fictional <code>acme-corp</code> data — the tool never ships or commits real repo names or tokens.</em>
@@ -74,7 +74,6 @@ scope:
     - acme-corp/billing-service
 views:
   - code-security        # security findings: Dependabot + code scanning
-  # - insights           # add to enable the Insights (charts) tab
 branding:
   title: "Acme Triage"
 # Optional: a JS/TS module exporting scoring overrides.
@@ -117,17 +116,19 @@ Compiled builds seed their baked `scope` automatically, so a turnkey dashboard o
 
 ## Insights
 
-The optional **Insights** view (add `insights` to `views`) renders a grid of charts for the
-loaded items — a separate surface so the table stays a clean cockpit.
+**Insights** is a standard dashboard view beside List. It refreshes every connected, ready
+triage surface and turns the current snapshot into an operator briefing: urgent work,
+repository concentration, backlog age, coverage, and diagnostics about how effectively the
+triage function is separating and enriching work.
 
-<p align="center"><img alt="triagekit Insights — quick-wins ratio, priority distribution, age buckets, top locations" src="site/screenshots/insights.png" width="820" /></p>
+<p align="center"><img alt="triagekit Insights operator briefing — urgent work, repository concentration, age, coverage, and triage diagnostics" src="site/screenshots/insights.png" width="820" /></p>
 
-- **Snapshot-only.** Every chart is compositional (distribution / ranking / ratio), never a
-  time-series — a backend-free fetch has no history to trend.
-- **Contributed per kind.** Generic charts (priority distribution, age buckets, top
-  locations) apply to everything; `dependency-vuln` adds a fix-available "quick wins" ratio
-  and a runtime-vs-development split; `code-scanning` adds open-by-severity and by-tool
-  breakdowns. New sources light up their own charts automatically.
+- **Snapshot-only.** Insights reports the state visible now; it never claims trends,
+  throughput, or remediation time without historical data.
+- **Actionable.** Repository and priority findings drill into the matching List context.
+  Scoring and filter diagnostics open the settings workflow.
+- **Truthful coverage.** Unsupported, stale, and partially refreshed surfaces stay visible
+  instead of being presented as zero.
 
 ## Customizing the scoring
 
