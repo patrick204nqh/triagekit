@@ -188,4 +188,36 @@ describe("buildInsightSnapshot", () => {
     });
     expect(snapshot.attention.actionableUrgentDenominator).toBeGreaterThanOrEqual(0);
   });
+
+  it("feeds duplicate pressure into effectiveness diagnostics", () => {
+    const dependency = (id: string) => insightItem({
+      id,
+      kind: "dependency-vuln",
+      details: {
+        package: "same-package",
+        severity: "high",
+        cvss: 8,
+        scope: "runtime",
+        fixAvailable: true,
+        fixVersion: "2.0.0",
+      },
+    });
+    const snapshot = buildInsightSnapshot({
+      items: [dependency("one"), dependency("two")],
+      readyKinds: ["dependency-vuln"],
+      refreshedKinds: ["dependency-vuln"],
+      catalog: runtimeCatalog,
+      score: scoreContextFixture(runtimeCatalog),
+      botLogins: [],
+      now: NOW,
+    });
+
+    expect(snapshot.diagnostics.map((entry) => entry.id)).toHaveLength(6);
+    expect(snapshot.diagnostics).toContainEqual(expect.objectContaining({
+      id: "noise-pressure",
+      numerator: 1,
+      denominator: 2,
+      severity: "attention",
+    }));
+  });
 });

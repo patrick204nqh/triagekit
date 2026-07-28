@@ -3,6 +3,7 @@ import type { Kind, TriageItem } from "../dataset/item";
 import type { ScoreContext } from "../scoring/configured";
 import { scoreAndTier } from "../scoring/configured";
 import type { Tier } from "../scoring/tier";
+import { diagnoseEffectiveness } from "./diagnostics";
 import type {
   AgeSummary,
   Concentration,
@@ -109,15 +110,38 @@ export function buildInsightSnapshot(
   let urgent = 0;
   let directlyActionable = 0;
   let actionableUrgentDenominator = 0;
+  let duplicateCount = 0;
+  let mutedBotCount = 0;
+  const scores: number[] = [];
+  const tiers: Tier[] = [];
+  const dedupeKeys = new Set<string>();
+  const mutedBots = new Set(
+    input.botLogins.map((login) => login.toLowerCase()),
+  );
 
   for (const item of input.items) {
     if (!ready.has(item.kind)) continue;
     const { score, tier } = scoreAndTier(item, input.score, input.catalog);
-    void score;
+    scores.push(score);
+    tiers.push(tier);
     all += 1;
     totals[tier] += 1;
 
     const capabilities = input.catalog.insightsFor(item.kind);
+    const dedupeKey = capabilities?.dedupeKey?.(item);
+    if (dedupeKey) {
+      if (dedupeKeys.has(dedupeKey)) duplicateCount += 1;
+      else dedupeKeys.add(dedupeKey);
+    }
+    const author = (item.details as {
+      author?: { login?: string; kind?: string };
+    } | undefined)?.author;
+    if (
+      author?.kind === "bot"
+      || (author?.login && mutedBots.has(author.login.toLowerCase()))
+    ) {
+      mutedBotCount += 1;
+    }
     if (capabilities?.actionable) {
       actionability.supported = true;
       actionability.denominator += 1;
@@ -181,6 +205,19 @@ export function buildInsightSnapshot(
       kinds: Object.freeze([...entry.kinds].sort()),
     }));
 
+  const actionabilityMetric = metric(actionability);
+  const ownershipMetric = metric(ownership);
+  const evidenceMetric = metric(evidence);
+  const diagnostics = diagnoseEffectiveness({
+    scores,
+    tiers,
+    actionability: actionabilityMetric,
+    ownership: ownershipMetric,
+    evidence: evidenceMetric,
+    duplicateCount,
+    mutedBotCount,
+  });
+
   return Object.freeze({
     generatedAt: input.now,
     coverage: Object.freeze({
@@ -196,9 +233,9 @@ export function buildInsightSnapshot(
     }),
     concentrations: Object.freeze(concentrationRows),
     age: Object.freeze({ ...age }),
-    actionability: metric(actionability),
-    ownership: metric(ownership),
-    evidence: metric(evidence),
-    diagnostics: Object.freeze([]),
+    actionability: actionabilityMetric,
+    ownership: ownershipMetric,
+    evidence: evidenceMetric,
+    diagnostics,
   });
 }
