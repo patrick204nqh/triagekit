@@ -14,6 +14,28 @@ const item = (id: string, kind: TriageItem["kind"] = "issue"): TriageItem => ({
 });
 
 describe("dataset store", () => {
+  it("exposes an immutable provenance snapshot without exposing its map", () => {
+    const store = createStore();
+    store.upsert([item("github:1")], {
+      provider: "github",
+      scopeKey: "r1",
+      kind: "issue",
+      fetchedAt: 123,
+    });
+
+    const entries = store.entries();
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].provenance).toEqual({
+      provider: "github",
+      scopeKey: "r1",
+      kind: "issue",
+      fetchedAt: 123,
+    });
+    expect(Object.isFrozen(entries)).toBe(true);
+    expect(Object.isFrozen(entries[0])).toBe(true);
+    expect(Object.isFrozen(entries[0].provenance)).toBe(true);
+  });
   it("upsert adds items keyed by fingerprint (default = id); same fp replaces", () => {
     const s = createStore();
     s.upsert([item("github:1"), item("github:2")], { provider: "github", scopeKey: "r1", kind: "issue", fetchedAt: 1 });
