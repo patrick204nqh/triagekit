@@ -110,6 +110,116 @@ describe("mountShell artifact navigation", () => {
     }
   });
 
+  it("opens the settings category requested by an insight diagnostic", async () => {
+    sessionStorage.setItem("triagekit.cred.github", "token");
+    localStorage.setItem(
+      "triagekit.scope.github",
+      JSON.stringify({ repos: ["acme-corp/web"] }),
+    );
+    const fetchSpy = mockGithubItems([
+      dependencyItem("demo-package", "acme-corp/web"),
+    ]);
+
+    try {
+      bootstrap(configWithoutInsights);
+      await flush();
+      clickView("Insights");
+      await flush();
+      await flush();
+
+      const action = document.querySelector<HTMLButtonElement>(
+        "[data-diagnostic-action='scoring']",
+      );
+      expect(action).not.toBeNull();
+      action!.click();
+
+      expect(
+        document.querySelector<HTMLElement>("[data-category].on")
+          ?.dataset.category,
+      ).toBe("scoring");
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("does not replace List when an Insights refresh finishes after navigation", async () => {
+    sessionStorage.setItem("triagekit.cred.github", "token");
+    localStorage.setItem(
+      "triagekit.scope.github",
+      JSON.stringify({ repos: ["acme-corp/web"] }),
+    );
+    const fetchSpy = mockGithubItems([
+      dependencyItem("demo-package", "acme-corp/web"),
+    ]);
+
+    try {
+      bootstrap(configWithoutInsights);
+      await flush();
+      await flush();
+
+      let release!: () => void;
+      let completed = 0;
+      const pending = new Promise<void>((resolve) => { release = resolve; });
+      fetchSpy.mockImplementation(async () => {
+        await pending;
+        completed += 1;
+        return new Response("[]", { status: 200 });
+      });
+      fetchSpy.mockClear();
+
+      clickView("Insights");
+      expect(fetchSpy).toHaveBeenCalled();
+      clickView("List");
+      expect(document.querySelector(".tb-view.active")?.textContent).toBe("List");
+
+      release();
+      await vi.waitFor(() => expect(completed).toBe(fetchSpy.mock.calls.length));
+      await flush();
+      await flush();
+
+      expect(document.querySelector(".tb-view.active")?.textContent).toBe("List");
+      expect(document.querySelector("#root")?.textContent).not.toContain(
+        "Operator briefing",
+      );
+      expect(document.querySelector("#root .surface-body")).not.toBeNull();
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("refreshes Insights when the automatic refresh timer ticks", async () => {
+    sessionStorage.setItem("triagekit.cred.github", "token");
+    localStorage.setItem(
+      "triagekit.scope.github",
+      JSON.stringify({ repos: ["acme-corp/web"] }),
+    );
+    localStorage.setItem("triagekit.refresh", "300");
+    const intervalSpy = vi.spyOn(globalThis, "setInterval");
+    const fetchSpy = mockGithubItems([
+      dependencyItem("demo-package", "acme-corp/web"),
+    ]);
+
+    try {
+      bootstrap(configWithoutInsights);
+      await flush();
+      clickView("Insights");
+      await flush();
+      await flush();
+      fetchSpy.mockClear();
+
+      const timer = intervalSpy.mock.calls.find(([, delay]) => delay === 300_000);
+      expect(timer).toBeDefined();
+      (timer![0] as () => void)();
+      await flush();
+      await flush();
+
+      expect(fetchSpy).toHaveBeenCalled();
+    } finally {
+      fetchSpy.mockRestore();
+      intervalSpy.mockRestore();
+    }
+  });
+
   it("renders the brand and an artifact rail with the live artifact active", () => {
     bootstrap(config);
     expect(document.querySelector("#appbar .brand .brand-mark")).toBeTruthy();

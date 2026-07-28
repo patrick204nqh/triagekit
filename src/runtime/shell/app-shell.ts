@@ -334,7 +334,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       repositories: [...new Set(env.store.snapshot().map((item) => item.location))],
     });
     if (resolved.destination === "settings") {
-      openSettings();
+      settings.open(primaryProvider(active).id, resolved.category);
       return;
     }
     applySessionUpdate(session.openInsightRoute(resolved));
@@ -391,6 +391,10 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
           : job.kinds.filter((kind) => !failedKinds.has(kind)),
       ))];
       insightSnapshot = projectInsights();
+      if (currentView() !== "insights") {
+        core.rerender();
+        return;
+      }
       const hasItems = env.store.snapshot().length > 0;
       renderInsights(root, insightSnapshot, {
         state: hasItems
@@ -508,7 +512,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     root.setAttribute("role", "tabpanel");
     root.setAttribute("aria-labelledby", `view-tab-${currentView()}`);
     if (currentView() === "insights") {
-      void presentInsights(!silent);
+      void presentInsights(true);
       return;
     }
 

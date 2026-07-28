@@ -47,6 +47,21 @@ describe("mountSettings", () => {
     expect(host.querySelectorAll("[data-theme-seg] [data-theme]").length).toBe(3);
   });
 
+  it.each(["scoring", "filters"] as const)(
+    "opens directly to the requested %s category",
+    (category) => {
+      const { host, s } = mount();
+      s.open("github", category);
+
+      expect(
+        host.querySelector<HTMLElement>("[data-category].on")?.dataset.category,
+      ).toBe(category);
+      expect(
+        host.querySelector<HTMLElement>(`[data-cat-pane="${category}"]`)?.hidden,
+      ).toBe(false);
+    },
+  );
+
   it("commits a typed credential only on Save", () => {
     const { host, creds, s } = mount();
     s.open("github");

@@ -41,6 +41,7 @@ const CATEGORIES = [
   ["filters", "Filters"],
   ["general", "General"],
 ] as const;
+type SettingsCategory = (typeof CATEGORIES)[number][0];
 
 interface Opts {
   catalog?: RuntimeCatalog;
@@ -523,7 +524,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   // [data-…] regardless of which category is active. The scoring pane renders
   // lazily on first reveal — preserving the old Advanced-tab behavior.
   let scoringRendered = false;
-  function showCategory(id: string) {
+  function showCategory(id: SettingsCategory) {
     host.querySelectorAll<HTMLElement>("[data-category]").forEach(b =>
       b.classList.toggle("on", b.dataset.category === id));
     host.querySelectorAll<HTMLElement>("[data-cat-pane]").forEach(p =>
@@ -531,17 +532,18 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     if (id === "scoring" && !scoringRendered) { renderScoring(); scoringRendered = true; }
   }
   host.querySelectorAll<HTMLElement>("[data-category]").forEach(b =>
-    b.addEventListener("click", () => showCategory(b.dataset.category!)));
+    b.addEventListener("click", () =>
+      showCategory(b.dataset.category as SettingsCategory)));
 
   return {
-    open(provider?: string) {
+    open(provider?: string, category: SettingsCategory = "connections") {
       expanded = provider ?? (providerReps[0] ? providerOf(providerReps[0]) : null);
       draftCred.clear(); draftScope.clear(); draftTiers = null; draftModels.clear(); draftBots = null;
       savedTheme = getThemeChoice(); draftTheme = null;
       savedRefresh = getRefreshInterval(); draftRefresh = null;
       updateSaveGate(); filter.value = "";
       scoringRendered = false;
-      showCategory("connections");
+      showCategory(category);
       // Theme/refresh/bots live in other panes but their elements exist in the
       // DOM regardless of visibility, so render them up front like before.
       renderTheme(); renderRefresh(); renderAutoBots(); renderBots(); renderConns(); setHidden(false);
