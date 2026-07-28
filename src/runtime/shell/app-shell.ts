@@ -23,6 +23,7 @@ import { getThemeChoice, cycleTheme } from "./theme";
 import { getRefreshInterval, relativeSince } from "./refresh";
 import { scopeKey } from "../core/scope-key";
 import { adapterBotLogins } from "../core/author-policy";
+import { refreshProviders } from "../core/orchestrator";
 import type { DatasetStore } from "../core/store";
 import type { TimerPort, ViewPort } from "../core/ports";
 import type { CoreDeps, Core } from "../core/core";
@@ -34,6 +35,12 @@ import {
 import { createTriageSession } from "../session/triage-session";
 import type { SessionUpdate, TriageSession } from "../session/types";
 import { HandoffController } from "../handoff/controller";
+import { buildInsightSnapshot } from "../insights/projector";
+import { buildInsightRefreshJobs } from "../insights/refresh";
+import { resolveInsightRoute } from "../insights/routes";
+import type { InsightSnapshot } from "../insights/types";
+import type { Kind } from "../dataset/item";
+import type { TriageFailure } from "../catalog/types";
 
 export interface ShellEnv {
   catalog: RuntimeCatalog;
@@ -111,7 +118,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   if (isCompiledConfig(config)) {
     scopes.set(config.source, config.scope!);
   }
-  const hasInsights = config.views.includes("insights");
+  const hasInsights = true;
 
   const providersForArtifact = (a: Artifact) =>
     catalog.providersFor(a.kinds[0]);
@@ -130,6 +137,10 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   const currentFilters = () => session.snapshot().filters;
   let lastRows: ScoredItem[] = [];
   let lastFetchedAt: number | null = null;
+  let insightSnapshot: InsightSnapshot | null = null;
+  let insightFailures: TriageFailure[] = [];
+  let insightRefreshedKinds: Kind[] = [];
+  let insightRefreshing = false;
   let cancelRefresh: (() => void) | undefined;
 
   // Signature of the toolbar's row-derived inputs (distinct repo locations + applicable
@@ -195,7 +206,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       // Rebuild the toolbar when that row-derived set actually changes — but not on
       // every paint, so a background refresh doesn't tear down an open filter popover.
       if (navRowSig() !== lastNavRowSig) buildNav();
-      if (currentView() === "insights") { renderInsights(root, vm.scored, active.kinds, catalog); return; }
+      if (currentView() === "insights") { void presentInsights(false); return; }
       if (currentView() !== "list") {
         const tab = catalog.tabs().find((candidate) => candidate.id === currentView());
         if (tab) { tab.render(root, vm.scored); return; }
@@ -215,6 +226,13 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     },
   };
 
+  const scoreContext = () => ({
+    getModel: (kind: Kind) => policy.getScoreModel(kind),
+    getFields: (kind: Kind) => catalog.fieldsFor(kind),
+    getThresholds: () => policy.getTiers(),
+    override: env.scoreOverride,
+  });
+
   const core = env.createCore({
     store: env.store,
     view: dispatchView,
@@ -227,12 +245,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     })),
     activeKinds: () => active.kinds,
     botLogins: () => policy.getBotLogins(),
-    scoreContext: () => ({
-      getModel: (k) => policy.getScoreModel(k),
-      getFields: (k) => catalog.fieldsFor(k),
-      getThresholds: () => policy.getTiers(),
-      override: env.scoreOverride,
-    }),
+    scoreContext,
     filters: currentFilters,
     repoView: currentRepository,
   });
@@ -255,7 +268,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       buildRail();
       buildNav();
       refreshBar();
-      if (catalog.kind(update.state.kind)?.status === "upcoming") {
+      if (update.state.view === "insights" || catalog.kind(update.state.kind)?.status === "upcoming") {
         render();
       } else {
         core.rerender();
@@ -285,6 +298,113 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     getAutoBots: () => adapterBotLogins(env.store.snapshot(), active.kinds),
   });
   const openSettings = () => settings.open(primaryProvider(active).id);
+
+  const insightJobs = () => buildInsightRefreshJobs({
+    catalog,
+    credentialFor: (providerId) => {
+      const provider = catalog.providers().find((candidate) => candidate.id === providerId);
+      return provider ? creds.get(connectionKey(provider)) ?? undefined : undefined;
+    },
+    scopeFor: (providerId) => {
+      const provider = catalog.providers().find((candidate) => candidate.id === providerId);
+      return provider ? scopes.get(connectionKey(provider)) : {};
+    },
+    scopeKeyFor: (_providerId, scope) => scopeKey(scope),
+  });
+
+  const readyInsightKinds = (): Kind[] => catalog.kinds()
+    .filter((kind) => kind.status === "ready")
+    .map((kind) => kind.kind);
+
+  const projectInsights = (): InsightSnapshot => buildInsightSnapshot({
+    items: env.store.snapshot(),
+    readyKinds: readyInsightKinds(),
+    refreshedKinds: insightRefreshedKinds,
+    staleKinds: readyInsightKinds().filter((kind) => !insightRefreshedKinds.includes(kind)),
+    catalog,
+    score: scoreContext(),
+    botLogins: policy.getBotLogins(),
+    now: Date.now(),
+  });
+
+  const handleInsightRoute = (route: Parameters<typeof resolveInsightRoute>[0]["route"]) => {
+    const resolved = resolveInsightRoute({
+      route,
+      catalog,
+      repositories: [...new Set(env.store.snapshot().map((item) => item.location))],
+    });
+    if (resolved.destination === "settings") {
+      openSettings();
+      return;
+    }
+    applySessionUpdate(session.openInsightRoute(resolved));
+  };
+
+  async function presentInsights(refresh: boolean): Promise<void> {
+    root.setAttribute("role", "tabpanel");
+    root.setAttribute("aria-labelledby", "view-tab-insights");
+    const jobs = insightJobs();
+    const readyProviders = catalog.providers()
+      .filter((provider) => provider.status === "ready" && provider.adapter);
+
+    if (jobs.length === 0) {
+      const hasCredential = readyProviders.some((provider) =>
+        Boolean(creds.get(connectionKey(provider))),
+      );
+      renderInsights(root, null, {
+        state: "empty",
+        emptyReason: readyProviders.length === 0 || !hasCredential
+          ? "no-provider"
+          : "no-scope",
+        onRoute: handleInsightRoute,
+      });
+      return;
+    }
+
+    if (insightSnapshot) {
+      renderInsights(root, insightSnapshot, {
+        state: insightFailures.length ? "partial" : "ready",
+        failures: insightFailures,
+        onRoute: handleInsightRoute,
+      });
+    } else {
+      renderInsights(root, null, {
+        state: "loading",
+        onRoute: handleInsightRoute,
+      });
+    }
+
+    if (!refresh || insightRefreshing) return;
+    insightRefreshing = true;
+    try {
+      const result = await refreshProviders(jobs, env.store);
+      insightFailures = result.failures;
+      const failedProviders = new Set(
+        result.failures.filter((failure) => !failure.kind).map((failure) => failure.provider),
+      );
+      const failedKinds = new Set(
+        result.failures.flatMap((failure) => failure.kind ? [failure.kind] : []),
+      );
+      insightRefreshedKinds = [...new Set(jobs.flatMap((job) =>
+        failedProviders.has(job.provider.id)
+          ? []
+          : job.kinds.filter((kind) => !failedKinds.has(kind)),
+      ))];
+      insightSnapshot = projectInsights();
+      const hasItems = env.store.snapshot().length > 0;
+      renderInsights(root, insightSnapshot, {
+        state: hasItems
+          ? (insightFailures.length ? "partial" : "ready")
+          : "empty",
+        emptyReason: hasItems ? undefined : (insightFailures.length ? "unavailable" : "no-items"),
+        failures: insightFailures,
+        onRoute: handleInsightRoute,
+      });
+    } finally {
+      insightRefreshing = false;
+    }
+  }
+
   status.addEventListener("click", openSettings);
   gear.addEventListener("click", openSettings);
   refresh.addEventListener("click", () => { lastRows = []; render(); });
@@ -385,6 +505,13 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
 
   // silent: an auto-refresh tick re-fetches in place (no skeleton flash).
   const render = (silent = false) => {
+    root.setAttribute("role", "tabpanel");
+    root.setAttribute("aria-labelledby", `view-tab-${currentView()}`);
+    if (currentView() === "insights") {
+      void presentInsights(!silent);
+      return;
+    }
+
     const live = readyProvidersFor(active);
     if (!live.length) {   // upcoming artifact placeholder
       const provs = providersForArtifact(active).map(s => `<li>${providerIcon(s.id, 14)} ${esc(s.id)}</li>`).join("");
@@ -393,7 +520,6 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       lastFetchedAt = null; updateSync();
       return;
     }
-    if (!silent && currentView() === "insights" && lastRows.length) { renderInsights(root, lastRows, active.kinds); return; }
     if (!silent && currentView() !== "list" && currentView() !== "insights" && lastRows.length) {
       const tab = catalog.tabs().find((candidate) => candidate.id === currentView());
       if (tab) { tab.render(root, lastRows); return; }

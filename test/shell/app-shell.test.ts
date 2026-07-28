@@ -4,6 +4,7 @@ import { bootstrap } from "../../src/runtime/bootstrap";
 import { mockGithubItems } from "../helpers/github-fetch";
 import { parseSessionQuery } from "../../src/runtime/session/serialized-session";
 import type { TriageConfigT } from "../../src/config/schema";
+import type { TriageItem } from "../../src/runtime/dataset/item";
 
 const flush = () => new Promise<void>(r => setTimeout(r, 0));
 
@@ -13,6 +14,38 @@ const config: TriageConfigT = {
   scope: {},
   branding: { title: "Acme Triage" },
 };
+
+const configWithoutInsights: TriageConfigT = {
+  ...config,
+  views: ["code-security"],
+};
+
+const dependencyItem = (id: string, location: string): TriageItem => ({
+  id: `github:${location}:${id}`,
+  provider: "github",
+  providerRef: { number: 1 },
+  kind: "dependency-vuln",
+  title: id,
+  location,
+  signal: 100,
+  createdAt: "2026-07-01T00:00:00Z",
+  url: `https://github.com/${location}/security/dependabot/1`,
+  details: {
+    package: id,
+    severity: "critical",
+    cvss: 10,
+    scope: "runtime",
+    fixAvailable: true,
+    fixVersion: "2.0.0",
+  },
+});
+
+function clickView(label: string): void {
+  const tab = [...document.querySelectorAll<HTMLButtonElement>(".tb-view")]
+    .find((candidate) => candidate.textContent === label);
+  if (!tab) throw new Error(`missing ${label} view`);
+  tab.click();
+}
 
 function scaffold() {
   vi.stubGlobal("matchMedia", (q: string) => ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} }) as any);
@@ -24,6 +57,58 @@ function scaffold() {
 
 describe("mountShell artifact navigation", () => {
   beforeEach(() => { sessionStorage.clear(); localStorage.clear(); history.replaceState(null, "", "/"); scaffold(); });
+
+  it("shows Insights when the legacy config omits it", async () => {
+    bootstrap(configWithoutInsights);
+    await flush();
+    expect([...document.querySelectorAll(".tb-view")].map((tab) => tab.textContent))
+      .toContain("Insights");
+  });
+
+  it("refreshes every connected ready kind when Insights opens", async () => {
+    sessionStorage.setItem("triagekit.cred.github", "token");
+    localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: ["acme-corp/web"] }));
+    const fetchSpy = mockGithubItems([dependencyItem("demo-package", "acme-corp/web")]);
+    try {
+      bootstrap(configWithoutInsights);
+      await flush();
+      clickView("Insights");
+      await flush();
+      await flush();
+
+      const urls = fetchSpy.mock.calls.map(([input]) => String(input));
+      expect(urls.some((url) => url.includes("/dependabot/alerts"))).toBe(true);
+      expect(urls.some((url) => url.includes("/code-scanning/alerts"))).toBe(true);
+      expect(urls.some((url) => url.includes("/issues"))).toBe(true);
+      expect(document.querySelector("#root")?.textContent).toContain("Operator briefing");
+      expect(document.querySelector("#root")?.getAttribute("role")).toBe("tabpanel");
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("opens an insight concentration in the matching List context", async () => {
+    sessionStorage.setItem("triagekit.cred.github", "token");
+    localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: ["acme-corp/web"] }));
+    const fetchSpy = mockGithubItems([dependencyItem("demo-package", "acme-corp/web")]);
+    try {
+      bootstrap(configWithoutInsights);
+      await flush();
+      clickView("Insights");
+      await flush();
+      await flush();
+
+      document.querySelector<HTMLButtonElement>("[data-concentration='acme-corp/web']")?.click();
+      await flush();
+      expect(parseSessionQuery(location.search)).toMatchObject({
+        kind: "dependency-vuln",
+        view: "list",
+        repository: "acme-corp/web",
+      });
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
 
   it("renders the brand and an artifact rail with the live artifact active", () => {
     bootstrap(config);
