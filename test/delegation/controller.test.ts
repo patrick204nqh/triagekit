@@ -150,6 +150,37 @@ describe("delegation controller", () => {
     expect(controller.snapshot().handedOff).toHaveLength(1);
   });
 
+  it("separates actionable exceptions from manual deselection", () => {
+    const { controller, queue } = fixture({ count: 3 });
+    const entries = queue.snapshot().entries;
+    queue.transition(queueKey(entries[0].identity), {
+      status: "blocked",
+      selected: true,
+      reason: "Target projection failed",
+    });
+    queue.transition(queueKey(entries[1].identity), {
+      status: "unavailable",
+      selected: true,
+      reason: "Refresh failed",
+    });
+    queue.transition(queueKey(entries[2].identity), {
+      status: "current",
+      selected: false,
+    });
+
+    expect(controller.snapshot().notInNextBundle.map((entry) =>
+      entry.status)).toEqual(["blocked", "unavailable"]);
+    expect(controller.snapshot().packages).toHaveLength(0);
+
+    queue.transition(queueKey(entries[2].identity), {
+      status: "resolved",
+      selected: false,
+      reason: "No longer present",
+    });
+    expect(controller.snapshot().notInNextBundle.map((entry) =>
+      entry.status)).toEqual(["blocked", "unavailable", "resolved"]);
+  });
+
   it("downloads artifacts without changing queue membership", () => {
     const bundleFixture = fixture();
     expect(bundleFixture.controller.downloadBundle("json"))

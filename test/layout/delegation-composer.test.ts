@@ -45,7 +45,7 @@ function controllerWith(
     pendingConfirmation: null,
     canUndoHandoff: false,
     busyAction: null,
-    needsAttention: [],
+    notInNextBundle: [],
     handedOff: [],
     ...overrides,
   };
@@ -111,6 +111,31 @@ describe("delegation composer", () => {
     expect(controller.confirmHandoff).toHaveBeenCalledOnce();
   });
 
+  it("keeps the dialog and package body mounted across copy updates", () => {
+    const host = document.createElement("div");
+    const controller = controllerWith(false);
+    mountDelegationComposer(host, controller);
+    const dialog = host.querySelector("[role='dialog']");
+    const body = host.querySelector(".delegation-composer-body");
+
+    controller.emit({
+      busyAction: "copy",
+      notice: { tone: "info", message: "Copying bundle…" },
+    });
+    controller.emit({
+      busyAction: null,
+      notice: {
+        tone: "success",
+        message: "Copied 1 package · 1 target · queue unchanged",
+      },
+    });
+
+    expect(host.querySelector("[role='dialog']")).toBe(dialog);
+    expect(host.querySelector(".delegation-composer-body")).toBe(body);
+    expect(host.querySelector("[data-delegation-notice]")?.textContent)
+      .toContain("queue unchanged");
+  });
+
   it("preserves field focus and selection across controller updates", () => {
     const host = document.createElement("div");
     document.body.append(host);
@@ -157,6 +182,48 @@ describe("delegation composer", () => {
     expect(controller.removeQueueItem).toHaveBeenCalledWith(
       "github:issue:acme-corp/core:github:42",
     );
+  });
+
+  it("shows only actionable exceptions outside the next bundle", () => {
+    const host = document.createElement("div");
+    const controller = controllerWith(false, {
+      notInNextBundle: [{
+        key: "blocked-key",
+        itemId: "github:blocked",
+        title: "Blocked issue",
+        repository: "acme-corp/core",
+        kind: "issue",
+        status: "blocked",
+        reason: "Target projection failed",
+      }, {
+        key: "resolved-key",
+        itemId: "github:resolved",
+        title: "Resolved issue",
+        repository: "acme-corp/core",
+        kind: "issue",
+        status: "resolved",
+        reason: "No longer present",
+      }],
+    });
+    mountDelegationComposer(host, controller);
+
+    const section = host.querySelector(
+      "[data-queue-section='not-in-next-bundle']",
+    );
+    expect(section?.querySelector("summary")?.textContent)
+      .toContain("Not in next bundle · 2");
+    expect(section?.textContent).toContain("Blocked");
+    expect(section?.textContent).toContain("No longer found");
+    expect(section?.textContent).not.toContain("Needs attention");
+
+    section?.querySelector<HTMLElement>(
+      "[data-remove-target='github:blocked']",
+    )?.click();
+    expect(controller.removeTarget).toHaveBeenCalledWith("github:blocked");
+    section?.querySelector<HTMLElement>(
+      "[data-remove-queue-item='resolved-key']",
+    )?.click();
+    expect(controller.removeQueueItem).toHaveBeenCalledWith("resolved-key");
   });
 
   it("restores dashboard interaction when the composer closes", () => {
