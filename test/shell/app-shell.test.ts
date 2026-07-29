@@ -232,7 +232,8 @@ describe("mountShell artifact navigation", () => {
       .toEqual(expect.arrayContaining(["Dependencies", "Cloud misconfig", "Tasks"]));
     const vuln = rail.find(b => b.textContent?.startsWith("Dependencies"))!;
     expect(vuln.className).toContain("active");          // live artifact leads
-    expect(document.querySelector("#root")?.textContent).toMatch(/connect a token/i);  // empty scope/cred
+    expect(document.querySelector("#root")?.textContent)
+      .toContain("Open Connections");
   });
 
   it("groups the rail into Findings and Work, with a refresh control and no Load button", () => {
@@ -242,6 +243,92 @@ describe("mountShell artifact navigation", () => {
     expect(document.querySelector("#appbar .btn-primary")).toBeNull();               // Load retired
     expect(document.querySelector('#appbar .icon-btn[aria-label="Refresh now"]')).toBeTruthy();
     expect(document.querySelector("#appbar .icon-btn[aria-label='Toggle theme']")?.getAttribute("title")).toMatch(/^Theme:/);
+  });
+
+  it("opens connection status without opening Settings and deep-links its actions", async () => {
+    sessionStorage.setItem("triagekit.cred.github", "token");
+    localStorage.setItem(
+      "triagekit.scope.github",
+      JSON.stringify({
+        repos: Array.from(
+          { length: 11 },
+          (_, index) => `acme-corp/repository-${index + 1}`,
+        ),
+      }),
+    );
+    const fetchSpy = mockGithubItems([]);
+    try {
+      bootstrap(config);
+      await flush();
+      await flush();
+
+      const pill = document.querySelector<HTMLButtonElement>(
+        "[data-connection-status-trigger]",
+      )!;
+      expect(pill.textContent).toContain("11 repositories");
+      pill.click();
+      expect(document.querySelector(
+        "[data-connection-status-menu]",
+      )?.hasAttribute("hidden")).toBe(false);
+      expect(document.querySelector("[data-panel]")?.classList.contains("open"))
+        .toBe(false);
+
+      document.querySelector<HTMLButtonElement>(
+        "[data-status-repositories]",
+      )!.click();
+      expect(document.querySelector(
+        "[data-category='repositories']",
+      )?.classList.contains("on")).toBe(true);
+
+      document.querySelector<HTMLButtonElement>(
+        "#appbar .icon-btn[aria-label='Settings']",
+      )!.click();
+      expect(document.querySelector(
+        "[data-category='connections']",
+      )?.classList.contains("on")).toBe(true);
+      expect(document.querySelector("#appbar .last-sync")).toBeNull();
+      expect(pill.textContent).toContain("updated");
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("routes connected no-scope and disconnected empty states to the right category", async () => {
+    sessionStorage.setItem("triagekit.cred.github", "token");
+    localStorage.setItem(
+      "triagekit.scope.github",
+      JSON.stringify({ repos: [] }),
+    );
+    const fetchSpy = mockGithubItems([]);
+    try {
+      bootstrap(config);
+      await flush();
+      await flush();
+
+      const choose = document.querySelector<HTMLButtonElement>(
+        "[data-choose-repositories]",
+      )!;
+      expect(choose.textContent).toBe("Choose repositories");
+      choose.click();
+      expect(document.querySelector(
+        "[data-category='repositories']",
+      )?.classList.contains("on")).toBe(true);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+
+    scaffold();
+    sessionStorage.clear();
+    localStorage.clear();
+    bootstrap(config);
+    const connect = document.querySelector<HTMLButtonElement>(
+      "[data-choose-repositories]",
+    )!;
+    expect(connect.textContent).toBe("Open Connections");
+    connect.click();
+    expect(document.querySelector(
+      "[data-category='connections']",
+    )?.classList.contains("on")).toBe(true);
   });
 
   it("shows List + Insights tabs in the toolbar for the live artifact", () => {
@@ -254,7 +341,10 @@ describe("mountShell artifact navigation", () => {
   it("renders the list in a render-only body with the toolbar driving filters, and a filter change does not refetch", async () => {
     // A ready source with a satisfied cred + scope reaches the rendered-rows path.
     sessionStorage.setItem("triagekit.cred.github", "tok");
-    localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: [] }));
+    localStorage.setItem(
+      "triagekit.scope.github",
+      JSON.stringify({ repos: ["acme-corp/web"] }),
+    );
     const fetchSpy = mockGithubItems([]);
     try {
       bootstrap(config);
@@ -266,13 +356,14 @@ describe("mountShell artifact navigation", () => {
       expect(body).toBeTruthy();
       expect(document.querySelector("#root .facet-bar")).toBeNull();   // retired renderer's DOM stays out of the surface
       expect(document.querySelector("#root .surface-body table.alerts, #root .surface-body .empty")).toBeTruthy();
-      expect(fetchSpy).toHaveBeenCalledTimes(0);
+      const initialFetches = fetchSpy.mock.calls.length;
+      expect(initialFetches).toBeGreaterThan(0);
 
       // (b) a filter change (sort) via the toolbar re-renders the body without refetching.
       const sortBtn = document.querySelector<HTMLElement>("#viewswitch [data-sort='recent']")!;
       sortBtn.click();
       expect(document.querySelector("#root .surface-body")).toBeTruthy();
-      expect(fetchSpy).toHaveBeenCalledTimes(0);   // no refetch
+      expect(fetchSpy).toHaveBeenCalledTimes(initialFetches);
     } finally {
       fetchSpy.mockRestore();
     }

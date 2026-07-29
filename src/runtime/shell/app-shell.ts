@@ -19,7 +19,10 @@ import { scopeSummary } from "./health";
 import { mountSettings } from "./settings";
 import { providerIcon } from "./provider-icons";
 import { getThemeChoice, cycleTheme } from "./theme";
-import { relativeSince } from "./refresh";
+import {
+  connectionDatasetState,
+  mountConnectionStatus,
+} from "./connection-status";
 import { adapterBotLogins } from "../core/author-policy";
 import type { ViewPort } from "../core/ports";
 import type { CoreDeps, Core } from "../core/core";
@@ -43,6 +46,7 @@ import type {
   DatasetSnapshot,
   RefreshCadence,
 } from "../cached-dataset/types";
+import { createBrowserConnectionState } from "../cached-dataset/browser-connection-state";
 import type { FocusPolicySnapshot } from "../focus/types";
 import {
   migrateLegacyLabels,
@@ -330,7 +334,11 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
           : latest,
         null,
       ) ?? null;
-      updateSync();
+      refreshConnectionStatus();
+      if (needsRepositoryScope()) {
+        render();
+        return;
+      }
       const reconciliation = session.reconcile({
         repositories: [...new Set(vm.scored.map((row) => row.location))],
         views: [
@@ -491,7 +499,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
       lastFetchedAt = null;
       buildRail();
       buildNav();
-      refreshBar();
+      refreshConnectionStatus();
       void core.refreshNow();
     } else if (update.work === "rederive") {
       core.rerender();
@@ -499,7 +507,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
     } else if (update.work === "present") {
       buildRail();
       buildNav();
-      refreshBar();
+      refreshConnectionStatus();
       if (update.state.view === "insights" || catalog.kind(update.state.kind)?.status === "upcoming") {
         render();
       } else {
@@ -508,22 +516,26 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
     }
   }
 
-  // ── Command bar: brand + merged status chip + sync stamp + refresh + theme ──
+  // ── Command bar: brand + connection status + refresh + theme ──
   const bar = document.getElementById("appbar")!;
   const titleHtml = esc(config.branding.title).replace(/·/g, `<span class="dot">·</span>`);
   bar.innerHTML = `<h1 class="brand">${BRAND_MARK}<span class="wordmark">${titleHtml}</span></h1><div class="spacer"></div>`;
-  const status = document.createElement("button"); status.className = "status-chip";
-  const sync = document.createElement("span"); sync.className = "last-sync";
+  const statusHost = document.createElement("div");
   const refresh = document.createElement("button"); refresh.className = "icon-btn"; refresh.setAttribute("aria-label", "Refresh now"); refresh.title = "Refresh now"; refresh.innerHTML = REFRESH;
   const themeBtn = document.createElement("button"); themeBtn.className = "icon-btn"; themeBtn.setAttribute("aria-label", "Toggle theme");
   const gear = document.createElement("button"); gear.className = "icon-btn"; gear.setAttribute("aria-label", "Settings"); gear.title = "Settings"; gear.innerHTML = GEAR;
-  bar.append(status, sync, refresh, themeBtn, gear);
+  bar.append(statusHost, refresh, themeBtn, gear);
 
   const pendingConnections = new Map<string, ConnectedProvider>();
-  const configuredScope = (providerId: string): Scope =>
-    isCompiledConfig(config) && config.source === providerId
+  const connectionState = createBrowserConnectionState();
+  const configuredScope = (providerId: string): Scope => {
+    const compiled = isCompiledConfig(config) && config.source === providerId
       ? config.scope ?? {}
       : {};
+    return Object.keys(compiled).length > 0
+      ? compiled
+      : connectionState.scope(providerId);
+  };
 
   const installDatasetSession = (
     providerId: string,
@@ -545,7 +557,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
       if (!coreReady) return;
       if (providerId === currentProvider()) {
         core.rerender();
-        refreshBar();
+        refreshConnectionStatus();
         if (currentView() === "insights") void presentInsights(false);
       }
     });
@@ -607,14 +619,20 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
     onChange: () => {
       lastRows = [];
       lastShownRows = [];
-      refreshBar();
+      refreshConnectionStatus();
       render();
     },
     onThemeChange: () => syncTheme(),
     getRows: () => lastRows,
     getAutoBots: () => adapterBotLogins(activeItems(), active.kinds),
   });
-  const openSettings = () => settings.open(primaryProvider(active).id);
+  const connectionStatus = mountConnectionStatus(statusHost, {
+    openSettings(provider, category) {
+      settings.open(provider, category);
+    },
+  });
+  const openSettings = () =>
+    settings.open(primaryProvider(active).id, "connections");
 
   const readyInsightKinds = (): Kind[] => catalog.kinds()
     .filter((kind) => kind.status === "ready")
@@ -704,7 +722,6 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
     }
   }
 
-  status.addEventListener("click", openSettings);
   gear.addEventListener("click", openSettings);
   refresh.addEventListener("click", () => {
     lastRows = [];
@@ -721,25 +738,37 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
   }
   themeBtn.addEventListener("click", () => { cycleTheme(); syncTheme(); });
 
-  // Status chip shows the single active provider scope.
-  function refreshBar() {
+  const activeProviderDeclaration = (): ProviderDeclaration => {
     const live = readyProvidersFor(active);
-    const lead = live.find(s => s.id === currentProvider()) ?? primaryProvider(active);
-    let cls = "warn", tail: string;
-    if (!live.length) { tail = "upcoming"; }
-    else {
-      const dataset = datasetSnapshots.get(lead.id);
-      const missing = !dataset || dataset.phase === "closed";
-      cls = missing ? "warn" : "ok";
-      tail = missing ? "not connected" : scopeSummary(lead, dataset.scope);
-      if (dataset?.persistence === "memory") cls = "warn";
-    }
-    status.className = "status-chip " + cls;
-    status.innerHTML = `${providerIcon(lead.id, 15)}<span class="sid">${esc(lead.id)}</span><span class="sep">·</span><span class="muted">${esc(tail)}</span>`;
+    return live.find((candidate) => candidate.id === currentProvider())
+      ?? primaryProvider(active);
+  };
+
+  function needsRepositoryScope(): boolean {
+    const snapshot = activeDatasetSnapshot();
+    const repositoryField = activeProviderDeclaration().connection.scopeFields
+      .find((field) => field.key === "repos");
+    const repositories = repositoryField
+      ? snapshot?.scope[repositoryField.key]
+      : undefined;
+    return connectedProviders.has(currentProvider())
+      && repositoryField !== undefined
+      && (!Array.isArray(repositories) || repositories.length === 0);
   }
 
-  function updateSync() {
-    sync.textContent = lastFetchedAt == null ? "" : `updated ${relativeSince(lastFetchedAt)}`;
+  function refreshConnectionStatus(): void {
+    const lead = activeProviderDeclaration();
+    const snapshot = datasetSnapshots.get(lead.id);
+    connectionStatus.render({
+      provider: lead.id,
+      connected: connectedProviders.has(lead.id),
+      scopeSummary: snapshot
+        ? scopeSummary(lead, snapshot.scope)
+        : "scope not set",
+      lastFetchedAt,
+      cadence: snapshot?.cadence ?? "off",
+      datasetState: connectionDatasetState(snapshot),
+    });
   }
   // ── Navigation: grouped artifact rail (Findings / Work) → list/insights + filter ──
   const rail = document.getElementById("domainRail")!;
@@ -826,7 +855,8 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
       const provs = providersForArtifact(active).map(s => `<li>${providerIcon(s.id, 14)} ${esc(s.id)}</li>`).join("");
       root.innerHTML = `<div class="upcoming"><h2>${esc(active.label)} <span class="badge">upcoming</span></h2>
         <p class="muted">On the roadmap. Will triage from:</p><ul class="prov-roadmap">${provs}</ul></div>`;
-      lastFetchedAt = null; updateSync();
+      lastFetchedAt = null;
+      refreshConnectionStatus();
       return;
     }
     if (!silent && currentView() !== "list" && currentView() !== "insights" && lastRows.length) {
@@ -834,11 +864,24 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
       if (tab) { tab.render(root, lastRows); return; }
     }
 
-    if (!activeDatasetSession()) {
-      const needScope = connectedProviders.has(currentProvider())
-        && !Object.keys(activeDatasetSnapshot()?.scope ?? {}).length;
-      root.innerHTML = `<p class="muted">Open Settings to ${needScope ? "choose your scope" : "connect a token"}.</p>`;
-      lastFetchedAt = null; updateSync();
+    const needsRepositories = needsRepositoryScope();
+    if (!activeDatasetSession() || needsRepositories) {
+      const category = needsRepositories ? "repositories" : "connections";
+      const label = needsRepositories
+        ? "Choose repositories"
+        : "Open Connections";
+      root.innerHTML = `<div class="empty-state" data-provider-empty>
+        <p class="muted">${needsRepositories
+          ? "Choose at least one repository to begin triage."
+          : "Connect a provider to begin triage."}</p>
+        <button type="button" class="btn-primary" data-choose-repositories>${label}</button>
+      </div>`;
+      root.querySelector<HTMLElement>("[data-choose-repositories]")
+        ?.addEventListener("click", () => {
+          settings.open(currentProvider(), category);
+        });
+      lastFetchedAt = null;
+      refreshConnectionStatus();
       return;
     }
     if (!silent && activeDatasetSnapshot()?.phase === "hydrating") {
@@ -850,9 +893,8 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
   syncTheme();
   buildRail();
   buildNav();
-  refreshBar();
-  updateSync();
-  setInterval(updateSync, 30_000);   // keep the "updated Xm ago" stamp fresh
+  refreshConnectionStatus();
+  setInterval(() => connectionStatus.updateTime(), 30_000);
   coreReady = true;
   const ready = (async () => {
     for (const provider of catalog.providers().filter((candidate) =>
