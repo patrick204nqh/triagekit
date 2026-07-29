@@ -6,6 +6,40 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.3] — 2026-07-29
+
+### Added
+- Cross-dashboard insights that group related findings and route operators back into
+  the relevant triage workflow.
+- Browser-managed Cached Datasets with IndexedDB persistence, provider isolation,
+  atomic Dataset Slice refreshes, and visible stale-data handling.
+- Rate-aware GitHub request scheduling and provider-neutral Triage Actions for
+  supported GitHub mutations.
+- Provider-scoped focus policies for repository priority and visible include/exclude
+  label rules.
+- A bounded Delegation queue with editable work packages, target revalidation,
+  Markdown/JSON export, and retained handoff history.
+- Repository workspace controls, accessible repository ordering, and connection
+  status navigation.
+
+### Changed
+- Delegation exports now leave the queue unchanged until the operator explicitly
+  confirms handoff; confirmed handoffs can be undone.
+- Provider failures are scoped to the active finding kind, collapsed when repeated,
+  and quieter during normal cadence refreshes.
+- Visible rows can be selected or deselected in bulk for delegation.
+- Repository and connection controls, product documentation, and screenshots were
+  refreshed for the expanded workflow.
+
+### Fixed
+- Closing the Delegation panel reliably releases its modal layer so the dashboard
+  remains interactive.
+- Dependency label filters no longer show redundant copy or inherit layout problems
+  from unrelated controls.
+- Insights navigation and refresh state remain stable across view changes.
+- Repository row actions stay within their intended layout, browser fetch keeps its
+  receiver binding, and parallel workflow tests are stable.
+
 ## [0.1.2] — 2026-07-28
 
 ### Added
@@ -61,7 +95,8 @@ All notable changes to this project are documented here. The format follows
   strict hash-based CSP with no external scripts.
 - Branded landing page + hosted generic dashboard on GitHub Pages.
 
-[Unreleased]: https://github.com/patrick204nqh/triagekit/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/patrick204nqh/triagekit/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/patrick204nqh/triagekit/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/patrick204nqh/triagekit/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/patrick204nqh/triagekit/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/patrick204nqh/triagekit/releases/tag/v0.1.0
