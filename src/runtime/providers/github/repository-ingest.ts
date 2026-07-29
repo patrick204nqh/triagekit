@@ -54,9 +54,16 @@ export async function discoverGithubRepositories(
   });
 }
 
+const isCodeSecurityScopeFailure = (error: GithubHttpError): boolean =>
+  error.status === 403
+  && error.message.toLowerCase().includes(
+    "code security must be enabled for this repository",
+  );
+
 const failureCategory = (error: unknown): FailureCategory => {
   if (!(error instanceof GithubHttpError)) return "network";
   if (error.status === 401 || error.ssoRequired) return "auth";
+  if (isCodeSecurityScopeFailure(error)) return "scope";
   if (error.status === 403) return "rate-limit";
   if (error.status === 404) return "not-found";
   return error.status === 0 ? "network" : "provider";

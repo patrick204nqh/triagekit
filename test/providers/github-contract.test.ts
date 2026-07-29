@@ -171,4 +171,50 @@ describe("GitHub Provider transport", () => {
       },
     });
   });
+
+  it("classifies the Code Security capability response as a scope failure", async () => {
+    const github = createGithubProvider(async () =>
+      new Response(JSON.stringify({
+        message: "Code Security must be enabled for this repository to use code scanning.",
+      }), { status: 403 }));
+
+    const bound = await github.bind("token");
+    const outcomes = await collect(bound.fetchSlices({
+      scope: { repos: ["acme-corp/web"] },
+      slices: [{ target: "acme-corp/web", kind: "code-scanning" }],
+      signal: new AbortController().signal,
+    }));
+
+    expect(outcomes[0]).toMatchObject({
+      type: "failed",
+      failure: {
+        provider: "github",
+        kind: "code-scanning",
+        target: "acme-corp/web",
+        category: "scope",
+      },
+    });
+  });
+
+  it("keeps unrelated forbidden responses classified as rate limits", async () => {
+    const github = createGithubProvider(async () =>
+      new Response(JSON.stringify({ message: "Forbidden" }), { status: 403 }));
+
+    const bound = await github.bind("token");
+    const outcomes = await collect(bound.fetchSlices({
+      scope: { repos: ["acme-corp/web"] },
+      slices: [{ target: "acme-corp/web", kind: "code-scanning" }],
+      signal: new AbortController().signal,
+    }));
+
+    expect(outcomes[0]).toMatchObject({
+      type: "failed",
+      failure: {
+        provider: "github",
+        kind: "code-scanning",
+        target: "acme-corp/web",
+        category: "rate-limit",
+      },
+    });
+  });
 });
