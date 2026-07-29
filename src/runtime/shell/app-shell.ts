@@ -58,6 +58,23 @@ import {
   type RowDelegationSelection,
   type SelectionControlsProps,
 } from "../layout/delegation/selection-controls";
+import {
+  createDelegationController,
+} from "../delegation/controller";
+import type {
+  DelegationController,
+  RevalidationResult,
+} from "../delegation/types";
+import {
+  revalidateQueue as revalidateDelegationQueue,
+} from "../delegation/revalidation";
+import { projectDelegationTarget } from "../delegation/projector";
+import {
+  downloadJson,
+  downloadText,
+} from "../handoff/adapters/download";
+import { mountDelegationComposer } from "../layout/delegation/composer";
+import type { Tier } from "../scoring/tier";
 
 export interface ShellEnv {
   catalog: RuntimeCatalog;
@@ -210,6 +227,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
   let lastFetchedAt: number | null = null;
   let insightSnapshot: InsightSnapshot | null = null;
   let insightRefreshing = false;
+  let delegationController: DelegationController | null = null;
   const connectedProviders = new Map<string, ConnectedProvider>();
   const datasetSessions = new Map<string, DatasetSession>();
   const datasetSnapshots = new Map<string, DatasetSnapshot>();
@@ -269,9 +287,10 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
         );
       },
       onOpenQueue: () => {
-        document.dispatchEvent(new CustomEvent(
-          "triagekit:open-delegation",
-        ));
+        delegationController?.open();
+        queueMicrotask(() => {
+          void delegationController?.revalidate();
+        });
       },
     };
   };
@@ -382,6 +401,85 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
     buildNav();
     if (currentView() === "list") core.rerender();
   });
+
+  const scoreQueuedItem = (item: DatasetSnapshot["items"][number]): ScoredItem =>
+    lastRows.find((row) => row.id === item.id) ?? {
+      ...item,
+      score: item.signal,
+      tier: "P3" as Tier,
+    };
+
+  const revalidateSelectedQueue = async (): Promise<RevalidationResult> => {
+    const selected = delegationQueue
+      .snapshot()
+      .entries.filter((entry) => entry.selected);
+    const transitions: RevalidationResult["transitions"][number][] = [];
+
+    for (const provider of [
+      ...new Set(selected.map((entry) => entry.identity.provider)),
+    ]) {
+      const entries = selected.filter(
+        (entry) => entry.identity.provider === provider,
+      );
+      const before = datasetSnapshots.get(provider);
+      const session = datasetSessions.get(provider) ?? null;
+
+      if (!before) {
+        transitions.push(
+          ...entries.map((entry) => ({
+            key: queueKey(entry.identity),
+            itemId: entry.identity.itemId,
+            status: "unavailable" as const,
+            selected: true,
+            reason: "Provider dataset unavailable",
+          })),
+        );
+        continue;
+      }
+
+      const result = await revalidateDelegationQueue({
+        entries,
+        before,
+        session,
+        project: (item) =>
+          projectDelegationTarget({
+            item: scoreQueuedItem(item),
+            explanation: scoreExplain(scoreQueuedItem(item)),
+            catalog,
+          }),
+      });
+      transitions.push(...result.transitions);
+    }
+
+    return { transitions };
+  };
+
+  delegationController = createDelegationController({
+    queue: delegationQueue,
+    items: () =>
+      [...datasetSnapshots.values()].flatMap((snapshot) =>
+        snapshot.items.map(scoreQueuedItem),
+      ),
+    focusPolicy: currentFocusPolicy,
+    catalog,
+    scoreExplain,
+    clipboard: {
+      writeText: (text) => navigator.clipboard.writeText(text),
+    },
+    downloads: {
+      text: downloadText,
+      json: downloadJson,
+    },
+    revalidateQueue: revalidateSelectedQueue,
+  });
+
+  let delegationHost = document.getElementById("delegation-host");
+  if (!delegationHost) {
+    delegationHost = document.createElement("div");
+    delegationHost.id = "delegation-host";
+    document.body.append(delegationHost);
+  }
+  mountDelegationComposer(delegationHost, delegationController);
 
   function applySessionUpdate(update: SessionUpdate): void {
     active = catalog.artifact(update.state.kind) ?? active;

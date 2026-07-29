@@ -52,7 +52,7 @@ function scaffold() {
   document.body.innerHTML = `<header id="appbar"></header>
     <nav id="domainRail" class="domains"></nav>
     <nav id="viewswitch" class="viewswitch"></nav>
-    <main id="root"></main><div id="settings-host"></div>`;
+    <main id="root"></main><div id="settings-host"></div><div id="delegation-host"></div>`;
 }
 
 describe("mountShell artifact navigation", () => {

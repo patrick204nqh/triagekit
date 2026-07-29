@@ -2,6 +2,7 @@ import type { Kind } from "../dataset/item";
 import type {
   HandoffIntent,
   HandoffTargetV1,
+  TransportResult,
 } from "../handoff/types";
 import type { ScoredItem } from "../layout/table/kind-renderer";
 import type {
@@ -157,4 +158,33 @@ export interface RevalidateQueueInput {
   readonly session: DatasetSession | null;
   readonly project: (item: TriageItem) => unknown;
   readonly onChecking?: (entries: readonly QueueEntry[]) => void;
+}
+
+export interface DelegationControllerSnapshot {
+  readonly open: boolean;
+  readonly selectedCount: number;
+  readonly retainedCount: number;
+  readonly remainingPackages: number;
+  readonly packages: readonly WorkPackageV1[];
+  readonly errors: readonly DelegationValidationError[];
+  readonly previewMarkdown: string;
+  readonly canDownload: boolean;
+  readonly error: string | null;
+}
+
+export interface DelegationController {
+  snapshot(): DelegationControllerSnapshot;
+  subscribe(listener: (snapshot: DelegationControllerSnapshot) => void): () => void;
+  open(): void;
+  close(): void;
+  updateIntent(packageId: string, intent: Partial<HandoffIntent>): void;
+  removeTarget(itemId: string): void;
+  revalidate(): Promise<void>;
+  copyBundle(): Promise<TransportResult>;
+  copyPackage(packageId: string): Promise<TransportResult>;
+  downloadBundle(format?: "md" | "json"): TransportResult;
+  downloadPackage(
+    packageId: string,
+    format?: "md" | "json",
+  ): TransportResult;
 }
