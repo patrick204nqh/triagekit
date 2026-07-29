@@ -7,6 +7,10 @@ import type {
   PruneReport,
 } from "./persistence";
 import type { SliceKey } from "./types";
+import {
+  DATASET_RETENTION_MS,
+  DATASET_SOFT_BYTES,
+} from "./clock";
 
 export interface FallbackDatasetPersistence extends DatasetPersistence {
   mode(): "indexeddb" | "memory";
@@ -16,12 +20,15 @@ export interface FallbackDatasetPersistence extends DatasetPersistence {
 const safeMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
-const recoveryPolicy = (activeConnectionKeys: ReadonlySet<string>): PrunePolicy => ({
-  now: Date.now(),
-  expiresBefore: Date.now(),
-  softBytes: 0,
-  activeConnectionKeys,
-});
+const recoveryPolicy = (activeConnectionKeys: ReadonlySet<string>): PrunePolicy => {
+  const now = Date.now();
+  return {
+    now,
+    expiresBefore: now - DATASET_RETENTION_MS,
+    softBytes: DATASET_SOFT_BYTES,
+    activeConnectionKeys,
+  };
+};
 
 const wrapPersistent = (persistent: DatasetPersistence): FallbackDatasetPersistence => {
   const memory = createMemoryDatasetPersistence();

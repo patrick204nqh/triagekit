@@ -11,6 +11,13 @@ import type {
   PersistedSlice,
 } from "./persistence";
 import {
+  createBrowserDatasetClock,
+  DATASET_RETENTION_MS,
+  DATASET_SOFT_BYTES,
+  expiresAt,
+  type DatasetClock,
+} from "./clock";
+import {
   createConnectionKey,
 } from "./identity";
 import type { ConnectionState } from "./browser-connection-state";
@@ -33,6 +40,7 @@ export interface CachedDatasetOptions {
   readonly providers: readonly ProviderDefinition[];
   readonly persistence: DatasetPersistence;
   readonly connectionState: ConnectionState;
+  readonly clock?: DatasetClock;
   readonly now?: () => number;
   readonly schema?: number;
 }
@@ -138,8 +146,9 @@ const createSession = (input: {
   readonly credential: string;
   readonly persistence: ObservablePersistence;
   readonly connectionState: ConnectionState;
-  readonly now: () => number;
+  readonly clock: DatasetClock;
   readonly schema: number;
+  readonly activeConnectionKeys: Set<string>;
 }): DatasetSession => {
   const observers = new Set<(snapshot: DatasetSnapshot) => void>();
   const slices = new Map<string, RuntimeSlice>();
@@ -150,6 +159,7 @@ const createSession = (input: {
   let connectionKey: string | undefined;
   let closed = false;
   let activeAbort: AbortController | undefined;
+  let cadenceTimer: unknown;
 
   for (const target of targets) {
     for (const kind of input.kinds) {
@@ -208,6 +218,31 @@ const createSession = (input: {
   };
 
   let initialized: Promise<void>;
+
+  const clearCadenceTimer = (): void => {
+    if (cadenceTimer === undefined) return;
+    input.clock.clearInterval(cadenceTimer);
+    cadenceTimer = undefined;
+  };
+
+  const scheduleCadenceTimer = (): void => {
+    clearCadenceTimer();
+    if (cadence === "off" || closed) return;
+    cadenceTimer = input.clock.setInterval(() => {
+      void refresh();
+    }, cadence * 1_000);
+  };
+
+  const prune = async (): Promise<void> => {
+    if (!connectionKey) return;
+    const now = input.clock.now();
+    await input.persistence.prune({
+      now,
+      expiresBefore: now - DATASET_RETENTION_MS,
+      softBytes: DATASET_SOFT_BYTES,
+      activeConnectionKeys: input.activeConnectionKeys,
+    });
+  };
 
   const refresh = async (selection?: {
     targets?: readonly string[];
@@ -301,7 +336,7 @@ const createSession = (input: {
             });
             continue;
           }
-          const validatedAt = input.now();
+          const validatedAt = input.clock.now();
           await input.persistence.touch(
             slice.persisted.key,
             validatedAt,
@@ -333,7 +368,7 @@ const createSession = (input: {
           });
           continue;
         }
-        const validatedAt = input.now();
+        const validatedAt = input.clock.now();
         const persisted: PersistedSlice = deepFreezeCopy({
           key: {
             connectionKey,
@@ -399,6 +434,7 @@ const createSession = (input: {
         message: "Provider returned no outcome for the Dataset Slice",
       });
     }
+    await prune();
     phase = failures.length > 0 ? "partial" : "ready";
     publish();
     return deepFreezeCopy({
@@ -415,6 +451,7 @@ const createSession = (input: {
       input.credential,
       input.scope,
     );
+    input.activeConnectionKeys.add(connectionKey);
     await input.persistence.activateGeneration(connectionKey, generation);
     const hydrated = await input.persistence.hydrate(connectionKey);
     if (closed) return;
@@ -425,6 +462,7 @@ const createSession = (input: {
       ));
       if (!slice
         || persisted.schema !== input.schema
+        || expiresAt(persisted.validatedAt) <= input.clock.now()
         || !persisted.items.every((item) =>
           isTriageItem(item)
           && item.provider === input.provider
@@ -434,10 +472,11 @@ const createSession = (input: {
       slice.persisted = deepFreezeCopy(persisted);
       slice.freshness = classifyFreshness({
         validatedAt: persisted.validatedAt,
-        now: input.now(),
+        now: input.clock.now(),
         cadence,
       });
     }
+    await prune();
     phase = "ready";
     publish();
     const due = [...slices.values()].filter((slice) =>
@@ -451,6 +490,7 @@ const createSession = (input: {
       });
     }
   })();
+  scheduleCadenceTimer();
 
   return {
     snapshot: () => snapshot,
@@ -463,11 +503,12 @@ const createSession = (input: {
     setCadence(nextCadence) {
       cadence = nextCadence;
       input.connectionState.saveCadence(input.provider, nextCadence);
+      scheduleCadenceTimer();
       for (const slice of slices.values()) {
         if (!slice.persisted || slice.freshness === "refreshing") continue;
         slice.freshness = classifyFreshness({
           validatedAt: slice.persisted.validatedAt,
-          now: input.now(),
+          now: input.clock.now(),
           cadence,
         });
       }
@@ -489,9 +530,11 @@ const createSession = (input: {
       closed = true;
       generation += 1;
       activeAbort?.abort(new DOMException("Disconnected", "AbortError"));
+      clearCadenceTimer();
       if (mode === "erase" && connectionKey) {
         await input.persistence.removeConnection(connectionKey);
       }
+      if (connectionKey) input.activeConnectionKeys.delete(connectionKey);
       input.bound.close();
       input.connectionState.disconnect(input.provider, mode);
       phase = "closed";
@@ -509,8 +552,14 @@ export const createCachedDatasets = (
     provider,
   ]));
   const persistence = options.persistence as ObservablePersistence;
-  const now = options.now ?? Date.now;
+  const defaultClock = createBrowserDatasetClock();
+  const clock = options.clock ?? (
+    options.now
+      ? { ...defaultClock, now: options.now }
+      : defaultClock
+  );
   const schema = options.schema ?? DEFAULT_SCHEMA;
+  const activeConnectionKeys = new Set<string>();
 
   const bind = async (
     providerId: string,
@@ -535,8 +584,9 @@ export const createCachedDatasets = (
           credential: trimmed,
           persistence,
           connectionState: options.connectionState,
-          now,
+          clock,
           schema,
+          activeConnectionKeys,
         });
       },
     };
