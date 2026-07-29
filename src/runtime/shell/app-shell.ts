@@ -92,7 +92,14 @@ export interface ToolbarPropsInput {
 
 // Pure assembly of the toolbar's view-mode / provider-scope / filter props from the
 // shell's state, extracted so it's testable without mounting the whole shell.
-function assembleToolbarProps(i: ToolbarPropsInput): Omit<ToolbarProps, "onFilterChange" | "onViewChange" | "onProviderSelect" | "onRepoSelect"> {
+function assembleToolbarProps(i: ToolbarPropsInput): Omit<
+  ToolbarProps,
+  | "onFilterChange"
+  | "onLabelRulesChange"
+  | "onViewChange"
+  | "onProviderSelect"
+  | "onRepoSelect"
+> {
   const viewModes = [{ id: "list", label: "List" }];
   if (i.hasInsights) viewModes.push({ id: "insights", label: "Insights" });
   for (const t of i.extraTabs) viewModes.push({ id: t.id, label: t.label });
@@ -116,7 +123,17 @@ function assembleToolbarProps(i: ToolbarPropsInput): Omit<ToolbarProps, "onFilte
   // repo so labels (and the count) are per-repo. The repo TABS, computed above from the
   // full set, still list every repo so the user can switch.
   const rows = activeRepo ? i.rows.filter(r => r.location === activeRepo) : i.rows;
-  return { artifact: i.artifact, rows, filters: i.filters, viewModes, activeView: i.activeView, providers, repos, activeRepo };
+  return {
+    artifact: i.artifact,
+    rows,
+    filters: i.filters,
+    focusPolicy: i.focusPolicy,
+    viewModes,
+    activeView: i.activeView,
+    providers,
+    repos,
+    activeRepo,
+  };
 }
 
 export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
@@ -607,6 +624,14 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
       ...base,
       catalog: catalog,
       onFilterChange,
+      onLabelRulesChange: (labels) => {
+        policy.setFocusPolicy({
+          ...currentFocusPolicy(),
+          labels,
+        });
+        core.rerender();
+        buildNav();
+      },
       onViewChange: (id) => {
         applySessionUpdate(session.selectView(id));
       },

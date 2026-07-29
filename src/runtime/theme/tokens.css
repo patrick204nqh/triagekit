@@ -679,6 +679,9 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
   .cat .unsaved-dot[data-unsaved] { margin-left:4px; }
   .set-content { padding:18px 16px; }
   .focus-repo-row { grid-template-columns:30px 3ch minmax(0,1fr) auto; }
+  .fbar { align-items:flex-start; }
+  .fbar-focus { align-items:flex-start; flex-direction:column; gap:4px; }
+  .focus-label-summary { max-width:min(60vw, 360px); }
 }
 
 /* Review card */
@@ -779,7 +782,19 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 
 /* Row 2: repo tabs (left) + Filter/Sort controls (right) directly above the table */
 .fbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; }
+.fbar-focus { display:flex; align-items:center; min-width:0; gap:10px; }
 .fbar-controls { display: flex; gap: 8px; }
+.focus-label-summary { display:flex; align-items:center; min-width:0; gap:4px; color:var(--muted);
+  font:500 11px var(--mono); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.focus-label-summary > span { overflow:hidden; text-overflow:ellipsis; }
+.focus-label-remove { display:inline-grid; place-items:center; width:20px; height:20px; flex:none; padding:0;
+  border:1px solid var(--line); border-radius:6px; background:transparent; color:var(--muted); font:600 12px var(--sans); }
+.focus-label-remove:hover { color:var(--fg); border-color:var(--line-strong); background:var(--carbon); }
+.focus-label-remove:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+.label-rules-head { display:flex; align-items:center; justify-content:space-between; gap:12px;
+  color:var(--fg); font:600 12px var(--sans); }
+[data-label-rules][aria-disabled="true"] { opacity:.5; }
+.label-lane .pop-axis-label { color:var(--fg); font-weight:600; }
 
 /* Repo display-scope tabs — left of the Filter/Sort controls (row 2) */
 .repo-tabs { display: inline-flex; align-items: center; gap: 2px; }
