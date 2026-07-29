@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   createMemoryConnectionState,
 } from "../../src/runtime/cached-dataset/browser-connection-state";
@@ -104,10 +104,10 @@ describe("Cached Datasets", () => {
     });
     const states: DatasetSnapshot[] = [];
     session.subscribe((state) => states.push(state));
-    await flush();
+    await vi.waitFor(() =>
+      expect(states.some((state) => state.items.length === 1)).toBe(true));
 
     expect(states[0].phase).toBe("hydrating");
-    expect(states.some((state) => state.items.length === 1)).toBe(true);
     expect(provider.requests).toHaveLength(1);
   });
 

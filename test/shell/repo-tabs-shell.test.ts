@@ -47,7 +47,8 @@ describe("repo tabs render end-to-end after data loads", () => {
       ]);
 
     try {
-      bootstrap(config);
+      const shell = bootstrap(config);
+      await shell.ready;
       await flush();
 
       const fbar = document.querySelector(".fbar");
@@ -72,7 +73,8 @@ describe("repo tabs render end-to-end after data loads", () => {
       vuln("acme/web", 2),
     ]);
     try {
-      bootstrap(config);
+      const shell = bootstrap(config);
+      await shell.ready;
       await flush();
       // Single distinct repo → renderRepoTabs renders nothing.
       expect(document.querySelectorAll(".fbar [data-repo]").length).toBe(0);

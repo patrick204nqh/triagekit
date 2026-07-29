@@ -56,7 +56,10 @@ export const createBrowserConnectionState = (
   saveScope(provider, scope) {
     local.setItem(scopeKey(provider), JSON.stringify(scope));
   },
-  cadence: (provider) => parseCadence(local.getItem(cadenceKey(provider))),
+  cadence: (provider) => parseCadence(
+    local.getItem(cadenceKey(provider))
+      ?? local.getItem("triagekit.refresh"),
+  ),
   saveCadence(provider, cadence) {
     if (cadence === "off") local.removeItem(cadenceKey(provider));
     else local.setItem(cadenceKey(provider), String(cadence));

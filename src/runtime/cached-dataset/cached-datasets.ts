@@ -564,6 +564,7 @@ export const createCachedDatasets = (
   const bind = async (
     providerId: string,
     credential: string,
+    resuming = false,
   ): Promise<ConnectedProvider> => {
     const definition = providers.get(providerId);
     if (!definition) throw new Error(`Unknown provider "${providerId}"`);
@@ -572,15 +573,22 @@ export const createCachedDatasets = (
     return {
       discoverScope: (signal) => bound.discoverScope(signal),
       open(openInput) {
-        const scope = bound.canonicalizeScope(openInput.scope);
+        const requestedScope = resuming
+          && Object.keys(openInput.scope).length === 0
+          ? options.connectionState.scope(providerId)
+          : openInput.scope;
+        const requestedCadence = resuming && openInput.cadence === "off"
+          ? options.connectionState.cadence(providerId)
+          : openInput.cadence;
+        const scope = bound.canonicalizeScope(requestedScope);
         options.connectionState.saveScope(providerId, scope);
-        options.connectionState.saveCadence(providerId, openInput.cadence);
+        options.connectionState.saveCadence(providerId, requestedCadence);
         return createSession({
           provider: providerId,
           bound,
           scope,
           kinds: Object.freeze([...new Set(openInput.kinds)]),
-          cadence: openInput.cadence,
+          cadence: requestedCadence,
           credential: trimmed,
           persistence,
           connectionState: options.connectionState,
@@ -600,7 +608,7 @@ export const createCachedDatasets = (
     },
     async resume(provider) {
       const credential = options.connectionState.credential(provider);
-      return credential ? bind(provider, credential) : null;
+      return credential ? bind(provider, credential, true) : null;
     },
   };
 };

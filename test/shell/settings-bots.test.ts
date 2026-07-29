@@ -2,13 +2,14 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { mountSettings } from "../../src/runtime/shell/settings";
 import { PolicyStore } from "../../src/runtime/shell/policy-store";
+import { createConnectionSettingsFixture } from "../helpers/connection-settings";
 
 function setup() {
   const host = document.createElement("div"); document.body.appendChild(host);
   const policy = new PolicyStore();
   const api = mountSettings(host, {
-    providers: [], creds: { get: () => "", set: () => {} } as any,
-    scopes: { get: () => ({}), set: () => {} } as any,
+    providers: [],
+    connections: createConnectionSettingsFixture().connections,
     policy, onChange: () => {},
   });
   api.open();
@@ -26,8 +27,8 @@ function setupAuto(autoBots: string[]) {
   const host = document.createElement("div"); document.body.appendChild(host);
   const policy = new PolicyStore();
   const api = mountSettings(host, {
-    providers: [], creds: { get: () => "", set: () => {} } as any,
-    scopes: { get: () => ({}), set: () => {} } as any,
+    providers: [],
+    connections: createConnectionSettingsFixture().connections,
     policy, onChange: () => {}, getAutoBots: () => autoBots,
   });
   api.open();

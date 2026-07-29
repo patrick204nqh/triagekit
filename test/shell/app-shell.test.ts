@@ -153,7 +153,8 @@ describe("mountShell artifact navigation", () => {
     ]);
 
     try {
-      bootstrap(configWithoutInsights);
+      const shell = bootstrap(configWithoutInsights);
+      await shell.ready;
       await flush();
       await flush();
 
@@ -168,6 +169,7 @@ describe("mountShell artifact navigation", () => {
       fetchSpy.mockClear();
 
       clickView("Insights");
+      await flush();
       expect(fetchSpy).toHaveBeenCalled();
       clickView("List");
       expect(document.querySelector(".tb-view.active")?.textContent).toBe("List");
@@ -200,7 +202,8 @@ describe("mountShell artifact navigation", () => {
     ]);
 
     try {
-      bootstrap(configWithoutInsights);
+      const shell = bootstrap(configWithoutInsights);
+      await shell.ready;
       await flush();
       clickView("Insights");
       await flush();

@@ -4,6 +4,7 @@ import type {
   ProviderDeclaration,
   RuntimeCatalog,
   Scorer,
+  Scope,
 } from "../catalog/types";
 import { GROUP_LABEL, GROUP_ORDER, type Artifact } from "../dataset/artifact";
 import { explainScoreModel, validateModel, type ScoreExplanation } from "../scoring/score-model";
@@ -13,19 +14,14 @@ import type { ScoredItem } from "../layout/table/kind-renderer";
 import { renderInsights } from "../layout/insights";
 import type { ListState } from "../layout/toolbar/filter-state";
 import { renderToolbar, type ToolbarProps } from "../layout/toolbar/toolbar";
-import { CredStore } from "./cred-store";
-import { ScopeStore } from "./scope-store";
 import { PolicyStore } from "./policy-store";
-import { healthOf, scopeSummary } from "./health";
+import { scopeSummary } from "./health";
 import { mountSettings } from "./settings";
 import { providerIcon } from "./provider-icons";
 import { getThemeChoice, cycleTheme } from "./theme";
-import { getRefreshInterval, relativeSince } from "./refresh";
-import { scopeKey } from "../core/scope-key";
+import { relativeSince } from "./refresh";
 import { adapterBotLogins } from "../core/author-policy";
-import { refreshProviders } from "../core/orchestrator";
-import type { DatasetStore } from "../core/store";
-import type { TimerPort, ViewPort } from "../core/ports";
+import type { ViewPort } from "../core/ports";
 import type { CoreDeps, Core } from "../core/core";
 import type { DomViewDeps } from "../adapters/dom-view";
 import {
@@ -36,22 +32,29 @@ import { createTriageSession } from "../session/triage-session";
 import type { SessionUpdate, TriageSession } from "../session/types";
 import { HandoffController } from "../handoff/controller";
 import { buildInsightSnapshot } from "../insights/projector";
-import { buildInsightRefreshJobs } from "../insights/refresh";
 import { resolveInsightRoute } from "../insights/routes";
 import type { InsightSnapshot } from "../insights/types";
 import type { Kind } from "../dataset/item";
 import type { TriageFailure } from "../catalog/types";
+import type {
+  CachedDatasets,
+  ConnectedProvider,
+  DatasetSession,
+  DatasetSnapshot,
+  RefreshCadence,
+} from "../cached-dataset/types";
 
 export interface ShellEnv {
   catalog: RuntimeCatalog;
+  datasets: CachedDatasets;
   session?: TriageSession;
   sessionUrl?: SessionUrlAdapter;
-  store: DatasetStore;
-  timer: TimerPort;
   createCore: (deps: CoreDeps) => Core;
   createDomView: (host: HTMLElement, deps: DomViewDeps) => ViewPort;
   scoreOverride?: Scorer;
 }
+
+export type ShellCore = Core & { readonly ready: Promise<void> };
 
 const applicableCatalogTabs = (
   catalog: RuntimeCatalog,
@@ -62,7 +65,6 @@ const applicableCatalogTabs = (
     .filter((tab) => tab.appliesTo(artifact, rows))
     .sort((a, b) => a.order - b.order);
 
-const connectionKey = (provider: ProviderDeclaration): string => provider.id;
 // Product mark: a funnel (many signals in → a triaged few out) whose drip is the
 // teal accent, echoing the "·" in the wordmark.
 const BRAND_MARK = `<svg class="brand-mark" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 5.5H20.5L13 14.5V18H11V14.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="20.8" r="1.7" fill="var(--accent)"/></svg>`;
@@ -108,16 +110,11 @@ function assembleToolbarProps(i: ToolbarPropsInput): Omit<ToolbarProps, "onFilte
   return { artifact: i.artifact, rows, filters: i.filters, viewModes, activeView: i.activeView, providers, repos, activeRepo };
 }
 
-export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
+export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
   const catalog = env.catalog;
   const session = env.session ?? createTriageSession({ catalog });
   const sessionUrl = env.sessionUrl ?? createBrowserSessionUrl(window);
-  const creds = new CredStore();
-  const scopes = new ScopeStore();
   const policy = new PolicyStore();
-  if (isCompiledConfig(config)) {
-    scopes.set(config.source, config.scope!);
-  }
   const hasInsights = true;
 
   const providersForArtifact = (a: Artifact) =>
@@ -138,10 +135,19 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   let lastRows: ScoredItem[] = [];
   let lastFetchedAt: number | null = null;
   let insightSnapshot: InsightSnapshot | null = null;
-  let insightFailures: TriageFailure[] = [];
-  let insightRefreshedKinds: Kind[] = [];
   let insightRefreshing = false;
-  let cancelRefresh: (() => void) | undefined;
+  const connectedProviders = new Map<string, ConnectedProvider>();
+  const datasetSessions = new Map<string, DatasetSession>();
+  const datasetSnapshots = new Map<string, DatasetSnapshot>();
+  const unsubscribers = new Map<string, () => void>();
+  let coreReady = false;
+
+  const activeDatasetSession = () => datasetSessions.get(currentProvider());
+  const activeDatasetSnapshot = () => datasetSnapshots.get(currentProvider());
+  const activeItems = () => activeDatasetSnapshot()?.items ?? [];
+  const activeFailures = (): readonly TriageFailure[] =>
+    activeDatasetSnapshot()?.slices
+      .flatMap((slice) => slice.failure ? [slice.failure] : []) ?? [];
 
   // Signature of the toolbar's row-derived inputs (distinct repo locations + applicable
   // extra-tab ids for the active artifact). dispatchView rebuilds the toolbar only when
@@ -153,12 +159,6 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     [...new Set(lastRows.map(r => r.location))].sort().join(",") +
     "|" + applicableCatalogTabs(catalog, active, lastRows).map(t => t.id).sort().join(",");
   let lastNavRowSig = "";
-
-  // The credentialed, scoped sources for the active artifact's active provider.
-  const usableProviders = () => readyProvidersFor(active).filter(provider =>
-    provider.id === currentProvider()
-    && creds.get(connectionKey(provider))
-    && Object.keys(scopes.get(connectionKey(provider))).length);
 
   // Per-item score breakdown for the list drawer (lifted from renderListWithFilters).
   const scoreExplain = (i: ScoredItem): ScoreExplanation | null => {
@@ -177,7 +177,13 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   const dispatchView: ViewPort = {
     render(vm) {
       lastRows = vm.scored;
-      lastFetchedAt = Date.now(); updateSync();
+      lastFetchedAt = activeDatasetSnapshot()?.slices.reduce<number | null>(
+        (latest, slice) => slice.validatedAt !== undefined
+          ? Math.max(latest ?? 0, slice.validatedAt)
+          : latest,
+        null,
+      ) ?? null;
+      updateSync();
       const reconciliation = session.reconcile({
         repositories: [...new Set(vm.scored.map((row) => row.location))],
         views: [
@@ -197,7 +203,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
         render();
         return;
       }
-      if (!usableProviders().length) {
+      if (!activeDatasetSession()) {
         render();
         return;
       }
@@ -211,14 +217,8 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
         const tab = catalog.tabs().find((candidate) => candidate.id === currentView());
         if (tab) { tab.render(root, vm.scored); return; }
       }
-      // createDomView is called per-render intentionally: artifact: active and token
-      // both reflect the current artifact/credential at render time and go stale if
-      // captured at construction (active is reassigned when the user switches artifacts).
-      const token = creds.get(connectionKey(usableProviders()[0]))!;  // usableProviders filter guarantees a credential
       env.createDomView(root, {
         artifact: active,
-        token,
-        providerId: currentProvider(),
         scoreExplain,
         catalog: catalog,
         handoffController,
@@ -234,15 +234,12 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   });
 
   const core = env.createCore({
-    store: env.store,
+    items: activeItems,
+    failures: activeFailures,
+    refresh: async () => {
+      await activeDatasetSession()?.refresh();
+    },
     view: dispatchView,
-    jobsFor: () => usableProviders().map(s => ({
-      provider: s,
-      scopeKey: scopeKey(scopes.get(connectionKey(s))),
-      scope: scopes.get(connectionKey(s)),
-      credential: creds.get(connectionKey(s))!,
-      kinds: active.kinds.filter(kind => s.kinds.includes(kind)),
-    })),
     activeKinds: () => active.kinds,
     botLogins: () => policy.getBotLogins(),
     scoreContext,
@@ -287,40 +284,111 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   const gear = document.createElement("button"); gear.className = "icon-btn"; gear.setAttribute("aria-label", "Settings"); gear.title = "Settings"; gear.innerHTML = GEAR;
   bar.append(status, sync, refresh, themeBtn, gear);
 
+  const pendingConnections = new Map<string, ConnectedProvider>();
+  const configuredScope = (providerId: string): Scope =>
+    isCompiledConfig(config) && config.source === providerId
+      ? config.scope ?? {}
+      : {};
+
+  const installDatasetSession = (
+    providerId: string,
+    connected: ConnectedProvider,
+    scope: Scope,
+    cadence: RefreshCadence,
+  ): DatasetSession => {
+    unsubscribers.get(providerId)?.();
+    const provider = catalog.provider(providerId);
+    const datasetSession = connected.open({
+      scope,
+      kinds: provider?.kinds ?? [],
+      cadence,
+    });
+    connectedProviders.set(providerId, connected);
+    datasetSessions.set(providerId, datasetSession);
+    const unsubscribe = datasetSession.subscribe((snapshot) => {
+      datasetSnapshots.set(providerId, snapshot);
+      if (!coreReady) return;
+      if (providerId === currentProvider()) {
+        core.rerender();
+        refreshBar();
+        if (currentView() === "insights") void presentInsights(false);
+      }
+    });
+    unsubscribers.set(providerId, unsubscribe);
+    return datasetSession;
+  };
+
   const settingsHost = document.getElementById("settings-host")!;
   const settings = mountSettings(settingsHost, {
     catalog,
-    providers: [...catalog.providers()], creds, scopes, policy,
+    providers: [...catalog.providers()],
+    connections: {
+      has: (providerId) =>
+        datasetSnapshots.get(providerId)?.phase !== "closed"
+        && connectedProviders.has(providerId),
+      scope: (providerId) =>
+        datasetSnapshots.get(providerId)?.scope ?? configuredScope(providerId),
+      cadence: (providerId) =>
+        datasetSnapshots.get(providerId)?.cadence ?? "off",
+      async discover(providerId, credential) {
+        const connected = credential
+          ? await env.datasets.connect(providerId, credential)
+          : connectedProviders.get(providerId)
+            ?? await env.datasets.resume(providerId);
+        if (!connected) throw new Error("Enter a credential before discovery");
+        if (credential) pendingConnections.set(providerId, connected);
+        return connected.discoverScope();
+      },
+      async save(providerId, credential, scope) {
+        const cadence = datasetSnapshots.get(providerId)?.cadence ?? "off";
+        const connected = credential
+          ? pendingConnections.get(providerId)
+            ?? await env.datasets.connect(providerId, credential)
+          : connectedProviders.get(providerId)
+            ?? await env.datasets.resume(providerId);
+        if (!connected) throw new Error("Enter a credential before saving");
+        pendingConnections.delete(providerId);
+        installDatasetSession(providerId, connected, scope, cadence);
+      },
+      setCadence(providerId, cadence) {
+        datasetSessions.get(providerId)?.setCadence(cadence);
+      },
+      async clearCachedData(providerId) {
+        await datasetSessions.get(providerId)?.clearCachedData();
+      },
+      async disconnect(providerId, mode) {
+        await datasetSessions.get(providerId)?.disconnect(mode);
+        unsubscribers.get(providerId)?.();
+        unsubscribers.delete(providerId);
+        connectedProviders.delete(providerId);
+        datasetSessions.delete(providerId);
+      },
+    },
+    policy,
     onChange: () => { lastRows = []; refreshBar(); render(); },
     onThemeChange: () => syncTheme(),
-    onRefreshChange: () => applyRefreshTimer(),
     getRows: () => lastRows,
-    getAutoBots: () => adapterBotLogins(env.store.snapshot(), active.kinds),
+    getAutoBots: () => adapterBotLogins(activeItems(), active.kinds),
   });
   const openSettings = () => settings.open(primaryProvider(active).id);
-
-  const insightJobs = () => buildInsightRefreshJobs({
-    catalog,
-    credentialFor: (providerId) => {
-      const provider = catalog.providers().find((candidate) => candidate.id === providerId);
-      return provider ? creds.get(connectionKey(provider)) ?? undefined : undefined;
-    },
-    scopeFor: (providerId) => {
-      const provider = catalog.providers().find((candidate) => candidate.id === providerId);
-      return provider ? scopes.get(connectionKey(provider)) : {};
-    },
-    scopeKeyFor: (_providerId, scope) => scopeKey(scope),
-  });
 
   const readyInsightKinds = (): Kind[] => catalog.kinds()
     .filter((kind) => kind.status === "ready")
     .map((kind) => kind.kind);
 
   const projectInsights = (): InsightSnapshot => buildInsightSnapshot({
-    items: env.store.snapshot(),
+    items: activeItems(),
     readyKinds: readyInsightKinds(),
-    refreshedKinds: insightRefreshedKinds,
-    staleKinds: readyInsightKinds().filter((kind) => !insightRefreshedKinds.includes(kind)),
+    refreshedKinds: [...new Set(
+      activeDatasetSnapshot()?.slices
+        .filter((slice) => slice.freshness === "fresh")
+        .map((slice) => slice.kind) ?? [],
+    )],
+    staleKinds: [...new Set(
+      activeDatasetSnapshot()?.slices
+        .filter((slice) => slice.freshness !== "fresh")
+        .map((slice) => slice.kind) ?? [],
+    )],
     catalog,
     score: scoreContext(),
     botLogins: policy.getBotLogins(),
@@ -331,7 +399,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     const resolved = resolveInsightRoute({
       route,
       catalog,
-      repositories: [...new Set(env.store.snapshot().map((item) => item.location))],
+      repositories: [...new Set(activeItems().map((item) => item.location))],
     });
     if (resolved.destination === "settings") {
       settings.open(primaryProvider(active).id, resolved.category);
@@ -343,33 +411,24 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   async function presentInsights(refresh: boolean): Promise<void> {
     root.setAttribute("role", "tabpanel");
     root.setAttribute("aria-labelledby", "view-tab-insights");
-    const jobs = insightJobs();
-    const readyProviders = catalog.providers()
-      .filter((provider) => provider.status === "ready" && provider.adapter);
+    const datasetSession = activeDatasetSession();
+    const datasetSnapshot = activeDatasetSnapshot();
 
-    if (jobs.length === 0) {
-      const hasCredential = readyProviders.some((provider) =>
-        Boolean(creds.get(connectionKey(provider))),
-      );
+    if (!datasetSession || !datasetSnapshot) {
       renderInsights(root, null, {
         state: "empty",
-        emptyReason: readyProviders.length === 0 || !hasCredential
-          ? "no-provider"
-          : "no-scope",
+        emptyReason: "no-provider",
         onRoute: handleInsightRoute,
       });
       return;
     }
 
+    const failures = activeFailures();
+    insightSnapshot = projectInsights();
     if (insightSnapshot) {
       renderInsights(root, insightSnapshot, {
-        state: insightFailures.length ? "partial" : "ready",
-        failures: insightFailures,
-        onRoute: handleInsightRoute,
-      });
-    } else {
-      renderInsights(root, null, {
-        state: "loading",
+        state: failures.length ? "partial" : "ready",
+        failures,
         onRoute: handleInsightRoute,
       });
     }
@@ -377,31 +436,20 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     if (!refresh || insightRefreshing) return;
     insightRefreshing = true;
     try {
-      const result = await refreshProviders(jobs, env.store);
-      insightFailures = result.failures;
-      const failedProviders = new Set(
-        result.failures.filter((failure) => !failure.kind).map((failure) => failure.provider),
-      );
-      const failedKinds = new Set(
-        result.failures.flatMap((failure) => failure.kind ? [failure.kind] : []),
-      );
-      insightRefreshedKinds = [...new Set(jobs.flatMap((job) =>
-        failedProviders.has(job.provider.id)
-          ? []
-          : job.kinds.filter((kind) => !failedKinds.has(kind)),
-      ))];
+      await datasetSession.refresh();
       insightSnapshot = projectInsights();
       if (currentView() !== "insights") {
         core.rerender();
         return;
       }
-      const hasItems = env.store.snapshot().length > 0;
+      const hasItems = activeItems().length > 0;
+      const currentFailures = activeFailures();
       renderInsights(root, insightSnapshot, {
         state: hasItems
-          ? (insightFailures.length ? "partial" : "ready")
+          ? (currentFailures.length ? "partial" : "ready")
           : "empty",
-        emptyReason: hasItems ? undefined : (insightFailures.length ? "unavailable" : "no-items"),
-        failures: insightFailures,
+        emptyReason: hasItems ? undefined : (currentFailures.length ? "unavailable" : "no-items"),
+        failures: currentFailures,
         onRoute: handleInsightRoute,
       });
     } finally {
@@ -411,7 +459,10 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
 
   status.addEventListener("click", openSettings);
   gear.addEventListener("click", openSettings);
-  refresh.addEventListener("click", () => { lastRows = []; render(); });
+  refresh.addEventListener("click", () => {
+    lastRows = [];
+    void core.refreshNow();
+  });
 
   // Theme: the top-right control cycles the explicit choice (auto → light → dark)
   // and shows the choice's own glyph, so picking "auto" in Settings is never lost.
@@ -429,9 +480,11 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
     let cls = "warn", tail: string;
     if (!live.length) { tail = "upcoming"; }
     else {
-      const missing = healthOf(lead, creds) !== "connected";
+      const dataset = datasetSnapshots.get(lead.id);
+      const missing = !dataset || dataset.phase === "closed";
       cls = missing ? "warn" : "ok";
-      tail = missing ? "no token" : scopeSummary(lead, scopes.get(connectionKey(lead)));
+      tail = missing ? "not connected" : scopeSummary(lead, dataset.scope);
+      if (dataset?.persistence === "memory") cls = "warn";
     }
     status.className = "status-chip " + cls;
     status.innerHTML = `${providerIcon(lead.id, 15)}<span class="sid">${esc(lead.id)}</span><span class="sep">·</span><span class="muted">${esc(tail)}</span>`;
@@ -440,12 +493,6 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   function updateSync() {
     sync.textContent = lastFetchedAt == null ? "" : `updated ${relativeSince(lastFetchedAt)}`;
   }
-  function applyRefreshTimer() {
-    if (cancelRefresh) cancelRefresh();
-    const secs = getRefreshInterval();
-    if (secs > 0) cancelRefresh = env.timer.every(secs * 1000, () => { if (readyProvidersFor(active).length) render(true); });
-  }
-
   // ── Navigation: grouped artifact rail (Findings / Work) → list/insights + filter ──
   const rail = document.getElementById("domainRail")!;
   const nav = document.getElementById("viewswitch")!;
@@ -529,14 +576,17 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
       if (tab) { tab.render(root, lastRows); return; }
     }
 
-    if (!usableProviders().length) {
-      const needScope = live.some(s => s.id === currentProvider() && creds.get(connectionKey(s)) && !Object.keys(scopes.get(connectionKey(s))).length);
+    if (!activeDatasetSession()) {
+      const needScope = connectedProviders.has(currentProvider())
+        && !Object.keys(activeDatasetSnapshot()?.scope ?? {}).length;
       root.innerHTML = `<p class="muted">Open Settings to ${needScope ? "choose your scope" : "connect a token"}.</p>`;
       lastFetchedAt = null; updateSync();
       return;
     }
-    if (!silent) renderTableSkeleton(root);
-    core.refreshNow();   // refresh → derive → dispatchView.render(vm)
+    if (!silent && activeDatasetSnapshot()?.phase === "hydrating") {
+      renderTableSkeleton(root);
+    }
+    core.rerender();
   };
 
   syncTheme();
@@ -544,8 +594,22 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): Core {
   buildNav();
   refreshBar();
   updateSync();
-  applyRefreshTimer();
   setInterval(updateSync, 30_000);   // keep the "updated Xm ago" stamp fresh
+  coreReady = true;
+  const ready = (async () => {
+    for (const provider of catalog.providers().filter((candidate) =>
+      candidate.status === "ready")) {
+      const connected = await env.datasets.resume(provider.id);
+      if (!connected) continue;
+      installDatasetSession(
+        provider.id,
+        connected,
+        configuredScope(provider.id),
+        "off",
+      );
+    }
+    render();
+  })();
   render();
-  return core;
+  return Object.assign(core, { ready });
 }

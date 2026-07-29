@@ -1,8 +1,9 @@
 import type {
+  ProviderDeclaration,
   RuntimeCatalog,
   Scope,
 } from "../catalog/types";
-import type { ProviderRefreshJob } from "../core/orchestrator";
+import type { Kind } from "../dataset/item";
 
 export interface InsightRefreshInput {
   catalog: RuntimeCatalog;
@@ -37,4 +38,11 @@ export function buildInsightRefreshJobs(
   }
 
   return Object.freeze(jobs);
+}
+export interface ProviderRefreshJob {
+  provider: ProviderDeclaration;
+  scopeKey: string;
+  scope: Scope;
+  credential: string;
+  kinds: readonly Kind[];
 }

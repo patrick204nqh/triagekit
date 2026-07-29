@@ -1,10 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mountSettings } from "../../src/runtime/shell/settings";
-import { CredStore } from "../../src/runtime/shell/cred-store";
-import { ScopeStore } from "../../src/runtime/shell/scope-store";
 import { PolicyStore } from "../../src/runtime/shell/policy-store";
 import { provider } from "../helpers/provider";
+import { createConnectionSettingsFixture } from "../helpers/connection-settings";
 
 const github = provider({
   scopeFields: [{
@@ -31,9 +30,16 @@ const github = provider({
 function mount(extra?: Partial<Parameters<typeof mountSettings>[1]>) {
   vi.stubGlobal("matchMedia", (q: string) => ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} }) as any);
   const host = document.createElement("div"); document.body.appendChild(host);
-  const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
-  const s = mountSettings(host, { providers: [github], creds, scopes, policy, onChange: () => {}, ...extra });
-  return { host, creds, scopes, policy, s };
+  const fixture = createConnectionSettingsFixture();
+  const policy = new PolicyStore();
+  const s = mountSettings(host, {
+    providers: [github],
+    connections: fixture.connections,
+    policy,
+    onChange: () => {},
+    ...extra,
+  });
+  return { host, ...fixture, policy, s };
 }
 
 describe("mountSettings", () => {
@@ -90,24 +96,25 @@ describe("mountSettings", () => {
     expect(synced).toBe(1);
   });
 
-  it("clears credentials on confirm", () => {
+  it("disconnects while retaining cached data", async () => {
     vi.stubGlobal("confirm", () => true);
     const { host, creds, s } = mount();
     creds.set("github", "ghp_x");
     s.open("github");
-    host.querySelector<HTMLElement>('[data-clear="creds"]')!.click();
+    host.querySelector<HTMLElement>('[data-disconnect="retain-cache"]')!.click();
+    await Promise.resolve();
     expect(creds.has("github")).toBe(false);
   });
 
   it("exposes an auto-refresh control wired to the preference", () => {
-    let bumped = 0;
-    const { host, s } = mount({ onRefreshChange: () => { bumped++; } });
+    const { host, s, connections } = mount();
     s.open("github");
     const opts = host.querySelectorAll("[data-refresh-seg] [data-refresh]");
-    expect(opts.length).toBe(3);
+    expect([...opts].map((option) =>
+      (option as HTMLElement).dataset.refresh))
+      .toEqual(["off", "300", "600", "900"]);
     host.querySelector<HTMLElement>('[data-refresh="300"]')!.click();
-    expect(localStorage.getItem("triagekit.refresh")).toBe("300");
-    expect(bumped).toBe(1);
+    expect(connections.cadence("github")).toBe(300);
   });
 
   it("catalogs connections as Connected vs Available and filters them", () => {
@@ -133,14 +140,18 @@ describe("mountSettings", () => {
       { value: "acme/web", label: "web", group: "acme" },
       { value: "acme/api", label: "api", group: "acme" },
     ]);
-    const src = {
-      ...github,
-      adapter: { ...github.adapter!, discoverScope: discover },
-    };
+    const src = github;
     const host = document.createElement("div"); document.body.appendChild(host);
-    const creds = new CredStore(); const scopes = new ScopeStore();
+    const fixture = createConnectionSettingsFixture();
+    const { creds, scopes } = fixture;
+    fixture.setDiscover(discover);
     creds.set("github", "ghp_x");
-    const s = mountSettings(host, { providers: [src], creds, scopes, policy: new PolicyStore(), onChange: () => {} });
+    const s = mountSettings(host, {
+      providers: [src],
+      connections: fixture.connections,
+      policy: new PolicyStore(),
+      onChange: () => {},
+    });
     s.open("github");
 
     host.querySelector<HTMLElement>('[data-discover="repos"]')!.click();
@@ -178,7 +189,7 @@ describe("mountSettings", () => {
     expect(host.querySelectorAll(".ms-chip").length).toBe(1);               // saved selection shown
   });
 
-  it("saves credentials under the stable provider id", () => {
+  it("saves credentials under the stable provider id", async () => {
     vi.stubGlobal("matchMedia", (query: string) => ({
       matches: true,
       media: query,
@@ -187,11 +198,11 @@ describe("mountSettings", () => {
     }) as any);
     const host = document.createElement("div");
     document.body.appendChild(host);
-    const creds = new CredStore();
+    const fixture = createConnectionSettingsFixture();
+    const { creds } = fixture;
     const settings = mountSettings(host, {
       providers: [github],
-      creds,
-      scopes: new ScopeStore(),
+      connections: fixture.connections,
       policy: new PolicyStore(),
       onChange: () => {},
     });
@@ -201,21 +212,26 @@ describe("mountSettings", () => {
     input.value = "ghp_x";
     input.dispatchEvent(new Event("input"));
     host.querySelector<HTMLElement>("[data-save]")!.click();
+    await Promise.resolve();
 
     expect(host.querySelectorAll(".conn-item")).toHaveLength(1);
     expect(creds.get("github")).toBe("ghp_x");
   });
   it("shows saved repos as chips on open, before any discovery", () => {
     const discover = vi.fn(async () => [{ value: "acme/web", label: "web", group: "acme" }]);
-    const src = {
-      ...github,
-      adapter: { ...github.adapter!, discoverScope: discover },
-    };
+    const src = github;
     const host = document.createElement("div"); document.body.appendChild(host);
-    const creds = new CredStore(); const scopes = new ScopeStore();
+    const fixture = createConnectionSettingsFixture();
+    const { creds, scopes } = fixture;
+    fixture.setDiscover(discover);
     creds.set("github", "tok");
     scopes.set("github", { repos: ["acme/web", "acme/api"] });
-    const s = mountSettings(host, { providers: [src], creds, scopes, policy: new PolicyStore(), onChange: () => {} });
+    const s = mountSettings(host, {
+      providers: [src],
+      connections: fixture.connections,
+      policy: new PolicyStore(),
+      onChange: () => {},
+    });
     s.open("github");
     const chips = [...host.querySelectorAll(".ms-chip .repo")].map(c => c.textContent);
     expect(chips).toEqual(expect.arrayContaining(["acme/web", "acme/api"]));
@@ -232,7 +248,12 @@ describe("mountSettings", () => {
       },
     };
     const host = document.createElement("div"); document.body.appendChild(host);
-    const s = mountSettings(host, { providers: [src], creds: new CredStore(), scopes: new ScopeStore(), policy: new PolicyStore(), onChange: () => {} });
+    const s = mountSettings(host, {
+      providers: [src],
+      connections: createConnectionSettingsFixture().connections,
+      policy: new PolicyStore(),
+      onChange: () => {},
+    });
     s.open("github");
     expect(host.querySelector(".conn-item .info")?.getAttribute("title")).toBe("Use a fine-grained PAT.");
     const link = host.querySelector<HTMLAnchorElement>(".set-link");
@@ -243,9 +264,9 @@ describe("mountSettings", () => {
   it("ignores negative tier input and leaves the default unchanged", () => {
     localStorage.clear(); sessionStorage.clear();
     document.body.innerHTML = `<div id="h3"></div>`;
-    const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
+    const policy = new PolicyStore();
     const host = document.getElementById("h3")!;
-    const s = mountSettings(host, { providers: [github], creds, scopes, policy, onChange: () => {} });
+    const s = mountSettings(host, { providers: [github], connections: createConnectionSettingsFixture().connections, policy, onChange: () => {} });
     s.open("github");
     // switch to Scoring & priority
     host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
@@ -258,9 +279,9 @@ describe("mountSettings", () => {
   it("ignores non-finite tier input (empty string) and leaves the default unchanged", () => {
     localStorage.clear(); sessionStorage.clear();
     document.body.innerHTML = `<div id="h2"></div>`;
-    const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
+    const policy = new PolicyStore();
     const host = document.getElementById("h2")!;
-    const s = mountSettings(host, { providers: [github], creds, scopes, policy, onChange: () => {} });
+    const s = mountSettings(host, { providers: [github], connections: createConnectionSettingsFixture().connections, policy, onChange: () => {} });
     s.open("github");
     // switch to Scoring & priority
     host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
@@ -273,10 +294,10 @@ describe("mountSettings", () => {
   it("Scoring pane edits tier thresholds and persists on save", () => {
     localStorage.clear(); sessionStorage.clear();
     document.body.innerHTML = `<div id="h"></div>`;
-    const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
+    const policy = new PolicyStore();
     let changed = 0;
     const host = document.getElementById("h")!;
-    const s = mountSettings(host, { providers: [github], creds, scopes, policy, onChange: () => { changed++; } });
+    const s = mountSettings(host, { providers: [github], connections: createConnectionSettingsFixture().connections, policy, onChange: () => { changed++; } });
     s.open("github");
     // switch to Scoring & priority
     host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
@@ -291,9 +312,9 @@ describe("mountSettings", () => {
   it("labels the global cutoffs as the built-in scoring default", () => {
     localStorage.clear(); sessionStorage.clear();
     document.body.innerHTML = `<div id="hbid"></div>`;
-    const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
+    const policy = new PolicyStore();
     const host = document.getElementById("hbid")!;
-    const s = mountSettings(host, { providers: [github], creds, scopes, policy, onChange: () => {} });
+    const s = mountSettings(host, { providers: [github], connections: createConnectionSettingsFixture().connections, policy, onChange: () => {} });
     s.open("github");
     host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
     expect(host.querySelector<HTMLElement>("[data-cat-pane='scoring']")!.textContent).toContain("built-in scoring");
@@ -302,9 +323,9 @@ describe("mountSettings", () => {
   it("flags non-decreasing global cutoffs inline (presentational only)", () => {
     localStorage.clear(); sessionStorage.clear();
     document.body.innerHTML = `<div id="hgv"></div>`;
-    const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
+    const policy = new PolicyStore();
     const host = document.getElementById("hgv")!;
-    const s = mountSettings(host, { providers: [github], creds, scopes, policy, onChange: () => {} });
+    const s = mountSettings(host, { providers: [github], connections: createConnectionSettingsFixture().connections, policy, onChange: () => {} });
     s.open("github");
     host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
     const pane = host.querySelector<HTMLElement>("[data-cat-pane='scoring']")!;
@@ -322,9 +343,9 @@ describe("mountSettings", () => {
   it("clears the inline flag when global cutoffs strictly decrease", () => {
     localStorage.clear(); sessionStorage.clear();
     document.body.innerHTML = `<div id="hgv2"></div>`;
-    const creds = new CredStore(); const scopes = new ScopeStore(); const policy = new PolicyStore();
+    const policy = new PolicyStore();
     const host = document.getElementById("hgv2")!;
-    const s = mountSettings(host, { providers: [github], creds, scopes, policy, onChange: () => {} });
+    const s = mountSettings(host, { providers: [github], connections: createConnectionSettingsFixture().connections, policy, onChange: () => {} });
     s.open("github");
     host.querySelector<HTMLElement>("[data-category='scoring']")!.click();
     const pane = host.querySelector<HTMLElement>("[data-cat-pane='scoring']")!;
