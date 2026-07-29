@@ -4,6 +4,11 @@ import type {
   TriageFailure,
 } from "../catalog/types";
 import type { Kind, TriageItem } from "../dataset/item";
+import type {
+  ActionAvailability,
+  ActionResult,
+  TriageAction,
+} from "../actions/types";
 
 export type RefreshCadence = "off" | 300 | 600 | 900;
 export type SliceFreshness =
@@ -37,6 +42,7 @@ export interface DatasetSnapshot {
   readonly persistence: "indexeddb" | "memory";
   readonly warnings: readonly string[];
   readonly retryAt?: number;
+  readonly pendingActions?: readonly string[];
 }
 
 export interface RefreshReport {
@@ -70,6 +76,11 @@ export interface DatasetSession {
     targets?: readonly string[];
     kinds?: readonly Kind[];
   }): Promise<RefreshReport>;
+  available(item: TriageItem): readonly ActionAvailability[];
+  perform(
+    action: TriageAction,
+    signal?: AbortSignal,
+  ): Promise<ActionResult>;
   setCadence(cadence: RefreshCadence): void;
   clearCachedData(): Promise<void>;
   disconnect(mode: DisconnectMode): Promise<void>;

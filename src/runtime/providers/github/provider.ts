@@ -23,6 +23,10 @@ import {
 import { dependencyVulnIngest } from "./kinds/dependency-vuln";
 import { codeScanningIngest } from "./kinds/code-scanning";
 import { reviewIngest } from "./kinds/review";
+import {
+  createGithubActionDefinitions,
+  githubActionCapabilities,
+} from "./actions";
 
 const githubKindIngests: readonly GithubKindIngest[] = [
   dependencyVulnIngest,
@@ -45,11 +49,6 @@ const reference = (value: unknown): GithubReference => {
     throw new ProviderError("github", "reference", "expected object with string repository and number number");
   }
   return candidate as GithubReference;
-};
-
-const actions: Readonly<Partial<Record<Kind, readonly string[]>>> = {
-  "change-request": ["merge", "comment", "label"],
-  issue: ["comment", "assign", "close", "label"],
 };
 
 async function enrichGithubItem(
@@ -98,8 +97,8 @@ async function executeGithubCommand(
   http: GithubHttp,
   command: ProviderCommand,
 ): Promise<void> {
-  const declared = actions[command.kind] ?? [];
-  if (!declared.includes(command.action)) {
+  const declared = githubActionCapabilities()[command.kind] ?? [];
+  if (!declared.some((intent) => intent === command.action)) {
     throw new ProviderError("github", "execute",
       `action "${command.action}" is not declared for "${command.kind}"`);
   }
@@ -185,7 +184,7 @@ export function createGithubProvider(
     capabilities: {
       discoverScope: true,
       enrich: ["change-request"],
-      actions,
+      actions: githubActionCapabilities(),
     },
     async bind(rawCredential) {
       const credential = rawCredential.trim();
@@ -211,6 +210,7 @@ export function createGithubProvider(
           : message;
 
       return {
+        actions: createGithubActionDefinitions(http),
         discoverScope(signal) {
           ensureOpen();
           return discoverGithubRepositories(http, signal);

@@ -1,5 +1,10 @@
 import type { Scope, TriageFailure } from "../catalog/types";
 import type { Kind, TriageItem } from "../dataset/item";
+import { createActionCatalog } from "../actions/catalog";
+import type {
+  ActionResult,
+  TriageAction,
+} from "../actions/types";
 import type {
   BoundProvider,
   ProviderDefinition,
@@ -49,6 +54,7 @@ interface RuntimeSlice {
   readonly target: string;
   readonly kind: Kind;
   persisted?: PersistedSlice;
+  projectedItems?: readonly TriageItem[];
   freshness: SliceFreshness;
   failure?: TriageFailure;
 }
@@ -151,6 +157,9 @@ const createSession = (input: {
   readonly activeConnectionKeys: Set<string>;
 }): DatasetSession => {
   const observers = new Set<(snapshot: DatasetSnapshot) => void>();
+  const actionCatalog = createActionCatalog(input.bound.actions ?? []);
+  const pendingActions = new Set<string>();
+  const actionControllers = new Set<AbortController>();
   const slices = new Map<string, RuntimeSlice>();
   const targets = input.bound.targets(input.scope);
   let cadence = input.cadence;
@@ -175,7 +184,8 @@ const createSession = (input: {
     const sliceStates: SliceState[] = [];
     const items: TriageItem[] = [];
     for (const slice of slices.values()) {
-      if (slice.persisted) items.push(...slice.persisted.items);
+      if (slice.projectedItems) items.push(...slice.projectedItems);
+      else if (slice.persisted) items.push(...slice.persisted.items);
       sliceStates.push(deepFreezeCopy({
         target: slice.target,
         kind: slice.kind,
@@ -193,6 +203,9 @@ const createSession = (input: {
       slices: sliceStates,
       persistence: persistenceMode(input.persistence),
       warnings: persistenceWarnings(input.persistence),
+      ...(pendingActions.size > 0
+        ? { pendingActions: [...pendingActions] }
+        : {}),
     });
   };
 
@@ -395,6 +408,7 @@ const createSession = (input: {
           });
         }
         slice.persisted = persisted;
+        delete slice.projectedItems;
         slice.freshness = "fresh";
         delete slice.failure;
         refreshed.push({ target: slice.target, kind: slice.kind });
@@ -443,6 +457,108 @@ const createSession = (input: {
       retainedStale,
       failures,
     });
+  };
+
+  const perform = async (
+    action: TriageAction,
+    signal?: AbortSignal,
+  ): Promise<ActionResult> => {
+    await initialized;
+    if (closed) {
+      return deepFreezeCopy({
+        status: "rejected",
+        message: "Dataset Session is closed",
+      });
+    }
+    const item = snapshot.items.find(({ id }) => id === action.itemId);
+    if (!item) {
+      return deepFreezeCopy({
+        status: "rejected",
+        message: `Triage item "${action.itemId}" was not found`,
+      });
+    }
+    const definition = actionCatalog.definition(action.intent);
+    if (!definition
+      || !definition.kinds.includes(item.kind)
+      || !definition.available(item)) {
+      return deepFreezeCopy({
+        status: "rejected",
+        message: `Triage Action "${action.intent}" is not available`,
+      });
+    }
+    const errors = definition.validate(action);
+    if (errors.length > 0) {
+      return deepFreezeCopy({
+        status: "rejected",
+        message: errors.join("; "),
+      });
+    }
+    if (pendingActions.has(action.itemId)) {
+      return deepFreezeCopy({
+        status: "rejected",
+        message: "A Triage Action is already pending for this item",
+      });
+    }
+
+    const controller = new AbortController();
+    const abort = (): void =>
+      controller.abort(signal?.reason ?? new DOMException("Aborted", "AbortError"));
+    if (signal?.aborted) abort();
+    else signal?.addEventListener("abort", abort, { once: true });
+    actionControllers.add(controller);
+    pendingActions.add(action.itemId);
+    publish();
+
+    try {
+      let result: ActionResult;
+      try {
+        result = await definition.execute(action, item, controller.signal);
+      } catch (error) {
+        if (controller.signal.aborted) throw controller.signal.reason ?? error;
+        result = {
+          status: "rejected",
+          message: error instanceof Error ? error.message : String(error),
+        };
+      }
+
+      if (result.status === "confirmed" && result.item) {
+        const projected = result.item;
+        if (projected.id !== item.id
+          || projected.provider !== input.provider
+          || projected.kind !== item.kind
+          || !isTriageItem(projected)) {
+          result = {
+            status: "rejected",
+            message: "Provider returned an invalid normalized TriageItem",
+          };
+        } else {
+          const slice = [...slices.values()].find((candidate) =>
+            (candidate.projectedItems ?? candidate.persisted?.items ?? [])
+              .some(({ id }) => id === item.id));
+          if (slice) {
+            const currentItems = slice.projectedItems
+              ?? slice.persisted?.items
+              ?? [];
+            slice.projectedItems = deepFreezeCopy(
+              currentItems.map((current) =>
+                current.id === item.id ? projected : current),
+            );
+            publish();
+          }
+        }
+      }
+
+      if (result.status === "confirmed"
+        || result.status === "outcome-unknown") {
+        await refresh(definition.revalidate(action, item));
+      }
+      return deepFreezeCopy(result);
+    } finally {
+      signal?.removeEventListener("abort", abort);
+      actionControllers.delete(controller);
+      pendingActions.delete(action.itemId);
+      publish();
+    }
   };
 
   initialized = (async () => {
@@ -500,6 +616,10 @@ const createSession = (input: {
       return () => observers.delete(observer);
     },
     refresh,
+    available(item) {
+      return actionCatalog.forItem(item);
+    },
+    perform,
     setCadence(nextCadence) {
       cadence = nextCadence;
       input.connectionState.saveCadence(input.provider, nextCadence);
@@ -519,6 +639,7 @@ const createSession = (input: {
       if (connectionKey) await input.persistence.removeConnection(connectionKey);
       for (const slice of slices.values()) {
         delete slice.persisted;
+        delete slice.projectedItems;
         delete slice.failure;
         slice.freshness = "requires-refresh";
       }
@@ -530,6 +651,9 @@ const createSession = (input: {
       closed = true;
       generation += 1;
       activeAbort?.abort(new DOMException("Disconnected", "AbortError"));
+      for (const controller of actionControllers) {
+        controller.abort(new DOMException("Disconnected", "AbortError"));
+      }
       clearCadenceTimer();
       if (mode === "erase" && connectionKey) {
         await input.persistence.removeConnection(connectionKey);
