@@ -1,3 +1,24 @@
+<!--
+README MAINTENANCE CONVENTION
+
+Audience: GitHub operators evaluating or using triagekit. Keep this page concise,
+product-led, and usable as a 30-second path from evaluation to first triage.
+
+Preserve this order:
+1. Product promise and visual walkthrough
+2. Current quick-start flow
+3. Three-step operating model
+4. Operator feature snapshot
+5. Build and sharing modes
+6. Security model
+7. Links to authoritative project documentation
+
+Keep UI instructions synchronized with the product. Prefer observable security
+facts over trust claims. Link to PRODUCT.md, DESIGN.md, and CONTRIBUTING.md for
+details instead of duplicating maintainer documentation here. Preserve the logo,
+badges, screenshots, live-demo links, and fictional-data disclosure.
+-->
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/logo.svg" />
