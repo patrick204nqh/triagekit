@@ -1,4 +1,6 @@
 import type { Kind } from "../dataset/item";
+import type { HandoffIntent } from "../handoff/types";
+import type { ScoredItem } from "../layout/table/kind-renderer";
 
 export interface QueueIdentity {
   readonly provider: string;
@@ -54,4 +56,27 @@ export interface DelegationQueue {
   snapshot(): QueueSnapshot;
   serialize(): readonly QueueEntry[];
   subscribe(listener: (snapshot: QueueSnapshot) => void): () => void;
+}
+
+export interface PlannedPackage {
+  readonly id: string;
+  readonly provider: string;
+  readonly repository: string;
+  readonly kind: Kind;
+  readonly intent: HandoffIntent;
+  readonly targets: readonly ScoredItem[];
+  readonly selectionReason: string;
+}
+
+export interface PlanResult {
+  readonly transfer: readonly PlannedPackage[];
+  readonly remaining: readonly PlannedPackage[];
+  readonly remainingPackages: number;
+}
+
+export interface PlanPackagesInput {
+  readonly items: readonly ScoredItem[];
+  readonly repositoryOrder: readonly string[];
+  readonly includeLabels?: readonly string[];
+  readonly excludeLabels?: readonly string[];
 }

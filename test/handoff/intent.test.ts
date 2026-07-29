@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { defaultIntent } from "../../src/runtime/handoff/intent";
+import {
+  defaultIntent,
+  intentForKind,
+} from "../../src/runtime/handoff/intent";
 
 describe("defaultIntent", () => {
   it("returns kind-specific outcome for known kinds", () => {
@@ -17,5 +20,12 @@ describe("defaultIntent", () => {
     const intent = defaultIntent("dependency-vuln");
     expect(intent.constraints).toEqual([]);
     expect(intent.verification).toEqual([]);
+  });
+
+  it("uses the existing handoff defaults for package intents", () => {
+    expect(intentForKind("dependency-vuln")).toEqual(
+      defaultIntent("dependency-vuln"),
+    );
+    expect(intentForKind("issue").outcome).toContain("issue");
   });
 });
