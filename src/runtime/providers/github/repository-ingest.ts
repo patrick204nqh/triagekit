@@ -8,31 +8,41 @@ import type {
   SliceOutcome,
   SliceRequest,
 } from "../../cached-dataset/provider";
-import { GithubHttpError } from "./http";
+import {
+  GithubHttpError,
+  type GithubHttp,
+} from "./http";
 import { GithubRepository } from "./schemas";
+import type { RequestPriority } from "./scheduler";
 
-export interface BoundGithubHttp {
-  get<T>(pathOrUrl: string, init?: RequestInit): Promise<T>;
-  request<T>(pathOrUrl: string, init?: RequestInit): Promise<T>;
-  paginate<T>(pathOrUrl: string, init?: RequestInit): Promise<readonly T[]>;
+export interface GithubIngestResult {
+  readonly items: readonly TriageItem[];
+  readonly validator?: string;
+  readonly unchanged: boolean;
 }
 
 export interface GithubKindIngest {
   kinds: readonly Kind[];
   fetchRepository(
-    http: BoundGithubHttp,
+    http: GithubHttp,
     repository: string,
     signal: AbortSignal,
-  ): Promise<readonly TriageItem[]>;
+    priority: RequestPriority,
+    validator?: string,
+  ): Promise<GithubIngestResult>;
 }
 
 export async function discoverGithubRepositories(
-  http: BoundGithubHttp,
+  http: GithubHttp,
   signal?: AbortSignal,
 ): Promise<readonly DiscoveryOption[]> {
-  const repositories = await http.paginate<unknown>(
+  const { rows: repositories } = await http.paginate<unknown>(
     "/user/repos?per_page=100&affiliation=owner,collaborator,organization_member&sort=full_name",
-    signal ? { signal } : undefined,
+    {
+      priority: "enrichment",
+      retry: "safe-read",
+      ...(signal ? { signal } : {}),
+    },
   );
   return repositories.map((raw) => {
     const repo = GithubRepository.parse(raw);
@@ -53,58 +63,61 @@ const failureCategory = (error: unknown): FailureCategory => {
 };
 
 export async function* fetchGithubSlices(
-  http: BoundGithubHttp,
+  http: GithubHttp,
   ingests: readonly GithubKindIngest[],
   request: {
     readonly scope: Scope;
     readonly slices: readonly SliceRequest[];
     readonly signal: AbortSignal;
+    readonly priority?: Extract<
+      RequestPriority,
+      "manual-refresh" | "startup-refresh" | "cadence-refresh"
+    >;
   },
   redact: (message: string) => string = (message) => message,
 ): AsyncIterable<SliceOutcome> {
-  const byTarget = new Map<string, Set<Kind>>();
   for (const slice of request.slices) {
-    const kinds = byTarget.get(slice.target) ?? new Set<Kind>();
-    kinds.add(slice.kind);
-    byTarget.set(slice.target, kinds);
-  }
-
-  for (const [repository, requestedKinds] of byTarget) {
-    for (const ingest of ingests) {
-      const kinds = ingest.kinds.filter((kind) => requestedKinds.has(kind));
-      if (kinds.length === 0) continue;
-      request.signal.throwIfAborted();
-      try {
-        const items = await ingest.fetchRepository(
-          http,
-          repository,
-          request.signal,
-        );
-        for (const kind of kinds) {
-          yield {
-            type: "changed",
-            target: repository,
-            kind,
-            items: items.filter((item) => item.kind === kind),
-          };
-        }
-      } catch (error) {
-        if (request.signal.aborted) throw request.signal.reason;
-        for (const kind of kinds) {
-          yield {
-            type: "failed",
-            target: repository,
-            kind,
-            failure: {
-              provider: "github",
-              kind,
-              target: repository,
-              category: failureCategory(error),
-              message: redact(error instanceof Error ? error.message : String(error)),
-            },
-          };
-        }
+    const ingest = ingests.find(({ kinds }) => kinds.includes(slice.kind));
+    if (!ingest) continue;
+    request.signal.throwIfAborted();
+    try {
+      const result = await ingest.fetchRepository(
+        http,
+        slice.target,
+        request.signal,
+        request.priority ?? "manual-refresh",
+        slice.validator,
+      );
+      if (result.unchanged && result.validator) {
+        yield {
+          type: "unchanged",
+          target: slice.target,
+          kind: slice.kind,
+          validator: result.validator,
+        };
+        continue;
       }
+      yield {
+        type: "changed",
+        target: slice.target,
+        kind: slice.kind,
+        items: result.items.filter((item) => item.kind === slice.kind),
+        ...(result.validator ? { validator: result.validator } : {}),
+      };
+    } catch (error) {
+      if (request.signal.aborted) throw request.signal.reason;
+      yield {
+        type: "failed",
+        target: slice.target,
+        kind: slice.kind,
+        failure: {
+          provider: "github",
+          kind: slice.kind,
+          target: slice.target,
+          category: failureCategory(error),
+          message: redact(error instanceof Error ? error.message : String(error)),
+        },
+      };
     }
   }
 }

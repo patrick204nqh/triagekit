@@ -12,12 +12,18 @@ const severities: readonly Severity[] = ["critical", "high", "medium", "low"];
 
 export const dependencyVulnIngest: GithubKindIngest = {
   kinds: [DEPENDENCY_VULN],
-  async fetchRepository(http, repository, signal) {
-    const rows = await http.paginate<unknown>(
+  async fetchRepository(http, repository, signal, priority, validator) {
+    const result = await http.paginate<unknown>(
       `/repos/${repository}/dependabot/alerts?state=open&per_page=100`,
-      { signal },
+      {
+        priority,
+        retry: "safe-read",
+        signal,
+        ...(validator ? { validator } : {}),
+      },
     );
-    return rows.filter((raw) => {
+    if (result.unchanged) return { ...result, items: [] };
+    const items = result.rows.filter((raw) => {
       const parsed = GithubDependabotAlert.parse(raw);
       return !parsed.auto_dismissed_at;
     }).map((raw) => {
@@ -52,5 +58,10 @@ export const dependencyVulnIngest: GithubKindIngest = {
         },
       } satisfies TriageItem<DependencyVulnDetails>;
     });
+    return {
+      items,
+      ...(result.validator ? { validator: result.validator } : {}),
+      unchanged: false,
+    };
   },
 };

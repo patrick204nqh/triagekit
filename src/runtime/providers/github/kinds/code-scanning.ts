@@ -21,18 +21,26 @@ const signal: Record<CodeScanningSeverity, number> = {
 
 export const codeScanningIngest: GithubKindIngest = {
   kinds: [CODE_SCANNING],
-  async fetchRepository(http, repository, abortSignal) {
-    let rows: readonly unknown[];
+  async fetchRepository(http, repository, abortSignal, priority, validator) {
+    let result: Awaited<ReturnType<typeof http.paginate<unknown>>>;
     try {
-      rows = await http.paginate<unknown>(
+      result = await http.paginate<unknown>(
         `/repos/${repository}/code-scanning/alerts?state=open&per_page=100`,
-        { signal: abortSignal },
+        {
+          priority,
+          retry: "safe-read",
+          signal: abortSignal,
+          ...(validator ? { validator } : {}),
+        },
       );
     } catch (error) {
-      if (error instanceof GithubHttpError && error.status === 404) return [];
+      if (error instanceof GithubHttpError && error.status === 404) {
+        return { items: [], unchanged: false };
+      }
       throw error;
     }
-    return rows.map((raw) => {
+    if (result.unchanged) return { ...result, items: [] };
+    const items = result.rows.map((raw) => {
       const parsed = GithubCodeScanningAlert.parse(raw);
       const securitySeverity = severity[parsed.rule?.security_severity_level ?? ""] ?? "low";
       const location = parsed.most_recent_instance?.location ?? {};
@@ -61,5 +69,10 @@ export const codeScanningIngest: GithubKindIngest = {
         },
       } satisfies TriageItem<CodeScanningDetails>;
     });
+    return {
+      items,
+      ...(result.validator ? { validator: result.validator } : {}),
+      unchanged: false,
+    };
   },
 };

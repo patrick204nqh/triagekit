@@ -10,9 +10,12 @@ import type {
 } from "../../cached-dataset/provider";
 import { canonicalGithubScope } from "../../cached-dataset/identity";
 import { createGithubHttp, type GithubHttp } from "./http";
+import {
+  createGithubRequestScheduler,
+  type GithubSchedulerStatus,
+} from "./scheduler";
 import { GithubPullRequest, GithubCheckRunsResponse } from "./schemas";
 import {
-  type BoundGithubHttp,
   discoverGithubRepositories,
   fetchGithubSlices,
   type GithubKindIngest,
@@ -50,7 +53,7 @@ const actions: Readonly<Partial<Record<Kind, readonly string[]>>> = {
 };
 
 async function enrichGithubItem(
-  http: BoundGithubHttp,
+  http: GithubHttp,
   kind: Kind,
   providerRef: unknown,
 ): Promise<unknown> {
@@ -60,12 +63,14 @@ async function enrichGithubItem(
   const { repository, number } = reference(providerRef);
   const pullRaw = await http.get<unknown>(
     `/repos/${repository}/pulls/${number}`,
+    { priority: "enrichment", retry: "safe-read" },
   );
   const pull = GithubPullRequest.parse(pullRaw);
   let checks = null;
   if (pull.head?.sha) {
     const resultRaw = await http.get<unknown>(
       `/repos/${repository}/commits/${pull.head.sha}/check-runs`,
+      { priority: "enrichment", retry: "safe-read" },
     );
     const result = GithubCheckRunsResponse.parse(resultRaw);
     const runs = result.check_runs ?? [];
@@ -90,7 +95,7 @@ async function enrichGithubItem(
 }
 
 async function executeGithubCommand(
-  http: BoundGithubHttp,
+  http: GithubHttp,
   command: ProviderCommand,
 ): Promise<void> {
   const declared = actions[command.kind] ?? [];
@@ -129,15 +134,23 @@ async function executeGithubCommand(
   };
   const route = routes[command.action];
   await http.request(route.path, {
-    method: route.method,
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(route.body),
+    priority: "triage-action",
+    retry: "never",
+    init: {
+      method: route.method,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(route.body),
+    },
   });
 }
 
 export interface GithubBoundProvider extends BoundProvider {
   enrich(kind: Kind, providerRef: unknown): Promise<unknown>;
   execute(command: ProviderCommand): Promise<void>;
+  status(): GithubSchedulerStatus;
+  subscribeStatus(
+    observer: (status: GithubSchedulerStatus) => void,
+  ): () => void;
 }
 
 export type GithubProviderDefinition =
@@ -145,19 +158,9 @@ export type GithubProviderDefinition =
   bind(credential: string): Promise<GithubBoundProvider>;
 };
 
-const bindHttp = (
-  http: GithubHttp,
-  credential: string,
-): BoundGithubHttp => ({
-  get: (pathOrUrl, init) => http.get(pathOrUrl, credential, init),
-  request: (pathOrUrl, init) => http.request(pathOrUrl, credential, init),
-  paginate: (pathOrUrl, init) => http.paginate(pathOrUrl, credential, init),
-});
-
 export function createGithubProvider(
   fetchImpl: typeof fetch,
 ): GithubProviderDefinition {
-  const http = createGithubHttp(fetchImpl);
   return {
     id: "github",
     label: "GitHub",
@@ -186,7 +189,16 @@ export function createGithubProvider(
     },
     async bind(rawCredential) {
       const credential = rawCredential.trim();
-      const boundHttp = bindHttp(http, credential);
+      const statusObservers = new Set<
+        (status: GithubSchedulerStatus) => void
+      >();
+      const scheduler = createGithubRequestScheduler({
+        fetch: fetchImpl,
+        onStatusChange(status) {
+          for (const observer of statusObservers) observer(status);
+        },
+      });
+      const http = createGithubHttp(credential, scheduler);
       let closed = false;
       const ensureOpen = (): void => {
         if (closed) {
@@ -201,7 +213,7 @@ export function createGithubProvider(
       return {
         discoverScope(signal) {
           ensureOpen();
-          return discoverGithubRepositories(boundHttp, signal);
+          return discoverGithubRepositories(http, signal);
         },
         canonicalizeScope: canonicalGithubScope,
         targets(scope) {
@@ -211,7 +223,7 @@ export function createGithubProvider(
           const stream = async function* () {
             ensureOpen();
             yield* fetchGithubSlices(
-              boundHttp,
+              http,
               githubKindIngests,
               {
                 ...request,
@@ -224,14 +236,24 @@ export function createGithubProvider(
         },
         enrich(kind, providerRef) {
           ensureOpen();
-          return enrichGithubItem(boundHttp, kind, providerRef);
+          return enrichGithubItem(http, kind, providerRef);
         },
         execute(command) {
           ensureOpen();
-          return executeGithubCommand(boundHttp, command);
+          return executeGithubCommand(http, command);
+        },
+        status() {
+          return scheduler.status();
+        },
+        subscribeStatus(observer) {
+          statusObservers.add(observer);
+          observer(scheduler.status());
+          return () => statusObservers.delete(observer);
         },
         close() {
           closed = true;
+          statusObservers.clear();
+          scheduler.close();
         },
       };
     },

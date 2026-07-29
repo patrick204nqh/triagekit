@@ -27,12 +27,18 @@ const label = (raw: { name?: string; color?: string }): Label => ({
 
 export const reviewIngest: GithubKindIngest = {
   kinds: [CHANGE_REQUEST, ISSUE],
-  async fetchRepository(http, repository, signal) {
-    const rows = await http.paginate<unknown>(
+  async fetchRepository(http, repository, signal, priority, validator) {
+    const result = await http.paginate<unknown>(
       `/repos/${repository}/issues?state=open&per_page=100`,
-      { signal },
+      {
+        priority,
+        retry: "safe-read",
+        signal,
+        ...(validator ? { validator } : {}),
+      },
     );
-    return rows.map((raw) => {
+    if (result.unchanged) return { ...result, items: [] };
+    const items = result.rows.map((raw) => {
       const parsed = GithubIssue.parse(raw);
       const isPullRequest = Boolean(parsed.pull_request);
       const kind = isPullRequest ? CHANGE_REQUEST : ISSUE;
@@ -69,5 +75,10 @@ export const reviewIngest: GithubKindIngest = {
         },
       } satisfies TriageItem<ReviewDetails>;
     });
+    return {
+      items,
+      ...(result.validator ? { validator: result.validator } : {}),
+      unchanged: false,
+    };
   },
 };
