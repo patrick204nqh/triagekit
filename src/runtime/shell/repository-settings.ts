@@ -1,5 +1,8 @@
 import type { DiscoveryOption } from "../catalog/types";
-import { reconcileRepositoryOrder } from "../focus/policy";
+import {
+  moveRepository,
+  reconcileRepositoryOrder,
+} from "../focus/policy";
 
 export interface RepositoryWorkspaceSnapshot {
   provider: string;
@@ -48,6 +51,35 @@ export function mountRepositorySettings(
   const discoveries = new Map<string, readonly DiscoveryOption[]>();
   const discoveryErrors = new Map<string, string>();
   const pendingDiscoveries = new Set<string>();
+  let draggedRepository: string | undefined;
+
+  function announce(message: string): void {
+    const status = host.querySelector<HTMLElement>("[data-repository-status]");
+    if (status) status.textContent = message;
+  }
+
+  function focusRepository(repository: string): void {
+    [...host.querySelectorAll<HTMLElement>("[data-selected-repository]")]
+      .find((row) => row.dataset.repository === repository)
+      ?.focus();
+  }
+
+  function move(repository: string, targetIndex: number): void {
+    const state = options.snapshot(activeProvider);
+    const order = reconcileRepositoryOrder(
+      state.repositoryOrder,
+      state.repositories,
+    ).saved;
+    const bounded = Math.max(0, Math.min(targetIndex, order.length - 1));
+    if (order.indexOf(repository) === bounded) return;
+    options.change(activeProvider, {
+      repositories: [...state.repositories],
+      repositoryOrder: moveRepository(order, repository, bounded),
+    });
+    render();
+    announce(`${repository} moved to priority ${bounded + 1}`);
+    focusRepository(repository);
+  }
 
   function render(): void {
     const snapshot = options.snapshot(activeProvider);
@@ -121,16 +153,55 @@ export function mountRepositorySettings(
       const row = document.createElement("div");
       row.dataset.selectedRepository = "";
       row.dataset.repository = repository;
+      row.tabIndex = 0;
+      const index = ordered.indexOf(repository);
+      row.addEventListener("keydown", (event) => {
+        if (!event.altKey) return;
+        if (event.key === "ArrowUp") {
+          event.preventDefault();
+          move(repository, index - 1);
+        } else if (event.key === "ArrowDown") {
+          event.preventDefault();
+          move(repository, index + 1);
+        }
+      });
+      row.addEventListener("dragover", (event) => {
+        event.preventDefault();
+      });
+      row.addEventListener("drop", (event) => {
+        event.preventDefault();
+        if (draggedRepository) move(draggedRepository, index);
+        draggedRepository = undefined;
+      });
       const name = document.createElement("span");
       name.textContent = repository;
-      row.append(name);
+      const drag = button("Drag", { repositoryDrag: repository });
+      drag.draggable = true;
+      drag.addEventListener("dragstart", () => {
+        draggedRepository = repository;
+      });
+      const up = button("Move up", { repositoryUp: repository });
+      up.disabled = index === 0;
+      up.addEventListener("click", () => {
+        move(repository, index - 1);
+      });
+      const down = button("Move down", { repositoryDown: repository });
+      down.disabled = index === ordered.length - 1;
+      down.addEventListener("click", () => {
+        move(repository, index + 1);
+      });
+      row.append(drag, name);
       if (discovered && !discoveredValues.has(repository)) {
         const unavailable = document.createElement("span");
         unavailable.dataset.unavailableSelected = "";
         unavailable.textContent = "Not found in latest scan";
         row.append(unavailable);
       }
-      row.append(button("Remove", { removeRepository: repository }));
+      row.append(
+        up,
+        down,
+        button("Remove", { removeRepository: repository }),
+      );
       selectedList.append(row);
     }
 
@@ -179,6 +250,11 @@ export function mountRepositorySettings(
       availableFilter,
       discover,
     );
+    const status = document.createElement("p");
+    status.dataset.repositoryStatus = "";
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
+    host.append(status);
     const error = discoveryErrors.get(snapshot.discoveryKey);
     if (error) {
       const alert = document.createElement("p");

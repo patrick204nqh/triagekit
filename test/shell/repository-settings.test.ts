@@ -182,4 +182,113 @@ describe("mountRepositorySettings", () => {
       "acme-corp/api",
     ]);
   });
+
+  it("moves repositories with Alt+Arrow and announces the new priority", () => {
+    const selected = [
+      "acme-corp/core",
+      "acme-corp/web",
+      "acme-corp/docs",
+    ];
+    const { host, controller, change } = mount({ repositories: selected });
+    controller.show("github");
+    const web = host.querySelector<HTMLElement>(
+      '[data-selected-repository][data-repository="acme-corp/web"]',
+    )!;
+
+    web.focus();
+    web.dispatchEvent(new KeyboardEvent("keydown", {
+      key: "ArrowUp",
+      altKey: true,
+      bubbles: true,
+    }));
+
+    expect(change).toHaveBeenLastCalledWith("github", {
+      repositories: selected,
+      repositoryOrder: [
+        "acme-corp/web",
+        "acme-corp/core",
+        "acme-corp/docs",
+      ],
+    });
+    expect(host.querySelector("[data-repository-status]")?.textContent)
+      .toContain("acme-corp/web moved to priority 1");
+    expect(document.activeElement?.getAttribute("data-repository"))
+      .toBe("acme-corp/web");
+  });
+
+  it("moves through visible buttons and disables movement past either edge", () => {
+    const { host, controller, change } = mount({
+      repositories: [
+        "acme-corp/core",
+        "acme-corp/web",
+        "acme-corp/docs",
+      ],
+    });
+    controller.show("github");
+
+    expect(host.querySelector<HTMLButtonElement>(
+      '[data-repository-up="acme-corp/core"]',
+    )?.disabled).toBe(true);
+    expect(host.querySelector<HTMLButtonElement>(
+      '[data-repository-down="acme-corp/docs"]',
+    )?.disabled).toBe(true);
+
+    click(host, '[data-repository-down="acme-corp/core"]');
+    expect(change).toHaveBeenLastCalledWith("github", {
+      repositories: [
+        "acme-corp/core",
+        "acme-corp/web",
+        "acme-corp/docs",
+      ],
+      repositoryOrder: [
+        "acme-corp/web",
+        "acme-corp/core",
+        "acme-corp/docs",
+      ],
+    });
+
+    click(host, '[data-repository-up="acme-corp/docs"]');
+    expect(change).toHaveBeenLastCalledWith("github", {
+      repositories: [
+        "acme-corp/core",
+        "acme-corp/web",
+        "acme-corp/docs",
+      ],
+      repositoryOrder: [
+        "acme-corp/web",
+        "acme-corp/docs",
+        "acme-corp/core",
+      ],
+    });
+  });
+
+  it("routes drag and drop through the same complete-order change", () => {
+    const { host, controller, change } = mount({
+      repositories: [
+        "acme-corp/core",
+        "acme-corp/web",
+        "acme-corp/docs",
+      ],
+    });
+    controller.show("github");
+    host.querySelector<HTMLElement>(
+      '[data-repository-drag="acme-corp/docs"]',
+    )!.dispatchEvent(new Event("dragstart", { bubbles: true }));
+    host.querySelector<HTMLElement>(
+      '[data-selected-repository][data-repository="acme-corp/core"]',
+    )!.dispatchEvent(new Event("drop", { bubbles: true }));
+
+    expect(change).toHaveBeenLastCalledWith("github", {
+      repositories: [
+        "acme-corp/core",
+        "acme-corp/web",
+        "acme-corp/docs",
+      ],
+      repositoryOrder: [
+        "acme-corp/docs",
+        "acme-corp/core",
+        "acme-corp/web",
+      ],
+    });
+  });
 });
