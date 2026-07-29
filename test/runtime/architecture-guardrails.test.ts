@@ -52,4 +52,30 @@ describe("runtime architecture guardrails", () => {
       expect(existsSync(join(runtime, relative)), relative).toBe(false);
     }
   });
+
+  it("keeps credentials out of provider-neutral job and view shapes", () => {
+    const publicShapeFiles = [
+      "core/core.ts",
+      "core/ports.ts",
+      "adapters/dom-view.ts",
+    ];
+    const publicShapes = publicShapeFiles
+      .map((relative) => readFileSync(join(runtime, relative), "utf8"))
+      .join("\n");
+
+    expect(publicShapes).not.toContain("credential:");
+  });
+
+  it("does not retain the shallow connection and refresh owners", () => {
+    const retired = [
+      "core/orchestrator.ts",
+      "insights/refresh.ts",
+      "shell/cred-store.ts",
+      "shell/scope-store.ts",
+    ];
+
+    for (const relative of retired) {
+      expect(existsSync(join(runtime, relative)), relative).toBe(false);
+    }
+  });
 });
