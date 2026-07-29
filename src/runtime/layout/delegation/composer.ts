@@ -117,8 +117,11 @@ export function mountDelegationComposer(
   controller: DelegationController,
 ): () => void {
   let wasOpen = false;
+  let activeDismiss: ReturnType<typeof dismissible> | null = null;
 
   const render = (snapshot: DelegationControllerSnapshot) => {
+    activeDismiss?.destroy();
+    activeDismiss = null;
     if (!snapshot.open) {
       host.innerHTML = "";
       if (wasOpen) {
@@ -159,12 +162,13 @@ export function mountDelegationComposer(
     const scrim = host.querySelector<HTMLElement>(
       "[data-delegation-scrim]",
     )!;
-    const dismiss = dismissible(composer, {
+    activeDismiss = dismissible(composer, {
       scrim,
       modal: true,
+      restoreFocus: false,
       onDismiss: () => controller.close(),
     });
-    dismiss.activate();
+    activeDismiss.activate();
     host.querySelector<HTMLElement>("[data-delegation-close]")
       ?.addEventListener("click", () => controller.close());
     scrim.addEventListener("click", () => controller.close());
@@ -243,6 +247,8 @@ export function mountDelegationComposer(
   render(controller.snapshot());
   return () => {
     unsubscribe();
+    activeDismiss?.destroy();
+    activeDismiss = null;
     host.innerHTML = "";
   };
 }

@@ -5,7 +5,7 @@ import {
 } from "../../src/runtime/layout/delegation/composer";
 
 function controllerWith(withError = true) {
-  const snapshot = {
+  let snapshot = {
     open: true,
     selectedCount: 1,
     retainedCount: 1,
@@ -39,11 +39,18 @@ function controllerWith(withError = true) {
     canDownload: true,
     error: null,
   };
+  const listeners = new Set<(value: typeof snapshot) => void>();
   return {
     snapshot: () => snapshot,
-    subscribe: () => () => {},
+    subscribe: (listener: (value: typeof snapshot) => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
     open: vi.fn(),
-    close: vi.fn(),
+    close: vi.fn(() => {
+      snapshot = { ...snapshot, open: false };
+      listeners.forEach((listener) => listener(snapshot));
+    }),
     updateIntent: vi.fn(),
     removeTarget: vi.fn(),
     revalidate: vi.fn(),
@@ -55,6 +62,23 @@ function controllerWith(withError = true) {
 }
 
 describe("delegation composer", () => {
+  it("restores dashboard interaction when the composer closes", () => {
+    document.body.innerHTML = "";
+    const dashboard = document.createElement("main");
+    const host = document.createElement("div");
+    document.body.append(dashboard, host);
+    const controller = controllerWith(false);
+
+    mountDelegationComposer(host, controller);
+    expect(dashboard.hasAttribute("inert")).toBe(true);
+
+    host.querySelector<HTMLElement>("[data-delegation-close]")!.click();
+
+    expect(host.childElementCount).toBe(0);
+    expect(dashboard.hasAttribute("inert")).toBe(false);
+    expect(document.querySelector("[data-delegation-scrim]")).toBeNull();
+  });
+
   it("renders one compact review surface with linked package errors", () => {
     const host = document.createElement("div");
     document.body.append(host);
