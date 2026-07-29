@@ -223,10 +223,13 @@ const createSession = (input: {
     for (const observer of observers) observer(snapshot);
   };
 
-  const selectedSlices = (selection?: {
+  type RefreshSelection = {
     targets?: readonly string[];
     kinds?: readonly Kind[];
-  }): RuntimeSlice[] => {
+  };
+  type RefreshCause = "startup" | "manual" | "cadence";
+
+  const selectedSlices = (selection?: RefreshSelection): RuntimeSlice[] => {
     const selectedTargets = selection?.targets
       ? new Set(selection.targets)
       : undefined;
@@ -250,7 +253,7 @@ const createSession = (input: {
     clearCadenceTimer();
     if (cadence === "off" || closed) return;
     cadenceTimer = input.clock.setInterval(() => {
-      void refresh();
+      void refreshWithCause(undefined, "cadence");
     }, cadence * 1_000);
   };
 
@@ -265,10 +268,10 @@ const createSession = (input: {
     });
   };
 
-  const refresh = async (selection?: {
-    targets?: readonly string[];
-    kinds?: readonly Kind[];
-  }): Promise<RefreshReport> => {
+  const refreshWithCause = async (
+    selection: RefreshSelection | undefined,
+    cause: RefreshCause,
+  ): Promise<RefreshReport> => {
     await initialized;
     providerStatus = input.bound.status?.() ?? providerStatus;
     if (providerStatus.paused) {
@@ -293,6 +296,17 @@ const createSession = (input: {
       });
     }
 
+    const selected = selectedSlices(selection).filter((slice) =>
+      cause !== "cadence" || slice.failure?.category !== "scope");
+    if (selected.length === 0) {
+      return deepFreezeCopy({
+        status: phase === "partial" ? "partial" : "complete",
+        refreshed: [],
+        retainedStale: [],
+        failures: [],
+      });
+    }
+
     generation += 1;
     const refreshGeneration = generation;
     activeAbort?.abort(new DOMException("Superseded", "AbortError"));
@@ -308,7 +322,6 @@ const createSession = (input: {
       });
     }
 
-    const selected = selectedSlices(selection);
     for (const slice of selected) {
       slice.freshness = "refreshing";
       delete slice.failure;
@@ -481,6 +494,9 @@ const createSession = (input: {
     });
   };
 
+  const refresh = (selection?: RefreshSelection): Promise<RefreshReport> =>
+    refreshWithCause(selection, "manual");
+
   const perform = async (
     action: TriageAction,
     signal?: AbortSignal,
@@ -622,10 +638,10 @@ const createSession = (input: {
       slice.freshness !== "fresh");
     if (due.length > 0 && !providerStatus.paused) {
       queueMicrotask(() => {
-        void refresh({
+        void refreshWithCause({
           targets: [...new Set(due.map((slice) => slice.target))],
           kinds: [...new Set(due.map((slice) => slice.kind))],
-        });
+        }, "startup");
       });
     }
   })();

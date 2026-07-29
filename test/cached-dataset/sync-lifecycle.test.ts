@@ -26,6 +26,7 @@ import type {
 import type {
   RefreshCadence,
 } from "../../src/runtime/cached-dataset/types";
+import type { TriageFailure } from "../../src/runtime/catalog/types";
 import type { TriageItem } from "../../src/runtime/dataset/item";
 
 const item = (
@@ -56,6 +57,7 @@ const changed = (
 
 const failed = (
   target: string,
+  category: TriageFailure["category"] = "rate-limit",
 ): SliceOutcome => ({
   type: "failed",
   target,
@@ -64,8 +66,10 @@ const failed = (
     provider: "github",
     kind: "issue",
     target,
-    category: "rate-limit",
-    message: "rate limited",
+    category,
+    message: category === "scope"
+      ? "Code Security must be enabled"
+      : "rate limited",
   },
 });
 
@@ -226,6 +230,31 @@ describe("Cached Dataset sync lifecycle", () => {
     timed.session.setCadence(900);
     expect([...timed.clock.intervals.values()].map((entry) => entry.milliseconds))
       .toEqual([900_000]);
+  });
+
+  it("skips scope failures on cadence but retries them manually", async () => {
+    const fixture = await sessionFixture({
+      cadence: 300,
+      outcomes: (requestIndex) => (async function* () {
+        yield requestIndex === 0
+          ? failed("acme-corp/web", "scope")
+          : changed("acme-corp/web", "manual-retry");
+      })(),
+    });
+
+    expect((await fixture.session.refresh()).status).toBe("partial");
+    expect(fixture.requestCount()).toBe(1);
+
+    const cadence = [...fixture.clock.intervals.values()][0];
+    cadence.callback();
+    await flush();
+    expect(fixture.requestCount()).toBe(1);
+    expect(fixture.session.snapshot().phase).toBe("partial");
+
+    expect((await fixture.session.refresh()).status).toBe("complete");
+    expect(fixture.requestCount()).toBe(2);
+    expect(fixture.session.snapshot().items.map(({ id }) => id))
+      .toContain("manual-retry");
   });
 
   it("manual refresh starts work without changing validation during snapshots", async () => {
