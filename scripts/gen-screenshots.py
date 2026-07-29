@@ -203,8 +203,8 @@ def record_gif(browser, routed):
     def beat(ms): page.wait_for_timeout(ms)
 
     beat(2200)                                                   # Dependencies findings
-    page.get_by_role("button", name="Insights", exact=True).click(); beat(2600)   # Insights charts
-    page.get_by_role("button", name="List", exact=True).click(); beat(400)
+    page.get_by_role("tab", name="Insights", exact=True).click(); beat(2600)   # Insights charts
+    page.get_by_role("tab", name="List", exact=True).click(); beat(400)
     page.get_by_role("button", name="Code scanning", exact=True).click()
     page.wait_for_load_state("networkidle"); beat(2400)          # Code scanning findings
     page.get_by_role("button", name="Change requests", exact=True).click()
