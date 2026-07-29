@@ -6,6 +6,8 @@ import { scoreAndTier, type ScoreContext } from "../scoring/configured";
 import { applyDecorators } from "./decorators";
 import { applyFilters, type ListState } from "../layout/toolbar/filter-state";
 import type { ScoredItem } from "../layout/table/kind-renderer";
+import type { FocusPolicySnapshot } from "../focus/types";
+import { compareFocusedItems } from "../focus/policy";
 
 export interface DeriveInput {
   items: readonly TriageItem[];
@@ -14,6 +16,7 @@ export interface DeriveInput {
   score: ScoreContext;
   repoView: string;        // "" = all repos (display-filter; not fetch-config Scope)
   filters: ListState;
+  focusPolicy: FocusPolicySnapshot;
   catalog?: RuntimeCatalog;
 }
 export interface Derived {
@@ -31,10 +34,10 @@ export function derive(input: DeriveInput): Derived {
       const { score, tier } = scoreAndTier(it, input.score, catalog);
       return { ...it, score, tier } as ScoredItem;
     })
-    .sort((a, b) => b.score - a.score);
+    .sort(compareFocusedItems(input.focusPolicy.repositoryOrder));
   const scoped = input.repoView && scored.some(r => r.location === input.repoView)
     ? scored.filter(r => r.location === input.repoView)
     : scored;
-  const shown = applyFilters(scoped, input.filters, catalog);
+  const shown = applyFilters(scoped, input.filters, catalog, input.focusPolicy);
   return { scored, shown };
 }

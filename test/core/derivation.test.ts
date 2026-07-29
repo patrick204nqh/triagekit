@@ -5,8 +5,13 @@ import { emptyListState } from "../../src/runtime/layout/toolbar/filter-state";
 import type { TriageItem } from "../../src/runtime/dataset/item";
 import type { ScoreContext } from "../../src/runtime/scoring/configured";
 
-const item = (id: string, signal: number, kind: TriageItem["kind"] = "issue"): TriageItem => ({
-  id, provider: "github", providerRef: {}, kind, title: id, location: "repo",
+const item = (
+  id: string,
+  signal: number,
+  kind: TriageItem["kind"] = "issue",
+  location = "repo",
+): TriageItem => ({
+  id, provider: "github", providerRef: {}, kind, title: id, location,
   signal, createdAt: "2026-01-01T00:00:00Z", url: "", details: {},
 });
 
@@ -17,8 +22,33 @@ const score: ScoreContext = {
   getThresholds: () => ({ p0: 80, p1: 50, p2: 20 }),
   override: (it) => it.signal,
 };
+const focusPolicy = {
+  provider: "github",
+  repositoryOrder: [] as string[],
+  labels: { include: [] as string[], exclude: [] as string[], enabled: true },
+};
 
 describe("derive", () => {
+  it("derives repository-first order before applying display scope", () => {
+    const out = derive({
+      items: [
+        item("web-p0", 100, "issue", "acme-corp/web"),
+        item("core-p2", 20, "issue", "acme-corp/core"),
+      ],
+      activeKinds: ["issue"],
+      botLogins: [],
+      score,
+      repoView: "",
+      filters: emptyListState(),
+      focusPolicy: {
+        provider: "github",
+        repositoryOrder: ["acme-corp/core", "acme-corp/web"],
+        labels: { include: [], exclude: [], enabled: true },
+      },
+    });
+    expect(out.scored.map((row) => row.id)).toEqual(["core-p2", "web-p0"]);
+  });
+
   it("filters to active kinds, scores, and sorts descending", () => {
     const out = derive({
       items: [item("a", 10), item("b", 90), item("c", 50, "change-request")],
@@ -27,6 +57,7 @@ describe("derive", () => {
       score,
       repoView: "",
       filters: emptyListState(),
+      focusPolicy,
     });
     expect(out.scored.map(r => r.id)).toEqual(["b", "a"]); // change-request filtered out, sorted desc
     expect(out.scored.map(r => r.score)).toEqual([90, 10]);
@@ -41,6 +72,7 @@ describe("derive", () => {
       score,
       repoView: "",
       filters: emptyListState(),
+      focusPolicy,
     });
     expect(out.shown.map(r => r.id)).toEqual(out.scored.map(r => r.id));
   });
@@ -48,7 +80,7 @@ describe("derive", () => {
   it("is pure: does not mutate the input items array", () => {
     const items = [item("a", 10), item("b", 90)];
     const before = items.map(i => i.id);
-    derive({ items, activeKinds: ["issue"], botLogins: [], score, repoView: "", filters: emptyListState() });
+    derive({ items, activeKinds: ["issue"], botLogins: [], score, repoView: "", filters: emptyListState(), focusPolicy });
     expect(items.map(i => i.id)).toEqual(before);
   });
 
@@ -57,7 +89,7 @@ describe("derive", () => {
       { id: "a", provider: "github", providerRef: {}, kind: "issue", title: "a", location: "acme/api", signal: 90, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
       { id: "b", provider: "github", providerRef: {}, kind: "issue", title: "b", location: "acme/web", signal: 80, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
     ];
-    const out = derive({ items, activeKinds: ["issue"], botLogins: [], score, repoView: "acme/api", filters: emptyListState() });
+    const out = derive({ items, activeKinds: ["issue"], botLogins: [], score, repoView: "acme/api", filters: emptyListState(), focusPolicy });
     expect(out.shown.map(r => r.id)).toEqual(["a"]);
     expect(out.scored.map(r => r.id)).toEqual(["a", "b"]); // scored is unscoped
   });
@@ -67,7 +99,7 @@ describe("derive", () => {
       { id: "a", provider: "github", providerRef: {}, kind: "issue", title: "a", location: "acme/api", signal: 90, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
       { id: "b", provider: "github", providerRef: {}, kind: "issue", title: "b", location: "acme/web", signal: 80, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
     ];
-    const out = derive({ items, activeKinds: ["issue"], botLogins: [], score, repoView: "", filters: emptyListState() });
+    const out = derive({ items, activeKinds: ["issue"], botLogins: [], score, repoView: "", filters: emptyListState(), focusPolicy });
     expect(out.shown.map(r => r.id)).toEqual(["a", "b"]);
   });
 
@@ -76,7 +108,7 @@ describe("derive", () => {
       { id: "a", provider: "github", providerRef: {}, kind: "issue", title: "a", location: "acme/api", signal: 90, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
       { id: "b", provider: "github", providerRef: {}, kind: "issue", title: "b", location: "acme/web", signal: 80, createdAt: "2026-01-01T00:00:00Z", url: "", details: {} },
     ];
-    const out = derive({ items, activeKinds: ["issue"], botLogins: [], score, repoView: "acme/NOPE", filters: emptyListState() });
+    const out = derive({ items, activeKinds: ["issue"], botLogins: [], score, repoView: "acme/NOPE", filters: emptyListState(), focusPolicy });
     expect(out.shown.map(r => r.id)).toEqual(["a", "b"]); // falls back to all, not empty
   });
 });

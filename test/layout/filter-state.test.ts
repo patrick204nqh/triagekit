@@ -45,6 +45,48 @@ describe("applyFilters (registry-driven)", () => {
   it("recent sort", () => {
     expect(applyFilters(rows, withAxes({}, "recent")).map(r => r.id)).toEqual(["b", "c", "a"]);
   });
+  it("applies include and exclude labels after generic axes", () => {
+    const focusedRows = [
+      row({
+        id: "security-only",
+        location: "acme-corp/core",
+        tier: "P1",
+        details: { labels: [{ name: "security", color: "" }] },
+      }),
+      row({
+        id: "excluded",
+        location: "acme-corp/core",
+        tier: "P1",
+        details: {
+          labels: [
+            { name: "security", color: "" },
+            { name: "jira-ticket-created", color: "" },
+          ],
+        },
+      }),
+      row({
+        id: "wrong-tier",
+        location: "acme-corp/core",
+        tier: "P2",
+        details: { labels: [{ name: "security", color: "" }] },
+      }),
+    ];
+    const shown = applyFilters(
+      focusedRows,
+      withAxes({ tier: ["P1"] }),
+      undefined,
+      {
+        provider: "github",
+        repositoryOrder: ["acme-corp/core"],
+        labels: {
+          include: ["security"],
+          exclude: ["jira-ticket-created"],
+          enabled: true,
+        },
+      },
+    );
+    expect(shown.map((candidate) => candidate.id)).toEqual(["security-only"]);
+  });
 });
 
 describe("pruneFilters (drops stale selections after a repo switch)", () => {

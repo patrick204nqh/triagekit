@@ -34,9 +34,14 @@ const vuln = (loc: string, n: number) => ({
 describe("repo tabs render end-to-end after data loads", () => {
   beforeEach(() => { sessionStorage.clear(); localStorage.clear(); history.replaceState(null, "", "/"); scaffold(); });
 
-  it("shows All + count-descending repo tabs (with overflow) in the .fbar when loaded rows span >1 repo", async () => {
+  it("shows All + focus-policy ordered repo tabs (with overflow) in the .fbar when loaded rows span >1 repo", async () => {
     sessionStorage.setItem("triagekit.cred.github", "tok");
     localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: ["acme/web", "acme/api", "acme/cli", "acme/docs"] }));
+    localStorage.setItem("triagekit.focus.github", JSON.stringify({
+      provider: "github",
+      repositoryOrder: ["acme/docs", "acme/cli", "acme/api", "acme/web"],
+      labels: { include: [], exclude: [], enabled: true },
+    }));
 
     // web x4, api x3, cli x2, docs x1 → 4 distinct repos, count-descending web > api > cli > docs.
     const fetchSpy = mockGithubItems([
@@ -55,9 +60,9 @@ describe("repo tabs render end-to-end after data loads", () => {
       expect(fbar).not.toBeNull();
 
       const inline = [...document.querySelectorAll<HTMLElement>(".fbar [data-repo]")].map(b => b.dataset.repo);
-      // "All" + the top-MAX_REPO_TABS(3) repos inline (count-descending), the rest in overflow.
-      expect(inline).toEqual(["", "acme/web", "acme/api", "acme/cli"]);
-      // The 4th repo (docs) sits in the +N overflow control, not inline.
+      // "All" + the top-MAX_REPO_TABS(3) repositories in explicit policy order.
+      expect(inline).toEqual(["", "acme/docs", "acme/cli", "acme/api"]);
+      // The 4th repository (web) sits in the +N overflow control.
       const more = document.querySelector(".fbar .repo-more");
       expect(more?.textContent).toContain("1");    // +1 overflow (acme/docs)
     } finally {

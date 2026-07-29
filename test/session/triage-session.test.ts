@@ -94,4 +94,23 @@ describe("Triage Session transitions", () => {
     expect(Object.isFrozen(state.filters)).toBe(true);
     expect(Object.isFrozen(state.filters.axes)).toBe(true);
   });
+
+  it("retains legacy labels for migration but never serializes them", () => {
+    const session = createTriageSession({
+      catalog: testCatalog(),
+      initial: { kind: "issue", provider: "github" },
+    });
+    const update = session.restore({
+      kind: "issue",
+      provider: "github",
+      sort: "priority",
+      axes: { labels: ["security"], tier: ["P0"] },
+    });
+
+    expect(update.state.filters.axes).toEqual({
+      labels: ["security"],
+      tier: ["P0"],
+    });
+    expect(update.serialized.axes).toEqual({ tier: ["P0"] });
+  });
 });

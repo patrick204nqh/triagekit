@@ -46,14 +46,17 @@ const frozenState = (state: SessionState): Readonly<SessionState> =>
 
 const serializedState = (
   state: Readonly<SessionState>,
-): Readonly<SerializedSession> => Object.freeze({
-  kind: state.kind,
-  provider: state.provider || undefined,
-  repository: state.preferredRepository || undefined,
-  view: state.view,
-  sort: state.filters.sort,
-  axes: state.filters.axes,
-});
+): Readonly<SerializedSession> => {
+  const { labels: _legacyLabels, ...axes } = state.filters.axes;
+  return Object.freeze({
+    kind: state.kind,
+    provider: state.provider || undefined,
+    repository: state.preferredRepository || undefined,
+    view: state.view,
+    sort: state.filters.sort,
+    axes,
+  });
+};
 
 export function createTriageSession(
   options: CreateTriageSessionOptions,

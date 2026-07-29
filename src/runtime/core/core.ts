@@ -5,6 +5,7 @@ import type { ScoreContext } from "../scoring/configured";
 import type { ListState } from "../layout/toolbar/filter-state";
 import { derive } from "./derivation";
 import type { ViewPort } from "./ports";
+import type { FocusPolicySnapshot } from "../focus/types";
 
 export interface CoreDeps {
   items(): readonly TriageItem[];
@@ -15,6 +16,7 @@ export interface CoreDeps {
   botLogins(): string[];
   scoreContext(): ScoreContext;
   filters(): ListState;
+  focusPolicy(): FocusPolicySnapshot;
   repoView(): string;   // active repo display-filter ("" = all); not fetch-config Scope
 }
 
@@ -28,6 +30,7 @@ export function createCore(deps: CoreDeps) {
       score: deps.scoreContext(),
       repoView: deps.repoView(),
       filters: deps.filters(),
+      focusPolicy: deps.focusPolicy(),
     });
     const byProvider: Record<string, number> = {};
     const byKind: Record<string, number> = {};

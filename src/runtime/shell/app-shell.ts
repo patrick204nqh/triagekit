@@ -43,6 +43,13 @@ import type {
   DatasetSnapshot,
   RefreshCadence,
 } from "../cached-dataset/types";
+import type { FocusPolicySnapshot } from "../focus/types";
+import {
+  migrateLegacyLabels,
+  reconcileRepositoryOrder,
+} from "../focus/policy";
+import { createFocusPolicyStore } from "../focus/browser-store";
+import { createLocalStorage } from "../adapters/local-storage";
 
 export interface ShellEnv {
   catalog: RuntimeCatalog;
@@ -82,6 +89,7 @@ export interface ToolbarPropsInput {
   activeProvider: string;
   activeRepo: string;
   extraTabs: { id: string; label: string }[];
+  focusPolicy: FocusPolicySnapshot;
 }
 
 // Pure assembly of the toolbar's view-mode / provider-scope / filter props from the
@@ -93,12 +101,15 @@ function assembleToolbarProps(i: ToolbarPropsInput): Omit<ToolbarProps, "onFilte
   const providers = i.providers.map(s => ({
     id: s.id, label: s.provider, on: s.id === i.activeProvider, live: s.status === "ready",
   }));
-  // Repo display-scope options: distinct row locations, count-descending.
-  const counts = new Map<string, number>();
-  for (const r of i.rows) counts.set(r.location, (counts.get(r.location) ?? 0) + 1);
-  const repos = [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([location]) => ({ id: location, label: location }));
+  const activeRepositories = [...new Set(i.rows.map((row) => row.location))];
+  const ordered = reconcileRepositoryOrder(
+    i.focusPolicy.repositoryOrder,
+    activeRepositories,
+  ).active;
+  const repos = ordered.map((location) => ({
+    id: location,
+    label: location,
+  }));
   // Coerce the displayed active tab to "All" when the sticky repo isn't among the
   // current options — matches derive()'s auto-fallback. State is NOT reset upstream,
   // so stickiness survives a round-trip to an artifact that DOES have the repo.
@@ -115,6 +126,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
   const session = env.session ?? createTriageSession({ catalog });
   const sessionUrl = env.sessionUrl ?? createBrowserSessionUrl(window);
   const policy = new PolicyStore();
+  const focusPolicies = createFocusPolicyStore(createLocalStorage());
   const hasInsights = true;
 
   const providersForArtifact = (a: Artifact) =>
@@ -124,7 +136,16 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
   const primaryProvider = (a: Artifact): ProviderDeclaration =>
     readyProvidersFor(a)[0] ?? providersForArtifact(a)[0];
 
-  const initialSession = session.restore(sessionUrl.read()).state;
+  const restoredSession = session.restore(sessionUrl.read()).state;
+  const storedFocusPolicy = focusPolicies.get(restoredSession.provider);
+  const migrated = migrateLegacyLabels(
+    restoredSession.filters,
+    storedFocusPolicy,
+  );
+  if (migrated.policy !== storedFocusPolicy) {
+    focusPolicies.set(migrated.policy);
+  }
+  const initialSession = session.changeFilters(migrated.listState).state;
   let active: Artifact = catalog.artifact(initialSession.kind)
     ?? artifacts.find((artifact) => readyProvidersFor(artifact).length)
     ?? artifacts[0];
@@ -132,6 +153,30 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
   const currentProvider = () => session.snapshot().provider;
   const currentRepository = () => session.snapshot().effectiveRepository;
   const currentFilters = () => session.snapshot().filters;
+  const currentFocusPolicy = (): FocusPolicySnapshot => {
+    const provider = currentProvider();
+    const policySnapshot = focusPolicies.get(provider);
+    const repositories = [...new Set(
+      activeItems().map((item) => item.location),
+    )];
+    const reconciled = reconcileRepositoryOrder(
+      policySnapshot.repositoryOrder,
+      repositories,
+    );
+    if (
+      reconciled.saved.length !== policySnapshot.repositoryOrder.length
+      || reconciled.saved.some((repository, index) =>
+        repository !== policySnapshot.repositoryOrder[index])
+    ) {
+      const next = {
+        ...policySnapshot,
+        repositoryOrder: reconciled.saved,
+      };
+      focusPolicies.set(next);
+      return next;
+    }
+    return policySnapshot;
+  };
   let lastRows: ScoredItem[] = [];
   let lastFetchedAt: number | null = null;
   let insightSnapshot: InsightSnapshot | null = null;
@@ -261,6 +306,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
     botLogins: () => policy.getBotLogins(),
     scoreContext,
     filters: currentFilters,
+    focusPolicy: currentFocusPolicy,
     repoView: currentRepository,
   });
 
@@ -554,6 +600,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
       activeRepo: currentRepository(),
       extraTabs: applicableCatalogTabs(catalog, active, lastRows)
         .map(t => ({ id: t.id, label: t.label })),
+      focusPolicy: currentFocusPolicy(),
     });
     renderToolbar(nav, {
       ...base,

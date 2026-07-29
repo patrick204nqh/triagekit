@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   compareFocusedItems,
   matchesLabelRules,
+  migrateLegacyLabels,
   moveRepository,
   reconcileRepositoryOrder,
 } from "../../src/runtime/focus/policy";
@@ -45,5 +46,30 @@ describe("focus policy", () => {
     ] as any[];
     expect([...rows].sort(compareFocusedItems(rank)).map((row) => row.id))
       .toEqual(["a", "b", "z"]);
+  });
+
+  it("migrates legacy labels into an empty focus policy and cleans list state", () => {
+    expect(migrateLegacyLabels(
+      {
+        axes: { labels: ["security"], tier: ["P0"] },
+        sort: "priority",
+      },
+      {
+        provider: "github",
+        repositoryOrder: [],
+        labels: { include: [], exclude: [], enabled: true },
+      },
+    )).toEqual({
+      policy: {
+        provider: "github",
+        repositoryOrder: [],
+        labels: {
+          include: ["security"],
+          exclude: [],
+          enabled: true,
+        },
+      },
+      listState: { axes: { tier: ["P0"] }, sort: "priority" },
+    });
   });
 });

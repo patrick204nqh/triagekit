@@ -42,6 +42,11 @@ describe("createCore", () => {
       botLogins: () => [],
       scoreContext: () => score,
       filters: () => emptyListState(),
+      focusPolicy: () => ({
+        provider: "github",
+        repositoryOrder: [],
+        labels: { include: [], exclude: [], enabled: true },
+      }),
       repoView: () => "",
     });
 
@@ -69,6 +74,11 @@ describe("createCore", () => {
       botLogins: () => [],
       scoreContext: () => score,
       filters: () => emptyListState(),
+      focusPolicy: () => ({
+        provider: "github",
+        repositoryOrder: [],
+        labels: { include: [], exclude: [], enabled: true },
+      }),
       repoView: () => "",
     });
 
