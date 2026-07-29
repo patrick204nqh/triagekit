@@ -33,6 +33,12 @@ export type SliceOutcome =
     readonly failure: TriageFailure;
   };
 
+export interface ProviderConnectionStatus {
+  readonly paused: boolean;
+  readonly retryAt?: number;
+  readonly reason?: string;
+}
+
 export interface BoundProvider {
   readonly actions?: readonly ActionDefinition[];
   discoverScope(signal?: AbortSignal): Promise<readonly DiscoveryOption[]>;
@@ -43,6 +49,10 @@ export interface BoundProvider {
     slices: readonly SliceRequest[];
     signal: AbortSignal;
   }): AsyncIterable<SliceOutcome>;
+  status?(): ProviderConnectionStatus;
+  subscribeStatus?(
+    observer: (status: ProviderConnectionStatus) => void,
+  ): () => void;
   close(): void;
 }
 

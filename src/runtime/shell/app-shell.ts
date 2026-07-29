@@ -148,6 +148,22 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
   const activeFailures = (): readonly TriageFailure[] =>
     activeDatasetSnapshot()?.slices
       .flatMap((slice) => slice.failure ? [slice.failure] : []) ?? [];
+  const actionPort = {
+    available: (item: ScoredItem) =>
+      activeDatasetSession()?.available(item) ?? [],
+    perform: async (action: Parameters<DatasetSession["perform"]>[0]) =>
+      activeDatasetSession()?.perform(action)
+      ?? {
+        status: "rejected" as const,
+        message: "Provider Connection is unavailable",
+      },
+    status: () => ({
+      paused: activeDatasetSnapshot()?.phase === "paused",
+      ...(activeDatasetSnapshot()?.retryAt !== undefined
+        ? { retryAt: activeDatasetSnapshot()?.retryAt }
+        : {}),
+    }),
+  };
 
   // Signature of the toolbar's row-derived inputs (distinct repo locations + applicable
   // extra-tab ids for the active artifact). dispatchView rebuilds the toolbar only when
@@ -222,6 +238,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
         scoreExplain,
         catalog: catalog,
         handoffController,
+        actions: actionPort,
       }).render(vm);
     },
   };

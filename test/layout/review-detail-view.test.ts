@@ -2,10 +2,13 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { reviewDetailView } from "../../src/runtime/layout/review-card/review-card";
 import type {
-  ProviderDetailPort,
   ScoredItem,
+  TriageActionPort,
 } from "../../src/runtime/layout/table/kind-renderer";
-import type { ProviderCommand } from "../../src/runtime/catalog/types";
+import type {
+  ActionAvailability,
+  TriageAction,
+} from "../../src/runtime/actions/types";
 
 function pr(overrides: Partial<any> = {}): ScoredItem {
   return {
@@ -24,6 +27,14 @@ function pr(overrides: Partial<any> = {}): ScoredItem {
   } as unknown as ScoredItem;
 }
 
+const actions = (
+  availability: readonly ActionAvailability[],
+  perform: TriageActionPort["perform"] = async () => ({ status: "confirmed" }),
+): TriageActionPort => ({
+  available: () => availability,
+  perform,
+});
+
 describe("reviewDetailView", () => {
   let body: HTMLElement, foot: HTMLElement;
   beforeEach(() => { body = document.createElement("div"); foot = document.createElement("div"); });
@@ -37,7 +48,9 @@ describe("reviewDetailView", () => {
   });
 
   it("body shows state/markdown; footer shows merge for an open mergeable PR", () => {
-    const v = reviewDetailView(pr(), {});
+    const v = reviewDetailView(pr(), {
+      actions: actions([{ intent: "merge", variants: ["squash", "merge"] }]),
+    });
     v.body(body); v.actions!(foot);
     expect(body.innerHTML).toContain("security fix");
     expect(body.querySelector(".rc-substate")).toBeTruthy();
@@ -47,7 +60,10 @@ describe("reviewDetailView", () => {
   });
 
   it("issue footer offers close + assign, never merge or CI", () => {
-    const issue = reviewDetailView({ ...pr(), kind: "issue" } as ScoredItem, {});
+    const issue = reviewDetailView(
+      { ...pr(), kind: "issue" } as ScoredItem,
+      { actions: actions([{ intent: "close" }, { intent: "assign" }]) },
+    );
     issue.actions!(foot);
     expect(foot.querySelector('[data-action="close"]')).toBeTruthy();
     expect(foot.querySelector('[data-action="assign"]')).toBeTruthy();
@@ -55,7 +71,9 @@ describe("reviewDetailView", () => {
   });
 
   it("arming an action re-renders the footer with a confirm control", () => {
-    const v = reviewDetailView(pr(), {});
+    const v = reviewDetailView(pr(), {
+      actions: actions([{ intent: "merge", variants: ["squash"] }]),
+    });
     v.actions!(foot);
     foot.querySelector<HTMLElement>('[data-action="merge"]')!.click();
     expect(foot.querySelector("[data-method]")).toBeTruthy();
@@ -68,7 +86,7 @@ describe("reviewDetailView", () => {
     expect(evil.header.title).toContain("<script>");
   });
 
-  it("routes actions through the Provider detail port", async () => {
+  it("emits semantic comment intent without a GitHub payload", async () => {
     const scoredIssue = {
       ...pr(),
       providerRef: { repository: "acme-corp/web", number: 7 },
@@ -77,13 +95,15 @@ describe("reviewDetailView", () => {
       signal: 10,
       details: { ...pr().details, number: 7, checks: null },
     } as ScoredItem;
-    const executed: ProviderCommand[] = [];
-    const provider: ProviderDetailPort = {
-      supports: (_kind, action) => action === "comment",
-      enrich: async () => ({ reviewers: [] }),
-      execute: async (command) => { executed.push(command); },
-    };
-    const detail = reviewDetailView(scoredIssue, { provider });
+    const performed: TriageAction[] = [];
+    const actionPort = actions(
+      [{ intent: "comment" }],
+      async (action) => {
+        performed.push(action);
+        return { status: "confirmed" };
+      },
+    );
+    const detail = reviewDetailView(scoredIssue, { actions: actionPort });
     detail.actions!(foot);
 
     foot.querySelector<HTMLElement>('[data-action="comment"]')!.click();
@@ -92,12 +112,45 @@ describe("reviewDetailView", () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(executed[0]).toMatchObject({
-      kind: "issue",
-      action: "comment",
-      ref: scoredIssue.providerRef,
-      payload: { body: "ship it" },
-    });
+    expect(performed).toEqual([{
+      intent: "comment",
+      itemId: scoredIssue.id,
+      markdown: "ship it",
+    }]);
     expect(foot.querySelector('[data-action="assign"]')).toBeNull();
+  });
+
+  it("renders only provider-advertised merge variants", () => {
+    const detail = reviewDetailView(pr(), {
+      actions: actions([{
+        intent: "merge",
+        variants: ["squash", "rebase"],
+      }]),
+    });
+    detail.actions!(foot);
+    foot.querySelector<HTMLElement>('[data-action="merge"]')!.click();
+
+    expect([
+      ...foot.querySelectorAll<HTMLOptionElement>("[data-method] option"),
+    ].map(({ value }) => value)).toEqual(["squash", "rebase"]);
+  });
+
+  it("disables actions and shows the exact provider retry time", () => {
+    const retryAt = Date.parse("2026-07-29T12:00:00.000Z");
+    const actionPort = {
+      ...actions([{ intent: "comment" }]),
+      status: () => ({ paused: true, retryAt }),
+    };
+    const detail = reviewDetailView(
+      { ...pr(), kind: "issue" } as ScoredItem,
+      { actions: actionPort },
+    );
+    detail.actions!(foot);
+
+    expect(foot.querySelector<HTMLButtonElement>(
+      '[data-action="comment"]',
+    )?.disabled).toBe(true);
+    expect(foot.querySelector("time")?.dateTime)
+      .toBe("2026-07-29T12:00:00.000Z");
   });
 });

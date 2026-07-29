@@ -1,9 +1,6 @@
 import { ProviderError } from "../../core/errors.js";
 import type { Kind } from "../../dataset/item";
-import type {
-  ProviderCommand,
-  ProviderDeclaration,
-} from "../../catalog/types";
+import type { ProviderDeclaration } from "../../catalog/types";
 import type {
   BoundProvider,
   ProviderDefinition,
@@ -93,59 +90,8 @@ async function enrichGithubItem(
   };
 }
 
-async function executeGithubCommand(
-  http: GithubHttp,
-  command: ProviderCommand,
-): Promise<void> {
-  const declared = githubActionCapabilities()[command.kind] ?? [];
-  if (!declared.some((intent) => intent === command.action)) {
-    throw new ProviderError("github", "execute",
-      `action "${command.action}" is not declared for "${command.kind}"`);
-  }
-  const { repository, number } = reference(command.ref);
-  const payload = command.payload ?? {};
-  const routes: Record<string, { method: string; path: string; body: unknown }> = {
-    merge: {
-      method: "PUT",
-      path: `/repos/${repository}/pulls/${number}/merge`,
-      body: payload,
-    },
-    comment: {
-      method: "POST",
-      path: `/repos/${repository}/issues/${number}/comments`,
-      body: payload,
-    },
-    label: {
-      method: "POST",
-      path: `/repos/${repository}/issues/${number}/labels`,
-      body: payload,
-    },
-    assign: {
-      method: "POST",
-      path: `/repos/${repository}/issues/${number}/assignees`,
-      body: payload,
-    },
-    close: {
-      method: "PATCH",
-      path: `/repos/${repository}/issues/${number}`,
-      body: { state: "closed" },
-    },
-  };
-  const route = routes[command.action];
-  await http.request(route.path, {
-    priority: "triage-action",
-    retry: "never",
-    init: {
-      method: route.method,
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(route.body),
-    },
-  });
-}
-
 export interface GithubBoundProvider extends BoundProvider {
   enrich(kind: Kind, providerRef: unknown): Promise<unknown>;
-  execute(command: ProviderCommand): Promise<void>;
   status(): GithubSchedulerStatus;
   subscribeStatus(
     observer: (status: GithubSchedulerStatus) => void,
@@ -237,10 +183,6 @@ export function createGithubProvider(
         enrich(kind, providerRef) {
           ensureOpen();
           return enrichGithubItem(http, kind, providerRef);
-        },
-        execute(command) {
-          ensureOpen();
-          return executeGithubCommand(http, command);
         },
         status() {
           return scheduler.status();

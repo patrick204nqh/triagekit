@@ -10,6 +10,7 @@ import { reviewBodyHtml } from "./body";
 import { actionBarHtml } from "./actions";
 import type { DetailView } from "../table/detail-view";
 import type { ScoredItem, DetailCtx } from "../table/kind-renderer";
+import type { TriageAction } from "../../actions/types";
 
 export interface ReviewCardOpts {
   sla?: Sla;
@@ -54,7 +55,7 @@ export function reviewDetailView(scored: ScoredItem, ctx: DetailCtx, opts: Revie
   let bodyHost: HTMLElement | null = null;
   let footHost: HTMLElement | null = null;
   let enriched = false;
-  const provider = ctx.provider;
+  const actions = ctx.actions;
   const selfHref = cur.details.permalinks.find(p => p.kind === "pr" || p.kind === "issue")?.href ?? cur.url;
 
   function renderBody(): void {
@@ -72,7 +73,8 @@ export function reviewDetailView(scored: ScoredItem, ctx: DetailCtx, opts: Revie
       footHost.innerHTML = actionBarHtml(
         cur,
         st,
-        provider ? (action) => provider.supports(cur.kind, action) : undefined,
+        actions?.available(cur) ?? [],
+        actions?.status?.(),
       );
     }
   }
@@ -82,44 +84,37 @@ export function reviewDetailView(scored: ScoredItem, ctx: DetailCtx, opts: Revie
     renderBody();
   }
   async function run(id: ActionId, payload: string): Promise<void> {
-    if (!provider || !provider.supports(cur.kind, id)) return;
+    if (!actions || !actions.available(cur).some(({ intent }) => intent === id)) return;
     st.busy = true; renderActions();
     try {
-      const commandPayload = id === "merge"
-        ? { merge_method: st.method }
-        : id === "comment"
-          ? { body: payload }
-          : id === "label"
-            ? { labels: [payload] }
-            : id === "assign"
-              ? { assignees: [payload] }
-              : undefined;
-      await provider.execute({
-        kind: cur.kind,
-        ref: cur.providerRef,
-        action: id,
-        payload: commandPayload,
-      });
-      if (id === "merge") patch({ state: "merged" });
-      else if (id === "close") patch({ state: "closed" });
-      else if (id === "comment") patch({ comments: cur.details.comments + 1 });
-      else if (id === "label") patch({ labels: [...cur.details.labels, { name: payload, color: "888888" }] });
-      else if (id === "assign") patch({ assignees: [...cur.details.assignees, { login: payload, avatarUrl: "", kind: "human" }] });
-      st.error = "";
+      let action: TriageAction;
+      if (id === "merge") {
+        action = { intent: "merge", itemId: cur.id, variant: st.method };
+      } else if (id === "comment") {
+        action = { intent: "comment", itemId: cur.id, markdown: payload };
+      } else if (id === "label") {
+        action = { intent: "label", itemId: cur.id, labels: [payload] };
+      } else if (id === "assign") {
+        action = { intent: "assign", itemId: cur.id, assignees: [payload] };
+      } else {
+        action = { intent: "close", itemId: cur.id };
+      }
+      const result = await actions.perform(action);
+      if (result.status === "confirmed") {
+        if (result.item?.details
+          && typeof result.item.details === "object") {
+          patch(result.item.details as Partial<ReviewItem["details"]>);
+        }
+        st.error = "";
+      } else {
+        st.error = result.message;
+      }
     } catch (e) { st.error = String((e as Error)?.message ?? e); }
     st.busy = false; st.armed = null; renderActions();
   }
   async function expand(): Promise<void> {
-    if (enriched || !provider) return;
+    if (enriched) return;
     enriched = true;
-    try {
-      const data = (await provider.enrich(
-        cur.kind,
-        cur.providerRef,
-      )) as Partial<ReviewItem["details"]>;
-      if (data) { Object.assign(cur.details, data); renderBody(); }
-    }
-    catch { enriched = false; }
   }
 
   return {

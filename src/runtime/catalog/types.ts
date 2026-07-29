@@ -45,13 +45,6 @@ export interface RefreshRequest {
   kinds: readonly Kind[];
 }
 
-export interface ProviderCommand {
-  kind: Kind;
-  ref: unknown;
-  action: string;
-  payload?: unknown;
-}
-
 export interface DiscoveryOption {
   value: string;
   label: string;
@@ -66,7 +59,6 @@ export interface ProviderAdapter {
     ref: unknown,
     credential: string,
   ): Promise<unknown>;
-  execute?(command: ProviderCommand, credential: string): Promise<void>;
 }
 
 export interface ScopeField {

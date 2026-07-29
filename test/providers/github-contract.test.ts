@@ -73,20 +73,18 @@ describe("GitHub Provider transport", () => {
     );
   });
 
-  it("rejects undeclared actions before making an HTTP request", async () => {
-    let calls = 0;
-    const github = createGithubProvider(async () => {
-      calls++;
-      return new Response("{}", { status: 200 });
-    });
+  it("exposes semantic definitions without a raw provider executor", async () => {
+    const bound = await createGithubProvider(async () =>
+      new Response("{}", { status: 200 })).bind("token");
 
-    const bound = await github.bind("token");
-    await expect(bound.execute({
-      kind: "issue",
-      ref: { repository: "acme-corp/web", number: 1 },
-      action: "merge",
-    })).rejects.toThrow(/not declared/i);
-    expect(calls).toBe(0);
+    expect("execute" in bound).toBe(false);
+    expect(bound.actions?.map(({ intent }) => intent)).toEqual([
+      "merge",
+      "comment",
+      "label",
+      "assign",
+      "close",
+    ]);
   });
 
   it("discovers repositories through the injected HTTP client", async () => {

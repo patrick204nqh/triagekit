@@ -8,6 +8,7 @@ import type {
 import type {
   BoundProvider,
   ProviderDefinition,
+  ProviderConnectionStatus,
   SliceOutcome,
   SliceRequest,
 } from "./provider";
@@ -169,6 +170,10 @@ const createSession = (input: {
   let closed = false;
   let activeAbort: AbortController | undefined;
   let cadenceTimer: unknown;
+  let providerStatus: ProviderConnectionStatus =
+    input.bound.status?.() ?? { paused: false };
+  let statusUnsubscribe: (() => void) | undefined;
+  let hydrationComplete = false;
 
   for (const target of targets) {
     for (const kind of input.kinds) {
@@ -203,6 +208,9 @@ const createSession = (input: {
       slices: sliceStates,
       persistence: persistenceMode(input.persistence),
       warnings: persistenceWarnings(input.persistence),
+      ...(providerStatus.paused && providerStatus.retryAt !== undefined
+        ? { retryAt: providerStatus.retryAt }
+        : {}),
       ...(pendingActions.size > 0
         ? { pendingActions: [...pendingActions] }
         : {}),
@@ -262,6 +270,20 @@ const createSession = (input: {
     kinds?: readonly Kind[];
   }): Promise<RefreshReport> => {
     await initialized;
+    providerStatus = input.bound.status?.() ?? providerStatus;
+    if (providerStatus.paused) {
+      phase = "paused";
+      publish();
+      return deepFreezeCopy({
+        status: "paused",
+        refreshed: [],
+        retainedStale: [],
+        failures: [],
+        ...(providerStatus.retryAt !== undefined
+          ? { retryAt: providerStatus.retryAt }
+          : {}),
+      });
+    }
     if (closed || connectionKey === undefined) {
       return deepFreezeCopy({
         status: "paused",
@@ -593,11 +615,12 @@ const createSession = (input: {
       });
     }
     await prune();
-    phase = "ready";
+    hydrationComplete = true;
+    phase = providerStatus.paused ? "paused" : "ready";
     publish();
     const due = [...slices.values()].filter((slice) =>
       slice.freshness !== "fresh");
-    if (due.length > 0) {
+    if (due.length > 0 && !providerStatus.paused) {
       queueMicrotask(() => {
         void refresh({
           targets: [...new Set(due.map((slice) => slice.target))],
@@ -606,6 +629,17 @@ const createSession = (input: {
       });
     }
   })();
+  statusUnsubscribe = input.bound.subscribeStatus?.((status) => {
+    providerStatus = status;
+    if (status.paused) {
+      phase = "paused";
+    } else if (hydrationComplete && phase === "paused") {
+      phase = [...slices.values()].some((slice) => slice.failure)
+        ? "partial"
+        : "ready";
+    }
+    publish();
+  });
   scheduleCadenceTimer();
 
   return {
@@ -655,6 +689,7 @@ const createSession = (input: {
         controller.abort(new DOMException("Disconnected", "AbortError"));
       }
       clearCadenceTimer();
+      statusUnsubscribe?.();
       if (mode === "erase" && connectionKey) {
         await input.persistence.removeConnection(connectionKey);
       }
