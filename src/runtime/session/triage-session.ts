@@ -1,6 +1,7 @@
 import { ConfigError } from "../core/errors.js";
 import type { RuntimeCatalog } from "../catalog/types";
 import type { Kind } from "../dataset/item";
+import type { ResolvedInsightRoute } from "../insights/routes";
 import {
   emptyListState,
   pruneFilters,
@@ -45,14 +46,17 @@ const frozenState = (state: SessionState): Readonly<SessionState> =>
 
 const serializedState = (
   state: Readonly<SessionState>,
-): Readonly<SerializedSession> => Object.freeze({
-  kind: state.kind,
-  provider: state.provider || undefined,
-  repository: state.preferredRepository || undefined,
-  view: state.view,
-  sort: state.filters.sort,
-  axes: state.filters.axes,
-});
+): Readonly<SerializedSession> => {
+  const { labels: _legacyLabels, ...axes } = state.filters.axes;
+  return Object.freeze({
+    kind: state.kind,
+    provider: state.provider || undefined,
+    repository: state.preferredRepository || undefined,
+    view: state.view,
+    sort: state.filters.sort,
+    axes,
+  });
+};
 
 export function createTriageSession(
   options: CreateTriageSessionOptions,
@@ -207,6 +211,19 @@ export function createTriageSession(
       return update({
         ...state,
         filters: normalizeFilters(state.kind, filters),
+      }, "rederive");
+    },
+
+    openInsightRoute(
+      route: Extract<ResolvedInsightRoute, { destination: "list" }>,
+    ) {
+      return update({
+        kind: route.kind,
+        provider: providerFor(route.kind, state.provider),
+        preferredRepository: route.preferredRepository,
+        effectiveRepository: route.preferredRepository,
+        view: "list",
+        filters: normalizeFilters(route.kind, route.filters),
       }, "rederive");
     },
 

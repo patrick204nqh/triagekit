@@ -65,6 +65,7 @@
   "devDependencies": {
     "@types/dompurify": "^3.0.5",
     "@types/node": "^25.9.1",
+    "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.1.1",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"

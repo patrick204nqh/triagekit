@@ -43,8 +43,10 @@ const CAT_PATHS: Record<string, string> = {
   connections: `<path d="M9 2v5M15 2v5"/><path d="M7 7h10v3a5 5 0 0 1-5 5 5 5 0 0 1-5-5V7z"/><path d="M12 15v7"/>`,
   // sliders — three horizontal tracks each with a knob
   scoring: `<path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="17" r="2"/>`,
+  // repository stack
+  repositories: `<path d="M5 4h14v5H5zM5 10h14v5H5zM5 16h14v4H5z"/><path d="M8 6.5h.01M8 12.5h.01M8 18h.01"/>`,
   // funnel
-  filters: `<path d="M3 4h18l-7 8v6l-4 2v-8L3 4z"/>`,
+  exclusions: `<path d="M3 4h18l-7 8v6l-4 2v-8L3 4z"/>`,
   // gear
   general: `<circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/>`,
 };

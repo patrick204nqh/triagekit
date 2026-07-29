@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { TriageConfigT } from "../../src/config/schema";
-import { createStore } from "../../src/runtime/core/store";
 import { mountShell } from "../../src/runtime/shell/app-shell";
+import { createCore } from "../../src/runtime/core/core";
 import { createTriageSession } from "../../src/runtime/session/triage-session";
 import { testCatalog } from "../support/test-catalog";
 
@@ -67,10 +67,12 @@ describe("shell Session adapter", () => {
 
     mountShell(config, {
       catalog,
+      datasets: {
+        connect: vi.fn(),
+        resume: vi.fn(async () => null),
+      },
       session,
       sessionUrl,
-      store: createStore(),
-      timer: { every: () => () => {} },
       createCore: () => core,
       createDomView: () => ({ render: () => {} }),
     });
@@ -87,5 +89,56 @@ describe("shell Session adapter", () => {
     );
     expect(core.rerender).toHaveBeenCalledTimes(1);
     expect(sessionUrl.write).toHaveBeenCalled();
+  });
+
+  it("renders hydrated data without exposing credentials to the DOM adapter", async () => {
+    const snapshot = {
+      phase: "ready" as const,
+      provider: "github",
+      scope: { repos: ["acme-corp/web"] },
+      cadence: "off" as const,
+      items: [],
+      slices: [],
+      persistence: "indexeddb" as const,
+      warnings: [],
+    };
+    const datasetSession = {
+      snapshot: () => snapshot,
+      subscribe(observer: (value: typeof snapshot) => void) {
+        observer(snapshot);
+        return () => {};
+      },
+      refresh: vi.fn(async () => ({
+        status: "complete" as const,
+        refreshed: [],
+        retainedStale: [],
+        failures: [],
+      })),
+      setCadence: vi.fn(),
+      clearCachedData: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
+    };
+    const createDomView = vi.fn((_host, deps) => {
+      expect(deps).not.toHaveProperty("token");
+      expect(deps).not.toHaveProperty("credential");
+      return { render: vi.fn() };
+    });
+
+    const shell = mountShell(config, {
+      catalog: testCatalog(),
+      datasets: {
+        connect: vi.fn(),
+        resume: vi.fn(async () => ({
+          discoverScope: vi.fn(async () => []),
+          open: vi.fn(() => datasetSession),
+        })),
+      },
+      createCore,
+      createDomView,
+    });
+
+    await shell.ready;
+
+    expect(createDomView).toHaveBeenCalled();
   });
 });

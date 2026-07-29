@@ -4,8 +4,6 @@ import { bootstrap } from "../../src/runtime/bootstrap";
 import { mockGithubItems } from "../helpers/github-fetch";
 import type { TriageConfigT } from "../../src/config/schema";
 
-const flush = () => new Promise<void>(r => setTimeout(r, 0));
-
 const config: TriageConfigT = {
   source: "github",
   views: ["code-security", "insights"],
@@ -41,8 +39,11 @@ describe("app-shell score breakdown in drawer", () => {
     localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: ["acme/web"] }));
     const spy = mockGithubItems([vulnItem]);
     try {
-      bootstrap(config);
-      await flush();
+      const shell = bootstrap(config);
+      await shell.ready;
+      await vi.waitFor(() =>
+        expect(document.querySelector("#root .surface-body .alert-row"))
+          .not.toBeNull());
       document.querySelector<HTMLElement>("#root .surface-body .alert-row")!.click();
       expect(document.querySelector("#root .drawer .breakdown")).not.toBeNull();
       expect(document.querySelector("#root .drawer")!.textContent).toContain("cvss");
@@ -54,8 +55,11 @@ describe("app-shell score breakdown in drawer", () => {
     localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: ["acme/web"] }));
     const spy = mockGithubItems([vulnItem]);
     try {
-      bootstrap(config);
-      await flush();
+      const shell = bootstrap(config);
+      await shell.ready;
+      await vi.waitFor(() =>
+        expect(document.querySelector("#root .surface-body .alert-row"))
+          .not.toBeNull());
       document.querySelector<HTMLElement>("#root .surface-body .alert-row")!.click();
       expect(document.querySelector("#root .drawer .breakdown")).toBeNull();
       expect(document.querySelector("#root .drawer")!.textContent).toContain("Built-in scorer");

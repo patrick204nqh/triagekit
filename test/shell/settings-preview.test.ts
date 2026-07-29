@@ -5,6 +5,7 @@ import { PolicyStore } from "../../src/runtime/shell/policy-store";
 import type { ScoreModel } from "../../src/runtime/scoring/score-model";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 import { scoringCatalog } from "../helpers/scoring-catalog";
+import { createConnectionSettingsFixture } from "../helpers/connection-settings";
 
 const KIND = "dependency-vuln";
 const def: ScoreModel = {
@@ -25,8 +26,8 @@ function setup(rows: ScoredItem[]) {
     catalog: scoringCatalog(def, [
       { name: "cvss", type: "number", range: [0, 10] },
     ]),
-    providers: [], creds: { get: () => "", set: () => {} } as any,
-    scopes: { get: () => ({}), set: () => {} } as any,
+    providers: [],
+    connections: createConnectionSettingsFixture().connections,
     policy, onChange: () => {}, getRows: () => rows,
   });
   api.open();

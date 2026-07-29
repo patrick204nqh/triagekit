@@ -2,6 +2,26 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { PolicyStore } from "../../src/runtime/shell/policy-store";
 import { DEFAULT_THRESHOLDS } from "../../src/runtime/scoring/tier";
+import type {
+  FocusPolicySnapshot,
+  FocusPolicyStore,
+} from "../../src/runtime/focus/types";
+
+class MemoryFocusPolicyStore implements FocusPolicyStore {
+  private readonly policies = new Map<string, FocusPolicySnapshot>();
+
+  get(provider: string): FocusPolicySnapshot {
+    return this.policies.get(provider) ?? {
+      provider,
+      repositoryOrder: [],
+      labels: { include: [], exclude: [], enabled: true },
+    };
+  }
+
+  set(policy: FocusPolicySnapshot): void {
+    this.policies.set(policy.provider, policy);
+  }
+}
 
 describe("PolicyStore", () => {
   beforeEach(() => localStorage.clear());
@@ -47,5 +67,19 @@ describe("PolicyStore", () => {
     expect(new PolicyStore().getScoreModel("dependency-vuln")).toBeNull();
     p.clearScoreModel("dependency-vuln");
     expect(new PolicyStore().getScoreModel("dependency-vuln")).toBeNull();
+  });
+
+  it("delegates provider focus policy without changing existing policy keys", () => {
+    const focus = new MemoryFocusPolicyStore();
+    const policy = new PolicyStore(focus);
+    policy.setFocusPolicy({
+      provider: "github",
+      repositoryOrder: ["acme-corp/core"],
+      labels: { include: ["security"], exclude: [], enabled: true },
+    });
+
+    expect(policy.getFocusPolicy("github").repositoryOrder)
+      .toEqual(["acme-corp/core"]);
+    expect(policy.getTiers()).toEqual(DEFAULT_THRESHOLDS);
   });
 });

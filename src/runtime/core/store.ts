@@ -69,6 +69,15 @@ export function createStore(fingerprint: Fingerprint = defaultFingerprint) {
     return [...entries.values()].map(e => e.item);
   }
 
+  function entrySnapshot(): readonly Readonly<StoreEntry>[] {
+    return Object.freeze(
+      [...entries.values()].map((entry) => Object.freeze({
+        item: entry.item,
+        provenance: Object.freeze({ ...entry.provenance }),
+      })),
+    );
+  }
+
   function stats(): StoreStats {
     const byProvider: Record<string, number> = {};
     const byKind: Record<string, number> = {};
@@ -79,7 +88,15 @@ export function createStore(fingerprint: Fingerprint = defaultFingerprint) {
     return { byProvider, byKind };
   }
 
-  return { upsert, replaceScope, replaceKind, remove, snapshot, stats };
+  return {
+    upsert,
+    replaceScope,
+    replaceKind,
+    remove,
+    snapshot,
+    entries: entrySnapshot,
+    stats,
+  };
 }
 
 export type DatasetStore = ReturnType<typeof createStore>;

@@ -18,7 +18,13 @@ function props(over: Partial<ToolbarProps> = {}): ToolbarProps {
     activeView: "list",
     providers: [{ id: "github", label: "github", on: true, live: true }],
     repos: [], activeRepo: "",
+    focusPolicy: {
+      provider: "github",
+      repositoryOrder: [],
+      labels: { include: [], exclude: [], enabled: true },
+    },
     onFilterChange: () => {}, onViewChange: () => {}, onProviderSelect: () => {}, onRepoSelect: () => {},
+    onLabelRulesChange: () => {},
     ...over,
   };
 }
@@ -29,10 +35,57 @@ const labelledRows = (...labels: { name: string; color: string }[]): ScoredItem[
 } as ScoredItem];
 
 describe("renderToolbar", () => {
-  it("renders label options as colored chips, keeping the data-axis/data-val input", () => {
+  it("renders explicit include and exclude lanes with exclusion summary", () => {
+    const host = document.createElement("div");
+    renderToolbar(host, props({
+      rows: labelledRows(
+        { name: "security", color: "b60205" },
+        { name: "jira-ticket-created", color: "888888" },
+      ),
+      focusPolicy: {
+        provider: "github",
+        repositoryOrder: [],
+        labels: {
+          include: ["security"],
+          exclude: ["jira-ticket-created"],
+          enabled: true,
+        },
+      },
+    }));
+    expect(host.textContent).toContain("Show if labelled");
+    expect(host.textContent).toContain("Hide if labelled");
+    expect(host.textContent).toContain(
+      "Label: security · Not label: jira-ticket-created",
+    );
+    expect(host.querySelector(
+      '[aria-label="Remove jira-ticket-created from hidden labels"]',
+    )).toBeTruthy();
+  });
+
+  it("changes hidden labels directly from the filter popover", () => {
+    const host = document.createElement("div");
+    const onLabelRulesChange = vi.fn();
+    renderToolbar(host, props({
+      rows: labelledRows({ name: "jira-ticket-created", color: "888888" }),
+      onLabelRulesChange,
+    }));
+    host.querySelector<HTMLElement>("[data-tb-filter]")!.click();
+    const hidden = host.querySelector<HTMLInputElement>(
+      '[data-label-mode="exclude"][data-val="jira-ticket-created"]',
+    )!;
+    hidden.checked = true;
+    hidden.dispatchEvent(new Event("change"));
+    expect(onLabelRulesChange).toHaveBeenCalledWith({
+      include: [],
+      exclude: ["jira-ticket-created"],
+      enabled: true,
+    });
+  });
+
+  it("renders label options as colored chips in both focus lanes", () => {
     const host = document.createElement("div");
     renderToolbar(host, props({ rows: labelledRows({ name: "bug", color: "d73a4a" }) }));
-    const input = host.querySelector<HTMLInputElement>("[data-axis='labels'][data-val='bug']");
+    const input = host.querySelector<HTMLInputElement>("[data-label-mode='include'][data-val='bug']");
     expect(input).not.toBeNull();                                   // state-driving input still present
     const opt = input!.closest(".pop-opt")!;
     expect(opt.querySelector(".lbl")?.getAttribute("style")).toContain("--lbl:#d73a4a");
@@ -42,7 +95,7 @@ describe("renderToolbar", () => {
   it("toggling a label checkbox marks its row .on", () => {
     const host = document.createElement("div");
     renderToolbar(host, props({ rows: labelledRows({ name: "bug", color: "d73a4a" }), onFilterChange: () => {} }));
-    const input = host.querySelector<HTMLInputElement>("[data-axis='labels'][data-val='bug']")!;
+    const input = host.querySelector<HTMLInputElement>("[data-label-mode='include'][data-val='bug']")!;
     input.checked = true;
     input.dispatchEvent(new Event("change"));
     expect(input.closest(".pop-opt")!.classList.contains("on")).toBe(true);
@@ -54,11 +107,11 @@ describe("renderToolbar", () => {
   it("shows a search box only for axes past the threshold", () => {
     const few = document.createElement("div");
     renderToolbar(few, props({ rows: manyLabels(4) }));
-    expect(few.querySelector("[data-filter-axis='labels']")).toBeNull();          // 4 <= 8
+    expect(few.querySelector("[data-filter-axis='labels-include']")).toBeNull();  // 4 <= 8
 
     const many = document.createElement("div");
     renderToolbar(many, props({ rows: manyLabels(9) }));
-    expect(many.querySelector("[data-filter-axis='labels']")).not.toBeNull();     // 9 > 8
+    expect(many.querySelector("[data-filter-axis='labels-include']")).not.toBeNull(); // 9 > 8
     expect(many.querySelector("[data-filter-axis='tier']")).toBeNull();           // tier has 4 fixed options
   });
 
@@ -70,11 +123,11 @@ describe("renderToolbar", () => {
       { name: "perf", color: "0e8a16" }, { name: "ci", color: "fbca04" },
       { name: "ux", color: "a2eeef" }, { name: "api", color: "cfd3d7" },
       { name: "auth", color: "8957e5" }) }));   // 9 labels -> search shown
-    const search = host.querySelector<HTMLInputElement>("[data-filter-axis='labels']")!;
+    const search = host.querySelector<HTMLInputElement>("[data-filter-axis='labels-include']")!;
     search.value = "se";
     search.dispatchEvent(new Event("input"));
     const visible = (val: string) => {
-      const opt = host.querySelector<HTMLElement>(`[data-axis='labels'][data-val='${val}']`)!.closest(".pop-opt") as HTMLElement;
+      const opt = host.querySelector<HTMLElement>(`[data-label-mode='include'][data-val='${val}']`)!.closest(".pop-opt") as HTMLElement;
       return opt.style.display !== "none";
     };
     expect(visible("security")).toBe(true);   // matches "se"
@@ -117,6 +170,39 @@ describe("renderToolbar", () => {
     const active = host.querySelector(".tb-view.active");
     expect(active?.textContent).toBe("List");
   });
+
+  it("uses accessible tab semantics for dashboard views", () => {
+    const host = document.createElement("div");
+    renderToolbar(host, props());
+
+    const tablist = host.querySelector(".tb-left");
+    const tabs = host.querySelectorAll<HTMLElement>(".tb-view");
+    expect(tablist?.getAttribute("role")).toBe("tablist");
+    expect(tablist?.getAttribute("aria-label")).toBe("Dashboard view");
+    expect(tabs[0].getAttribute("role")).toBe("tab");
+    expect(tabs[0].getAttribute("aria-selected")).toBe("true");
+    expect(tabs[0].getAttribute("tabindex")).toBe("0");
+    expect(tabs[0].getAttribute("aria-controls")).toBe("root");
+    expect(tabs[1].getAttribute("aria-selected")).toBe("false");
+    expect(tabs[1].getAttribute("tabindex")).toBe("-1");
+  });
+
+  it("moves and activates view tabs with arrow keys", () => {
+    const host = document.createElement("div");
+    document.body.append(host);
+    const onViewChange = vi.fn();
+    renderToolbar(host, props({ onViewChange }));
+    const tabs = host.querySelectorAll<HTMLElement>(".tb-view");
+
+    tabs[0].dispatchEvent(new KeyboardEvent("keydown", {
+      key: "ArrowRight",
+      bubbles: true,
+    }));
+
+    expect(onViewChange).toHaveBeenCalledWith("insights");
+    expect(document.activeElement).toBe(tabs[1]);
+  });
+
   it("renders Filter and Sort buttons", () => {
     const host = document.createElement("div");
     renderToolbar(host, props());

@@ -1,19 +1,19 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from "vitest";
 import { healthOf, scopeSummary } from "../../src/runtime/shell/health";
-import { CredStore } from "../../src/runtime/shell/cred-store";
 import { provider } from "../helpers/provider";
+import { createConnectionSettingsFixture } from "../helpers/connection-settings";
 
 describe("provider health", () => {
   beforeEach(() => sessionStorage.clear());
 
   it("upcoming providers are always upcoming", () => {
-    expect(healthOf(provider({ status: "upcoming" }), new CredStore()))
+    expect(healthOf(provider({ status: "upcoming" }), createConnectionSettingsFixture().creds))
       .toBe("upcoming");
   });
 
   it("a ready provider needs its credential", () => {
-    const creds = new CredStore();
+    const creds = createConnectionSettingsFixture().creds;
     const github = provider();
 
     expect(healthOf(github, creds)).toBe("needs-token");
@@ -36,7 +36,7 @@ describe("provider health", () => {
   });
 
   it("keys credentials by the stable Provider id", () => {
-    const creds = new CredStore();
+    const creds = createConnectionSettingsFixture().creds;
     const github = provider({ kinds: ["issue", "change-request"] });
 
     creds.set(github.id, "token");

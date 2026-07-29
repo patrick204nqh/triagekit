@@ -21,23 +21,45 @@ function triggerDownload(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-export function downloadMarkdown(handoff: AgentHandoffV1, markdown: string): TransportResult {
+export function downloadText(
+  filename: string,
+  text: string,
+  mime: string,
+): TransportResult {
   try {
-    const blob = new Blob([markdown], { type: "text/markdown" });
-    triggerDownload(blob, filenameFor(handoff, "md"));
+    const blob = new Blob([text], { type: mime });
+    triggerDownload(blob, safeFilename(filename));
     return { ok: true };
   } catch {
     return { ok: false, error: "Download failed" };
   }
 }
 
-export function downloadJSON(handoff: AgentHandoffV1): TransportResult {
+export function downloadJson(
+  filename: string,
+  value: unknown,
+): TransportResult {
   try {
-    const json = JSON.stringify(handoff, null, 2);
+    const json = JSON.stringify(value, null, 2);
     const blob = new Blob([json], { type: "application/json" });
-    triggerDownload(blob, filenameFor(handoff, "json"));
+    triggerDownload(blob, safeFilename(filename));
     return { ok: true };
   } catch {
     return { ok: false, error: "Download failed" };
   }
+}
+
+export function downloadMarkdown(
+  handoff: AgentHandoffV1,
+  markdown: string,
+): TransportResult {
+  return downloadText(
+    filenameFor(handoff, "md"),
+    markdown,
+    "text/markdown",
+  );
+}
+
+export function downloadJSON(handoff: AgentHandoffV1): TransportResult {
+  return downloadJson(filenameFor(handoff, "json"), handoff);
 }

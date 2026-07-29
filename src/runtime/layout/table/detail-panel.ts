@@ -176,7 +176,11 @@ export function renderTriageList(
     return;
   }
   const r0 = catalog.readyKind(rows[0].kind)?.renderer;
-  root.innerHTML = warnings + tableHtml(rows, r0?.columns)
+  root.innerHTML = warnings + tableHtml(
+    rows,
+    r0?.columns,
+    ctx.delegationSelection,
+  )
     + `<div class="scrim" data-drawer-scrim></div>`
     + `<aside class="drawer" hidden role="dialog" aria-modal="true" aria-label="Item detail">
          <div class="drawer-head"><div data-head></div><button class="drawer-close" aria-label="Close">×</button></div>
@@ -195,6 +199,16 @@ export function renderTriageList(
   function closeDrawer() { drawer.hidden = true; scrim.classList.remove("open"); dismiss.release(); }
   drawer.querySelector<HTMLElement>(".drawer-close")!.addEventListener("click", closeDrawer);
   scrim.addEventListener("click", closeDrawer);
+
+  root.querySelectorAll<HTMLElement>("[data-queue-select]").forEach((button) => {
+    const toggle = (event: Event) => {
+      event.stopPropagation();
+      const item = rows[Number(button.dataset.i)];
+      if (item) ctx.delegationSelection?.onToggle(item);
+    };
+    button.addEventListener("click", toggle);
+    button.addEventListener("keydown", (event) => event.stopPropagation());
+  });
 
   root.querySelectorAll<HTMLElement>(".alert-row").forEach(tr => {
     const openRow = () => {

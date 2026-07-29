@@ -1,6 +1,7 @@
 import type { Kind } from "../dataset/item";
 import type { ListState } from "../layout/toolbar/filter-state";
 import type { ScoredItem } from "../layout/table/kind-renderer";
+import type { ResolvedInsightRoute } from "../insights/routes";
 
 export type WorkIntent = "refresh" | "rederive" | "present" | "none";
 
@@ -46,4 +47,7 @@ export interface TriageSession {
   changeFilters(filters: ListState): SessionUpdate;
   restore(serialized: SerializedSession): SessionUpdate;
   reconcile(availability: SessionAvailability): SessionUpdate;
+  openInsightRoute(
+    route: Extract<ResolvedInsightRoute, { destination: "list" }>,
+  ): SessionUpdate;
 }

@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { createGithubHttp } from "../../src/runtime/providers/github/http";
-import {
-  discoverGithubRepositories,
-  refreshGithubKinds,
-  type GithubKindIngest,
-} from "../../src/runtime/providers/github/repository-ingest";
 import { createGithubProvider } from "../../src/runtime/providers/github/provider";
+
+const collect = async <T>(iterable: AsyncIterable<T>): Promise<T[]> => {
+  const values: T[] = [];
+  for await (const value of iterable) values.push(value);
+  return values;
+};
 
 describe("GitHub Provider transport", () => {
   it("exposes one stable Provider declaration", () => {
@@ -50,36 +50,41 @@ describe("GitHub Provider transport", () => {
     };
     const github = createGithubProvider(fetchMock);
 
-    const outcomes = await github.adapter!.refresh({
-      credential: "token",
+    const bound = await github.bind("token");
+    const outcomes = await collect(bound.fetchSlices({
       scope: { repos: ["acme-corp/web"] },
-      kinds: ["dependency-vuln"],
-    });
+      slices: [{ target: "acme-corp/web", kind: "dependency-vuln" }],
+      signal: new AbortController().signal,
+    }));
 
-    expect(outcomes[0].items[0]).toMatchObject({
+    expect(outcomes[0]).toMatchObject({
+      type: "changed",
+      target: "acme-corp/web",
+      kind: "dependency-vuln",
+    });
+    expect(outcomes[0].type === "changed" && outcomes[0].items[0]).toMatchObject({
       provider: "github",
       providerRef: { repository: "acme-corp/web", number: 7 },
       kind: "dependency-vuln",
       title: "axios",
     });
-    expect(outcomes[0].items[0].providerRef).not.toHaveProperty(
+    expect(outcomes[0].type === "changed" && outcomes[0].items[0].providerRef).not.toHaveProperty(
       "security_advisory",
     );
   });
 
-  it("rejects undeclared actions before making an HTTP request", async () => {
-    let calls = 0;
-    const github = createGithubProvider(async () => {
-      calls++;
-      return new Response("{}", { status: 200 });
-    });
+  it("exposes semantic definitions without a raw provider executor", async () => {
+    const bound = await createGithubProvider(async () =>
+      new Response("{}", { status: 200 })).bind("token");
 
-    await expect(github.adapter!.execute!({
-      kind: "issue",
-      ref: { repository: "acme-corp/web", number: 1 },
-      action: "merge",
-    }, "token")).rejects.toThrow(/not declared/i);
-    expect(calls).toBe(0);
+    expect("execute" in bound).toBe(false);
+    expect(bound.actions?.map(({ intent }) => intent)).toEqual([
+      "merge",
+      "comment",
+      "label",
+      "assign",
+      "close",
+    ]);
   });
 
   it("discovers repositories through the injected HTTP client", async () => {
@@ -95,46 +100,50 @@ describe("GitHub Provider transport", () => {
       ]), { status: 200 });
     };
 
-    const http = createGithubHttp(fetchMock);
-    expect(await discoverGithubRepositories(http, "token")).toEqual([
+    const bound = await createGithubProvider(fetchMock).bind("token");
+    expect(await bound.discoverScope()).toEqual([
       { value: "acme-corp/web", label: "web", group: "acme-corp" },
     ]);
     expect(calls).toHaveLength(1);
   });
 
   it("returns partial per-Kind outcomes when one repository fails", async () => {
-    const http = createGithubHttp(async () =>
-      new Response("{}", { status: 200 }));
-    const ingest: GithubKindIngest = {
-      kinds: ["issue"],
-      async fetchRepository(_http, repository) {
-        if (repository.endsWith("/broken")) throw new Error("network down");
-        return [{
-          id: `github:${repository}:1`,
-          provider: "github",
-          providerRef: { repository, number: 1 },
-          kind: "issue",
-          title: "Issue",
-          location: repository,
-          signal: 1,
-          createdAt: "2026-01-01T00:00:00Z",
-          url: "",
-          details: {},
-        }];
-      },
-    };
-
-    const outcomes = await refreshGithubKinds(http, [ingest], {
-      credential: "token",
-      scope: { repos: ["acme-corp/web", "acme-corp/broken"] },
-      kinds: ["issue"],
+    const github = createGithubProvider(async (input) => {
+      if (String(input).includes("acme-corp/broken")) {
+        throw new Error("network down");
+      }
+      return new Response(JSON.stringify([{
+        number: 1,
+        title: "Issue",
+        user: { login: "alice", type: "User" },
+        assignees: [],
+        labels: [],
+        comments: 0,
+        created_at: "2026-01-01T00:00:00Z",
+        html_url: "https://example.invalid/1",
+      }]), { status: 200 });
     });
+    const bound = await github.bind("token");
+    const outcomes = await collect(bound.fetchSlices({
+      scope: { repos: ["acme-corp/web", "acme-corp/broken"] },
+      slices: [
+        { target: "acme-corp/web", kind: "issue" },
+        { target: "acme-corp/broken", kind: "issue" },
+      ],
+      signal: new AbortController().signal,
+    }));
 
     expect(outcomes[0]).toMatchObject({
+      type: "changed",
       kind: "issue",
-      status: "partial",
+      target: "acme-corp/web",
       items: [{ location: "acme-corp/web" }],
-      failures: [{ provider: "github", target: "acme-corp/broken" }],
+    });
+    expect(outcomes[1]).toMatchObject({
+      type: "failed",
+      kind: "issue",
+      target: "acme-corp/broken",
+      failure: { provider: "github", target: "acme-corp/broken" },
     });
   });
 
@@ -145,20 +154,21 @@ describe("GitHub Provider transport", () => {
         headers: { "x-github-sso": "required" },
       }));
 
-    const outcomes = await github.adapter!.refresh({
-      credential: "token",
+    const bound = await github.bind("token");
+    const outcomes = await collect(bound.fetchSlices({
       scope: { repos: ["acme-corp/web"] },
-      kinds: ["dependency-vuln"],
-    });
+      slices: [{ target: "acme-corp/web", kind: "dependency-vuln" }],
+      signal: new AbortController().signal,
+    }));
 
     expect(outcomes[0]).toMatchObject({
-      status: "failed",
-      failures: [{
+      type: "failed",
+      failure: {
         provider: "github",
         kind: "dependency-vuln",
         target: "acme-corp/web",
         category: "auth",
-      }],
+      },
     });
   });
 });

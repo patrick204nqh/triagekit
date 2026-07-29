@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ProviderDeclaration } from "../../src/runtime/catalog/types";
 import { createCore } from "../../src/runtime/core/core";
-import { createStore } from "../../src/runtime/core/store";
 import type { ViewModel } from "../../src/runtime/core/view-model";
 import type { TriageItem } from "../../src/runtime/dataset/item";
 import { emptyListState } from "../../src/runtime/layout/toolbar/filter-state";
@@ -20,23 +18,6 @@ const item = (id: string, signal: number): TriageItem => ({
   details: {},
 });
 
-const provider = (items: readonly TriageItem[]): ProviderDeclaration => ({
-  id: "github",
-  label: "GitHub",
-  status: "ready",
-  kinds: ["issue"],
-  connection: { setupHint: "Token", scopeFields: [] },
-  capabilities: { discoverScope: false, enrich: [], actions: {} },
-  adapter: {
-    refresh: async () => [{
-      kind: "issue",
-      status: "success",
-      items,
-      failures: [],
-    }],
-  },
-});
-
 const score: ScoreContext = {
   getModel: () => null,
   getFields: () => [],
@@ -45,25 +26,27 @@ const score: ScoreContext = {
 };
 
 describe("createCore", () => {
-  it("refreshes through a provider adapter, derives, and renders", async () => {
-    const store = createStore();
+  it("refreshes the Dataset Session, derives, and renders", async () => {
     let vm: ViewModel | null = null;
-    const github = provider([item("github:1", 10), item("github:2", 90)]);
+    let items: readonly TriageItem[] = [];
+    const refreshed = [item("github:1", 10), item("github:2", 90)];
 
     const core = createCore({
-      store,
+      items: () => items,
+      failures: () => [],
+      refresh: async () => {
+        items = refreshed;
+      },
       view: { render: (model) => { vm = model; } },
-      jobsFor: () => [{
-        provider: github,
-        scopeKey: "r1",
-        scope: {},
-        credential: "t",
-        kinds: ["issue"],
-      }],
       activeKinds: () => ["issue"],
       botLogins: () => [],
       scoreContext: () => score,
       filters: () => emptyListState(),
+      focusPolicy: () => ({
+        provider: "github",
+        repositoryOrder: [],
+        labels: { include: [], exclude: [], enabled: true },
+      }),
       repoView: () => "",
     });
 
@@ -77,25 +60,25 @@ describe("createCore", () => {
     expect(vm!.errors).toEqual([]);
   });
 
-  it("rerender re-derives from the store without refreshing", () => {
-    const store = createStore();
-    store.upsert([item("github:1", 10)], {
-      provider: "github",
-      scopeKey: "r1",
-      kind: "issue",
-      fetchedAt: 1,
-    });
+  it("rerender re-derives from snapshot items without refreshing", () => {
+    const items = [item("github:1", 10)];
     let renders = 0;
     let vm: ViewModel | null = null;
 
     const core = createCore({
-      store,
+      items: () => items,
+      failures: () => [],
+      refresh: async () => {},
       view: { render: (model) => { renders += 1; vm = model; } },
-      jobsFor: () => [],
       activeKinds: () => ["issue"],
       botLogins: () => [],
       scoreContext: () => score,
       filters: () => emptyListState(),
+      focusPolicy: () => ({
+        provider: "github",
+        repositoryOrder: [],
+        labels: { include: [], exclude: [], enabled: true },
+      }),
       repoView: () => "",
     });
 

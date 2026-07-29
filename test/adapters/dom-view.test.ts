@@ -4,6 +4,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { createDomView } from "../../src/runtime/adapters/dom-view";
 import type { ViewModel } from "../../src/runtime/core/view-model";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
+import { vi } from "vitest";
 
 // Minimal manifest registration so the issue renderer exists.
 
@@ -46,5 +47,32 @@ describe("DOM view adapter", () => {
     expect(host.querySelector(".surface-body")).not.toBeNull();
     expect(host.querySelector(".facet-host")).toBeNull();   // retired filter bar's DOM stays absent; toolbar owns filters now
     expect(host.textContent).toContain("a");
+  });
+
+  it("passes queue selection intents into the rendered table", () => {
+    const host = document.getElementById("root")!;
+    const onToggle = vi.fn();
+    const view = createDomView(host, {
+      artifact: {
+        id: "issue",
+        label: "Issues",
+        group: "work",
+        kinds: ["issue"],
+      } as any,
+      scoreExplain: () => null,
+      delegationSelection: {
+        queuedKeys: new Set(),
+        onToggle,
+      },
+    });
+    const item = row("a", 9);
+    view.render({
+      scored: [item],
+      shown: [item],
+      errors: [],
+      stats: { byProvider: { github: 1 }, byKind: { issue: 1 } },
+    });
+    host.querySelector<HTMLElement>("[data-queue-select]")!.click();
+    expect(onToggle).toHaveBeenCalledWith(item);
   });
 });

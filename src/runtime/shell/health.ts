@@ -1,13 +1,12 @@
 import type { ProviderDeclaration, Scope } from "../catalog/types";
-import type { CredStore } from "./cred-store";
 
 export type Health = "connected" | "needs-token" | "upcoming";
 export function healthOf(
   provider: ProviderDeclaration,
-  creds: CredStore,
+  credentials: { has(provider: string): boolean },
 ): Health {
   if (provider.status === "upcoming") return "upcoming";
-  return creds.has(provider.id) ? "connected" : "needs-token";
+  return credentials.has(provider.id) ? "connected" : "needs-token";
 }
 // Generic summary built from the Provider declaration's scope fields.
 export function scopeSummary(provider: ProviderDeclaration, scope: Scope): string {

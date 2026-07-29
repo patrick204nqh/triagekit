@@ -1,45 +1,53 @@
 // src/runtime/core/core.ts
-import type { Kind } from "../dataset/item";
+import type { Kind, TriageItem } from "../dataset/item";
 import type { TriageFailure } from "../catalog/types";
 import type { ScoreContext } from "../scoring/configured";
 import type { ListState } from "../layout/toolbar/filter-state";
 import { derive } from "./derivation";
-import {
-  refreshProviders,
-  type ProviderRefreshJob,
-} from "./orchestrator";
-import type { DatasetStore } from "./store";
 import type { ViewPort } from "./ports";
+import type { FocusPolicySnapshot } from "../focus/types";
 
 export interface CoreDeps {
-  store: DatasetStore;
+  items(): readonly TriageItem[];
+  failures(): readonly TriageFailure[];
+  refresh(): Promise<void>;
   view: ViewPort;
-  jobsFor(): ProviderRefreshJob[];
   activeKinds(): readonly Kind[];
   botLogins(): string[];
   scoreContext(): ScoreContext;
   filters(): ListState;
+  focusPolicy(): FocusPolicySnapshot;
   repoView(): string;   // active repo display-filter ("" = all); not fetch-config Scope
 }
 
 export function createCore(deps: CoreDeps) {
-  let lastErrors: TriageFailure[] = [];
-
   function paint(): void {
+    const items = deps.items();
     const { scored, shown } = derive({
-      items: deps.store.snapshot(),
+      items,
       activeKinds: deps.activeKinds(),
       botLogins: deps.botLogins(),
       score: deps.scoreContext(),
       repoView: deps.repoView(),
       filters: deps.filters(),
+      focusPolicy: deps.focusPolicy(),
     });
-    deps.view.render({ scored, shown, errors: lastErrors, stats: deps.store.stats() });
+    const byProvider: Record<string, number> = {};
+    const byKind: Record<string, number> = {};
+    for (const item of items) {
+      byProvider[item.provider] = (byProvider[item.provider] ?? 0) + 1;
+      byKind[item.kind] = (byKind[item.kind] ?? 0) + 1;
+    }
+    deps.view.render({
+      scored,
+      shown,
+      errors: [...deps.failures()],
+      stats: { byProvider, byKind },
+    });
   }
 
   async function refreshNow(): Promise<void> {
-    const { failures } = await refreshProviders(deps.jobsFor(), deps.store);
-    lastErrors = failures;
+    await deps.refresh();
     paint();
   }
 

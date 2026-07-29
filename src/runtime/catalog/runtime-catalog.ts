@@ -119,7 +119,9 @@ function validateProvider(
   provider: ProviderDeclaration,
   kinds: ReadonlyMap<Kind, KindDeclaration>,
 ): void {
-  if (provider.status === "ready" && !provider.adapter) {
+  const bindable = "bind" in provider
+    && typeof (provider as ProviderDeclaration & { bind?: unknown }).bind === "function";
+  if (provider.status === "ready" && !provider.adapter && !bindable) {
     throw new CatalogError(`provider "${provider.id}" requires an adapter`);
   }
 
@@ -223,6 +225,7 @@ export function createRuntimeCatalog(
   return Object.freeze({
     kind: (id: Kind) => kindMap.get(id),
     readyKind,
+    insightsFor: (kind: Kind) => readyKind(kind)?.insights,
     kinds: () => kinds,
     artifact: (id: Kind) => artifactMap.get(id),
     artifacts: () => artifacts,

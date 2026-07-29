@@ -12,6 +12,7 @@ import type { TriageChart } from "../layout/charts/registry";
 import type { ViewModule } from "../views/registry";
 import type { TabModule } from "../layout/navigation/tab-registry";
 import type { HandoffTargetV1 } from "../handoff/types";
+import type { InsightCapabilities } from "../insights/types";
 
 export type Scope = Readonly<Record<string, unknown>>;
 export type Scorer = (item: TriageItem) => number;
@@ -44,13 +45,6 @@ export interface RefreshRequest {
   kinds: readonly Kind[];
 }
 
-export interface ProviderCommand {
-  kind: Kind;
-  ref: unknown;
-  action: string;
-  payload?: unknown;
-}
-
 export interface DiscoveryOption {
   value: string;
   label: string;
@@ -65,7 +59,6 @@ export interface ProviderAdapter {
     ref: unknown,
     credential: string,
   ): Promise<unknown>;
-  execute?(command: ProviderCommand, credential: string): Promise<void>;
 }
 
 export interface ScopeField {
@@ -109,6 +102,7 @@ export interface ReadyKindDeclaration {
   sorts: readonly SortKey[];
   charts: readonly TriageChart[];
   views: readonly ViewModule[];
+  insights?: InsightCapabilities;
   projectTarget?: (item: TriageItem) => Omit<HandoffTargetV1, "id" | "kind" | "provider" | "url">;
 }
 
@@ -133,6 +127,7 @@ export interface RuntimeDefaults {
 export interface RuntimeCatalog {
   kind(id: Kind): KindDeclaration | undefined;
   readyKind(id: Kind): ReadyKindDeclaration | undefined;
+  insightsFor(kind: Kind): InsightCapabilities | undefined;
   kinds(): readonly KindDeclaration[];
   artifact(id: Kind): Artifact | undefined;
   artifacts(): readonly Artifact[];

@@ -18,6 +18,9 @@ const issueKind = (): KindDeclaration => ({
   sorts: [],
   charts: [],
   views: [],
+  insights: {
+    evidenced: (item) => item.title.length > 0,
+  },
 });
 
 const github = (): ProviderDeclaration => ({
@@ -45,6 +48,8 @@ describe("createRuntimeCatalog", () => {
 
     expect(catalog.kind("issue")?.label).toBe("Issues");
     expect(catalog.readyKind("issue")?.renderer.kind).toBe("issue");
+    expect(typeof catalog.insightsFor("issue")?.evidenced).toBe("function");
+    expect(catalog.insightsFor("cloud-misconfig")).toBeUndefined();
     expect(catalog.artifact("issue")?.label).toBe("Issues");
     expect(catalog.provider("github")?.id).toBe("github");
     expect(catalog.fieldsFor("issue").map((field) => field.name))

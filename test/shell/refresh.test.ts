@@ -6,15 +6,15 @@ describe("refresh preference", () => {
   beforeEach(() => localStorage.clear());
 
   it("defaults to off and only accepts known intervals", () => {
-    expect(getRefreshInterval()).toBe(0);
+    expect(getRefreshInterval()).toBe("off");
     setRefreshInterval(300); expect(getRefreshInterval()).toBe(300);
-    setRefreshInterval(0); expect(getRefreshInterval()).toBe(0);
+    setRefreshInterval("off"); expect(getRefreshInterval()).toBe("off");
     localStorage.setItem("triagekit.refresh", "999");   // not an offered option
-    expect(getRefreshInterval()).toBe(0);
+    expect(getRefreshInterval()).toBe("off");
   });
 
-  it("offers Off / 5m / 10m", () => {
-    expect(REFRESH_OPTIONS.map(o => o.value)).toEqual([0, 300, 600]);
+  it("offers Off / 5m / 10m / 15m", () => {
+    expect(REFRESH_OPTIONS.map(o => o.value)).toEqual(["off", 300, 600, 900]);
   });
 
   it("formats a relative stamp", () => {

@@ -30,6 +30,15 @@ export const changeRequestKind: KindDeclaration = {
   sorts: [],
   charts: [],
   views: [changeRequestView],
+  insights: {
+    owned: (item) =>
+      Boolean((item.details as ReviewDetails | undefined)?.author?.login),
+    evidenced: (item) =>
+      Boolean(
+        item.title
+        && (item.details as ReviewDetails | undefined)?.state,
+      ),
+  },
   projectTarget: (item) => {
     const d = item.details as ReviewDetails | undefined;
     return {

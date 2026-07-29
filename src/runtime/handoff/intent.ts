@@ -15,3 +15,7 @@ export function defaultIntent(kind: Kind): HandoffIntent {
     verification: [],
   };
 }
+
+export function intentForKind(kind: Kind): HandoffIntent {
+  return defaultIntent(kind);
+}

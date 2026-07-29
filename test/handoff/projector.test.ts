@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { project } from "../../src/runtime/handoff/projector";
+import {
+  project,
+  projectTarget,
+} from "../../src/runtime/handoff/projector";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 import type { SessionState } from "../../src/runtime/session/types";
 import type { ScoreExplanation } from "../../src/runtime/scoring/score-model";
@@ -57,5 +60,22 @@ describe("project", () => {
     const h = project({ item, explanation: null, session, catalog: runtimeCatalog, timestamp: TS });
     expect(h.context.session.kind).toBe("dependency-vuln");
     expect(h.context.session.repository).toBe("acme-corp/app");
+  });
+
+  it("exposes the same reusable single-target projection", () => {
+    const target = projectTarget({
+      item,
+      explanation: null,
+      catalog: runtimeCatalog,
+    });
+    const handoff = project({
+      item,
+      explanation: null,
+      session,
+      catalog: runtimeCatalog,
+      timestamp: TS,
+    });
+    expect(target).toEqual(handoff.targets[0]);
+    expect(handoff.targets).toHaveLength(1);
   });
 });
