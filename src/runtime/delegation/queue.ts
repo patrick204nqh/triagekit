@@ -27,6 +27,14 @@ function freezeEntry(entry: QueueEntry): QueueEntry {
   });
 }
 
+function withSelection(entry: QueueEntry, selected: boolean): QueueEntry {
+  if (!selected || entry.status !== "transferred") {
+    return { ...entry, selected };
+  }
+  const { transferredAt: _transferredAt, ...ready } = entry;
+  return { ...ready, selected: true, status: "queued" };
+}
+
 export function createDelegationQueue(
   store?: DelegationQueueStore,
 ): DelegationQueue {
@@ -62,8 +70,15 @@ export function createDelegationQueue(
   ): boolean => {
     const entry = entries.get(key);
     if (!entry) return false;
+    const transferredAt = transition.transferredAt === undefined
+      ? entry.transferredAt
+      : transition.transferredAt;
+    const {
+      transferredAt: _previousTransferredAt,
+      ...entryWithoutTransferredAt
+    } = entry;
     entries.set(key, freezeEntry({
-      ...entry,
+      ...entryWithoutTransferredAt,
       status: transition.status,
       selected: transition.selected ?? entry.selected,
       ...(transition.reason === undefined
@@ -72,6 +87,9 @@ export function createDelegationQueue(
       ...(transition.changedFields === undefined
         ? {}
         : { changedFields: transition.changedFields }),
+      ...(transferredAt === null || transferredAt === undefined
+        ? {}
+        : { transferredAt }),
     }));
     return true;
   };
@@ -115,7 +133,7 @@ export function createDelegationQueue(
         const entry = entries.get(key);
         if (entry) {
           if (entry.selected === selected) continue;
-          entries.set(key, freezeEntry({ ...entry, selected }));
+          entries.set(key, freezeEntry(withSelection(entry, selected)));
           changed += 1;
           continue;
         }
@@ -139,7 +157,7 @@ export function createDelegationQueue(
     setSelected(key, selected) {
       const entry = entries.get(key);
       if (!entry || entry.selected === selected) return false;
-      return replace(key, { ...entry, selected });
+      return replace(key, withSelection(entry, selected));
     },
     transition(key, transition: QueueTransition) {
       const changed = transitioned(key, transition);

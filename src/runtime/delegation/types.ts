@@ -48,6 +48,7 @@ export interface QueueTransition {
   readonly selected?: boolean;
   readonly reason?: string;
   readonly changedFields?: readonly string[];
+  readonly transferredAt?: number | null;
 }
 
 export interface DelegationQueueStore {
@@ -163,6 +164,17 @@ export interface RevalidationResult {
   readonly transitions: readonly QueueRevalidationTransition[];
 }
 
+export interface DelegationQueueSummaryItem {
+  readonly key: string;
+  readonly itemId: string;
+  readonly title: string;
+  readonly repository: string;
+  readonly kind: Kind;
+  readonly status: QueueStatus;
+  readonly reason?: string;
+  readonly transferredAt?: number;
+}
+
 export interface RevalidateQueueInput {
   readonly entries: readonly QueueEntry[];
   readonly before: DatasetSnapshot;
@@ -181,6 +193,18 @@ export interface DelegationControllerSnapshot {
   readonly previewMarkdown: string;
   readonly canDownload: boolean;
   readonly error: string | null;
+  readonly notice: {
+    readonly tone: "success" | "error" | "info";
+    readonly message: string;
+  } | null;
+  readonly pendingConfirmation: {
+    readonly packageCount: number;
+    readonly targetCount: number;
+  } | null;
+  readonly canUndoHandoff: boolean;
+  readonly busyAction: "copy" | "revalidate" | null;
+  readonly needsAttention: readonly DelegationQueueSummaryItem[];
+  readonly handedOff: readonly DelegationQueueSummaryItem[];
 }
 
 export interface DelegationController {
@@ -190,9 +214,12 @@ export interface DelegationController {
   close(): void;
   updateIntent(packageId: string, intent: Partial<HandoffIntent>): void;
   removeTarget(itemId: string): void;
+  removeQueueItem(key: string): boolean;
   revalidate(): Promise<void>;
   copyBundle(): Promise<TransportResult>;
   copyPackage(packageId: string): Promise<TransportResult>;
+  confirmHandoff(): boolean;
+  undoHandoff(): boolean;
   downloadBundle(format?: "md" | "json"): TransportResult;
   downloadPackage(
     packageId: string,

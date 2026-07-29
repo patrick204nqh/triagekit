@@ -140,4 +140,18 @@ describe("delegation queue", () => {
       selectedAt: 1000,
     });
   });
+
+  it("returns a handed-off target to Ready when selected again", () => {
+    const queue = createDelegationQueue();
+    const target = identity("handed-off");
+    queue.add(target, 1000);
+    queue.markTransferred([queueKey(target)], 2000);
+
+    expect(queue.setSelected(queueKey(target), true)).toBe(true);
+    expect(queue.snapshot().entries[0]).toEqual(expect.objectContaining({
+      selected: true,
+      status: "queued",
+    }));
+    expect(queue.snapshot().entries[0].transferredAt).toBeUndefined();
+  });
 });
