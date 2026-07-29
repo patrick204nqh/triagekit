@@ -4,6 +4,10 @@ import { mountSettings } from "../../src/runtime/shell/settings";
 import { PolicyStore } from "../../src/runtime/shell/policy-store";
 import { provider } from "../helpers/provider";
 import { createConnectionSettingsFixture } from "../helpers/connection-settings";
+import type {
+  FocusPolicySnapshot,
+  FocusPolicyStore,
+} from "../../src/runtime/focus/types";
 
 const github = provider({
   scopeFields: [{
@@ -42,6 +46,44 @@ function mount(extra?: Partial<Parameters<typeof mountSettings>[1]>) {
   return { host, ...fixture, policy, s };
 }
 
+class MemoryFocusPolicyStore implements FocusPolicyStore {
+  private readonly policies = new Map<string, FocusPolicySnapshot>();
+
+  get(provider: string): FocusPolicySnapshot {
+    return this.policies.get(provider) ?? {
+      provider,
+      repositoryOrder: [],
+      labels: { include: [], exclude: [], enabled: true },
+    };
+  }
+
+  set(policy: FocusPolicySnapshot): void {
+    this.policies.set(policy.provider, policy);
+  }
+}
+
+function mountWithRepositories(repositories: string[]) {
+  vi.stubGlobal("matchMedia", (q: string) => ({
+    matches: true,
+    media: q,
+    addEventListener() {},
+    removeEventListener() {},
+  }) as any);
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const fixture = createConnectionSettingsFixture();
+  fixture.scopes.set("github", { repos: repositories });
+  const focusPolicies = new MemoryFocusPolicyStore();
+  const policy = new PolicyStore(focusPolicies);
+  const s = mountSettings(host, {
+    providers: [github],
+    connections: fixture.connections,
+    policy,
+    onChange: () => {},
+  });
+  return { host, s, focusPolicies };
+}
+
 describe("mountSettings", () => {
   beforeEach(() => { sessionStorage.clear(); localStorage.clear(); document.body.innerHTML = ""; });
 
@@ -67,6 +109,49 @@ describe("mountSettings", () => {
       ).toBe(false);
     },
   );
+
+  it("reorders active repositories without committing before Save", () => {
+    const { host, s, focusPolicies } = mountWithRepositories([
+      "acme-corp/core",
+      "acme-corp/web",
+      "acme-corp/docs",
+    ]);
+    s.open("github", "filters");
+    const web = host.querySelector<HTMLElement>(
+      '[data-focus-repo="acme-corp/web"]',
+    )!;
+    web.dispatchEvent(new KeyboardEvent("keydown", {
+      key: "ArrowUp",
+      altKey: true,
+      bubbles: true,
+    }));
+    expect(focusPolicies.get("github").repositoryOrder).toEqual([]);
+    host.querySelector<HTMLElement>("[data-save]")!.click();
+    expect(focusPolicies.get("github").repositoryOrder).toEqual([
+      "acme-corp/web",
+      "acme-corp/core",
+      "acme-corp/docs",
+    ]);
+    expect(host.querySelector("[role=status]")?.textContent)
+      .toContain("acme-corp/web moved to priority 1");
+  });
+
+  it("filters repository rows without rewriting their staged order", () => {
+    const { host, s, focusPolicies } = mountWithRepositories([
+      "acme-corp/core",
+      "acme-corp/web",
+      "acme-corp/docs",
+    ]);
+    s.open("github", "filters");
+    const search = host.querySelector<HTMLInputElement>(
+      "[data-focus-repo-search]",
+    )!;
+    search.value = "docs";
+    search.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(host.querySelectorAll("[data-focus-repo]")).toHaveLength(1);
+    host.querySelector<HTMLElement>("[data-save]")!.click();
+    expect(focusPolicies.get("github").repositoryOrder).toEqual([]);
+  });
 
   it("commits a typed credential only on Save", () => {
     const { host, creds, s } = mount();

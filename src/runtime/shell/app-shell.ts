@@ -48,8 +48,6 @@ import {
   migrateLegacyLabels,
   reconcileRepositoryOrder,
 } from "../focus/policy";
-import { createFocusPolicyStore } from "../focus/browser-store";
-import { createLocalStorage } from "../adapters/local-storage";
 
 export interface ShellEnv {
   catalog: RuntimeCatalog;
@@ -126,7 +124,6 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
   const session = env.session ?? createTriageSession({ catalog });
   const sessionUrl = env.sessionUrl ?? createBrowserSessionUrl(window);
   const policy = new PolicyStore();
-  const focusPolicies = createFocusPolicyStore(createLocalStorage());
   const hasInsights = true;
 
   const providersForArtifact = (a: Artifact) =>
@@ -137,13 +134,13 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
     readyProvidersFor(a)[0] ?? providersForArtifact(a)[0];
 
   const restoredSession = session.restore(sessionUrl.read()).state;
-  const storedFocusPolicy = focusPolicies.get(restoredSession.provider);
+  const storedFocusPolicy = policy.getFocusPolicy(restoredSession.provider);
   const migrated = migrateLegacyLabels(
     restoredSession.filters,
     storedFocusPolicy,
   );
   if (migrated.policy !== storedFocusPolicy) {
-    focusPolicies.set(migrated.policy);
+    policy.setFocusPolicy(migrated.policy);
   }
   const initialSession = session.changeFilters(migrated.listState).state;
   let active: Artifact = catalog.artifact(initialSession.kind)
@@ -155,7 +152,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
   const currentFilters = () => session.snapshot().filters;
   const currentFocusPolicy = (): FocusPolicySnapshot => {
     const provider = currentProvider();
-    const policySnapshot = focusPolicies.get(provider);
+    const policySnapshot = policy.getFocusPolicy(provider);
     const repositories = [...new Set(
       activeItems().map((item) => item.location),
     )];
@@ -172,7 +169,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
         ...policySnapshot,
         repositoryOrder: reconciled.saved,
       };
-      focusPolicies.set(next);
+      policy.setFocusPolicy(next);
       return next;
     }
     return policySnapshot;
@@ -428,6 +425,10 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
       },
     },
     policy,
+    onFocusPolicyChange: () => {
+      core.rerender();
+      buildNav();
+    },
     onChange: () => { lastRows = []; refreshBar(); render(); },
     onThemeChange: () => syncTheme(),
     getRows: () => lastRows,

@@ -633,6 +633,27 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 .btn-ghost.mini { min-height:34px; padding:5px 11px; font-size:12px; }
 .list-count { font:500 11px var(--mono); color:var(--muted); white-space:nowrap; margin-left:auto; }
 
+/* ── Repository focus priority ─────────────────────────────────────── */
+.focus-repo-search { width:100%; margin:4px 0 8px; }
+.focus-repo-list { display:flex; flex-direction:column; border-block:1px solid var(--line); }
+.focus-repo-row { display:grid; grid-template-columns:30px 3ch minmax(0,1fr) auto; align-items:center;
+  gap:8px; min-height:38px; padding:4px 2px; border-bottom:1px solid var(--line); }
+.focus-repo-row:last-child { border-bottom:0; }
+.focus-repo-row:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:6px; }
+.focus-repo-drag { display:inline-grid; place-items:center; width:28px; height:28px; padding:0;
+  border:1px solid transparent; border-radius:6px; background:transparent; color:var(--muted);
+  font:600 13px var(--mono); cursor:grab; letter-spacing:-.15em; }
+.focus-repo-drag:hover { color:var(--fg); border-color:var(--line-strong); background:var(--carbon); }
+.focus-repo-drag:active { cursor:grabbing; }
+.focus-repo-drag:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+.focus-repo-rank { color:var(--muted); text-align:right; font:600 11px var(--mono); font-variant-numeric:tabular-nums; }
+.focus-repo-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  color:var(--fg); font:400 13px var(--mono); }
+.focus-repo-actions { display:flex; gap:4px; }
+.focus-repo-actions .mini { width:30px; padding:4px; }
+.focus-repo-empty { margin:10px 2px; }
+[data-focus-status] { min-height:1.5em; margin-top:6px; }
+
 /* ── Connection row: ⓘ setup hint + setup link ─────────────────────── */
 .conn-item .info { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; flex:none; border:1px solid var(--line-strong); border-radius:50%; color:var(--muted); font:700 10px var(--sans); font-style:normal; cursor:help; }
 .conn-item .info:hover { color:var(--accent); border-color:var(--accent); }
@@ -657,6 +678,7 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
   .cat.on { box-shadow:none; border-color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
   .cat .unsaved-dot[data-unsaved] { margin-left:4px; }
   .set-content { padding:18px 16px; }
+  .focus-repo-row { grid-template-columns:30px 3ch minmax(0,1fr) auto; }
 }
 
 /* Review card */

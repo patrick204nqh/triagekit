@@ -30,6 +30,11 @@ import { REFRESH_OPTIONS } from "./refresh";
 import { dismissible } from "./dismissible";
 import type { ScoredItem } from "../layout/table/kind-renderer";
 import { esc } from "../layout/util";
+import type { FocusPolicySnapshot } from "../focus/types";
+import {
+  moveRepository,
+  reconcileRepositoryOrder,
+} from "../focus/policy";
 
 // Single source of truth for the sidebar nav — id paired with its label. The id
 // drives data-category, the categoryIcon() lookup, and the per-category unsaved-dot.
@@ -68,6 +73,10 @@ interface Opts {
   onThemeChange?: () => void;      // theme applied (resync the top-right toggle)
   getRows?: () => ScoredItem[];    // loaded scored rows — for the scoring editor's live preview
   getAutoBots?: () => string[];    // provider-flagged bot logins in current data (read-only display)
+  onFocusPolicyChange?: (
+    provider: string,
+    snapshot: FocusPolicySnapshot,
+  ) => void;
 }
 
 // Discovery results cached per source+credential so re-opening Settings or
@@ -121,6 +130,13 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
           </div>
           <div class="cat-pane" data-cat-pane="filters" hidden>
             <section class="set-section wide">
+              <label class="set-label" for="focus-repository-search">Repository priority</label>
+              <p class="set-helper">Repositories are triaged in this order before item priority. Use Alt+Arrow keys or drag the handle to reorder.</p>
+              <input id="focus-repository-search" class="focus-repo-search" data-focus-repo-search type="search" placeholder="Filter repositories…" />
+              <div class="focus-repo-list" data-focus-repo-list></div>
+              <p class="set-helper" role="status" aria-live="polite" data-focus-status></p>
+            </section>
+            <section class="set-section wide">
               <label class="set-label">Auto-detected bots</label>
               <p class="set-helper">Accounts the provider flags as bots in the current data — always treated as bots.</p>
               <div class="bot-chips" data-auto-bots></div>
@@ -169,6 +185,8 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   // Score-model edits per kind: a ScoreModel to persist, or "reset" to clear back to default.
   const draftModels = new Map<string, ScoreModel | "reset">();
   let draftBots: string[] | null = null;
+  const draftFocusPolicies = new Map<string, FocusPolicySnapshot>();
+  let focusRepositoryQuery = "";
   const getBots = () => draftBots ?? policy.getBotLogins();
   const allDraftsValid = () => {
     for (const [k, d] of draftModels) {
@@ -188,6 +206,31 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   };
   const getScope = (prov: string) =>
     draftScope.has(prov) ? draftScope.get(prov)! : connections.scope(prov);
+  const repositoriesFor = (provider: string): string[] => {
+    const declaration = providerReps.find((candidate) =>
+      providerOf(candidate) === provider);
+    const repositoryField = declaration
+      ? scopeFieldsOf(declaration).find((field) => field.key === "repos")
+      : undefined;
+    const value = repositoryField
+      ? getScope(provider)[repositoryField.key]
+      : undefined;
+    return Array.isArray(value)
+      ? value.filter((repository): repository is string =>
+        typeof repository === "string")
+      : [];
+  };
+  const focusPolicyFor = (provider: string): FocusPolicySnapshot => {
+    const policySnapshot =
+      draftFocusPolicies.get(provider) ?? policy.getFocusPolicy(provider);
+    return {
+      ...policySnapshot,
+      repositoryOrder: reconcileRepositoryOrder(
+        policySnapshot.repositoryOrder,
+        repositoriesFor(provider),
+      ).saved,
+    };
+  };
   const isConnected = (s: ProviderDeclaration) =>
     s.status !== "upcoming" && connections.has(providerOf(s));
   let expanded: string | null = null;   // now holds a provider key
@@ -248,6 +291,104 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     wrap.innerHTML = logins.length
       ? logins.map(l => `<span class="ms-chip"><span class="repo">${esc(l)}</span></span>`).join("")
       : `<span class="muted">No provider-flagged bots in the current data.</span>`;
+  }
+
+  function renderRepositoryPriority() {
+    const list = host.querySelector<HTMLElement>("[data-focus-repo-list]");
+    if (!list) return;
+    const provider = activeProviderId();
+    const snapshot = focusPolicyFor(provider);
+    const active = new Set(repositoriesFor(provider));
+    const query = focusRepositoryQuery.trim().toLowerCase();
+    const visible = snapshot.repositoryOrder.filter((repository) =>
+      active.has(repository)
+      && (!query || repository.toLowerCase().includes(query)));
+    list.innerHTML = visible.length
+      ? visible.map((repository) => {
+        const index = snapshot.repositoryOrder.indexOf(repository);
+        return `<div class="focus-repo-row" data-focus-repo="${esc(repository)}" tabindex="0">
+          <button type="button" class="focus-repo-drag" data-focus-drag="${esc(repository)}" draggable="true" aria-label="Drag ${esc(repository)} to reorder">⋮⋮</button>
+          <span class="focus-repo-rank">${index + 1}</span>
+          <span class="focus-repo-name">${esc(repository)}</span>
+          <span class="focus-repo-actions">
+            <button type="button" class="btn-ghost mini" data-focus-up="${esc(repository)}" aria-label="Move ${esc(repository)} up">↑</button>
+            <button type="button" class="btn-ghost mini" data-focus-down="${esc(repository)}" aria-label="Move ${esc(repository)} down">↓</button>
+          </span>
+        </div>`;
+      }).join("")
+      : `<p class="muted focus-repo-empty">No repositories match.</p>`;
+
+    const move = (repository: string, targetIndex: number) => {
+      const current = focusPolicyFor(provider);
+      const currentIndex = current.repositoryOrder.indexOf(repository);
+      const boundedIndex = Math.max(
+        0,
+        Math.min(targetIndex, current.repositoryOrder.length - 1),
+      );
+      if (currentIndex < 0 || currentIndex === boundedIndex) return;
+      const next: FocusPolicySnapshot = {
+        ...current,
+        repositoryOrder: moveRepository(
+          current.repositoryOrder,
+          repository,
+          boundedIndex,
+        ),
+      };
+      draftFocusPolicies.set(provider, next);
+      renderRepositoryPriority();
+      const status = host.querySelector<HTMLElement>("[data-focus-status]");
+      if (status) {
+        status.textContent =
+          `${repository} moved to priority ${boundedIndex + 1}`;
+      }
+      [...host.querySelectorAll<HTMLElement>("[data-focus-repo]")]
+        .find((row) => row.dataset.focusRepo === repository)
+        ?.focus();
+      updateSaveGate();
+    };
+
+    list.querySelectorAll<HTMLElement>("[data-focus-repo]").forEach((row) =>
+      row.addEventListener("keydown", (event) => {
+        if (!event.altKey
+          || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return;
+        event.preventDefault();
+        const repository = row.dataset.focusRepo!;
+        const index = focusPolicyFor(provider).repositoryOrder
+          .indexOf(repository);
+        move(repository, index + (event.key === "ArrowUp" ? -1 : 1));
+      }));
+    list.querySelectorAll<HTMLElement>("[data-focus-up]").forEach((button) =>
+      button.addEventListener("click", () => {
+        const repository = button.dataset.focusUp!;
+        move(repository, focusPolicyFor(provider).repositoryOrder
+          .indexOf(repository) - 1);
+      }));
+    list.querySelectorAll<HTMLElement>("[data-focus-down]").forEach((button) =>
+      button.addEventListener("click", () => {
+        const repository = button.dataset.focusDown!;
+        move(repository, focusPolicyFor(provider).repositoryOrder
+          .indexOf(repository) + 1);
+      }));
+
+    let draggedRepository = "";
+    list.querySelectorAll<HTMLElement>("[data-focus-drag]").forEach((handle) => {
+      handle.addEventListener("dragstart", (event) => {
+        draggedRepository = handle.dataset.focusDrag!;
+        event.dataTransfer?.setData("text/plain", draggedRepository);
+      });
+    });
+    list.querySelectorAll<HTMLElement>("[data-focus-repo]").forEach((row) => {
+      row.addEventListener("dragover", (event) => event.preventDefault());
+      row.addEventListener("drop", (event) => {
+        event.preventDefault();
+        const repository = draggedRepository
+          || event.dataTransfer?.getData("text/plain")
+          || "";
+        if (!repository) return;
+        move(repository, focusPolicyFor(provider).repositoryOrder
+          .indexOf(row.dataset.focusRepo!));
+      });
+    });
   }
   // Inline mirror of the tier "strictly decrease" rule for the GLOBAL cutoffs
   // (equivalent of scoring-editor's per-kind renderTierBands hint — that closure
@@ -492,6 +633,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     }
     draftTheme = null; draftRefresh = null;
     draftCred.clear(); draftScope.clear(); draftTiers = null; draftModels.clear(); draftBots = null;
+    draftFocusPolicies.clear();
     updateSaveGate(); setHidden(true);
   }
   async function save() {
@@ -506,6 +648,11 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     for (const [k, d] of draftModels) { if (d === "reset") policy.clearScoreModel(k); else policy.setScoreModel(k, d); }
     draftModels.clear();
     if (draftBots) { policy.setBotLogins(draftBots); draftBots = null; }
+    for (const [provider, snapshot] of draftFocusPolicies) {
+      policy.setFocusPolicy(snapshot);
+      opts.onFocusPolicyChange?.(provider, snapshot);
+    }
+    draftFocusPolicies.clear();
     // Theme/refresh are already applied via live preview; just commit the baseline.
     if (draftTheme !== null) { savedTheme = draftTheme; draftTheme = null; }
     if (draftRefresh !== null) { savedRefresh = draftRefresh; draftRefresh = null; }
@@ -524,7 +671,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     const dirty: Record<string, boolean> = {
       connections: draftCred.size > 0 || draftScope.size > 0,
       scoring: draftModels.size > 0 || draftTiers !== null,
-      filters: draftBots !== null,
+      filters: draftBots !== null || draftFocusPolicies.size > 0,
       general: draftTheme !== null || draftRefresh !== null,
     };
     host.querySelectorAll<HTMLElement>("[data-category]").forEach(b => {
@@ -538,7 +685,8 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   // Maps contribute their .size; the null-or-value drafts contribute 1 when set.
   const totalDrafts = () =>
     draftCred.size + draftScope.size + draftModels.size + (draftTiers !== null ? 1 : 0)
-    + (draftBots !== null ? 1 : 0) + (draftTheme !== null ? 1 : 0) + (draftRefresh !== null ? 1 : 0);
+    + (draftBots !== null ? 1 : 0) + (draftTheme !== null ? 1 : 0)
+    + (draftRefresh !== null ? 1 : 0) + draftFocusPolicies.size;
   const updateSaveBar = () => {
     const n = totalDrafts();
     const el = host.querySelector<HTMLElement>("[data-unsaved-count]");
@@ -569,6 +717,11 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     previewRows: (k) => (getRows?.() ?? []).filter(r => r.kind === k),
   });
   filter.addEventListener("input", () => renderConns());
+  host.querySelector<HTMLInputElement>("[data-focus-repo-search]")
+    ?.addEventListener("input", (event) => {
+      focusRepositoryQuery = (event.currentTarget as HTMLInputElement).value;
+      renderRepositoryPriority();
+    });
   host.querySelector<HTMLElement>('[data-clear="cache"]')
     ?.addEventListener("click", () => {
       void clearCachedData();
@@ -598,6 +751,12 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     open(provider?: string, category: SettingsCategory = "connections") {
       expanded = provider ?? (providerReps[0] ? providerOf(providerReps[0]) : null);
       draftCred.clear(); draftScope.clear(); draftTiers = null; draftModels.clear(); draftBots = null;
+      draftFocusPolicies.clear();
+      focusRepositoryQuery = "";
+      const focusSearch = host.querySelector<HTMLInputElement>(
+        "[data-focus-repo-search]",
+      );
+      if (focusSearch) focusSearch.value = "";
       savedTheme = getThemeChoice(); draftTheme = null;
       const refreshProvider = activeProviderId();
       savedRefresh = connections.cadence(refreshProvider);
@@ -607,7 +766,8 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       showCategory(category);
       // Theme/refresh/bots live in other panes but their elements exist in the
       // DOM regardless of visibility, so render them up front like before.
-      renderTheme(); renderRefresh(); renderAutoBots(); renderBots(); renderConns(); setHidden(false);
+      renderTheme(); renderRefresh(); renderAutoBots(); renderBots();
+      renderRepositoryPriority(); renderConns(); setHidden(false);
     },
   };
 }

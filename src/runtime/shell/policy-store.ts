@@ -1,5 +1,11 @@
 import { DEFAULT_THRESHOLDS, type TierThresholds } from "../scoring/tier";
 import type { ScoreModel } from "../scoring/score-model";
+import type {
+  FocusPolicySnapshot,
+  FocusPolicyStore,
+} from "../focus/types";
+import { createFocusPolicyStore } from "../focus/browser-store";
+import { createLocalStorage } from "../adapters/local-storage";
 
 // Rarely-changed triage policy — non-secret, localStorage, survives sessions.
 const TIERS_KEY = "triagekit.policy.tiers";
@@ -7,6 +13,19 @@ const BOTS_KEY = "triagekit.policy.botLogins";
 const SCORE_PREFIX = "triagekit.policy.score.";
 
 export class PolicyStore {
+  constructor(
+    private readonly focusPolicies: FocusPolicyStore =
+      createFocusPolicyStore(createLocalStorage()),
+  ) {}
+
+  getFocusPolicy(provider: string): FocusPolicySnapshot {
+    return this.focusPolicies.get(provider);
+  }
+
+  setFocusPolicy(policy: FocusPolicySnapshot): void {
+    this.focusPolicies.set(policy);
+  }
+
   getTiers(): TierThresholds {
     try { return { ...DEFAULT_THRESHOLDS, ...JSON.parse(localStorage.getItem(TIERS_KEY) ?? "{}") }; } catch { return { ...DEFAULT_THRESHOLDS }; }
   }
