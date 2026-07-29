@@ -61,4 +61,36 @@ describe("delegation queue", () => {
     expect(Object.isFrozen(queue.snapshot())).toBe(true);
     expect(Object.isFrozen(queue.snapshot().entries)).toBe(true);
   });
+
+  it("applies a transition batch with one published snapshot", () => {
+    const queue = createDelegationQueue();
+    queue.addMany([identity("1"), identity("2")], 1000);
+    const listener = vi.fn();
+    queue.subscribe(listener);
+
+    expect(queue.transitionMany([
+      {
+        key: queueKey(identity("1")),
+        transition: { status: "current", selected: true },
+      },
+      {
+        key: queueKey(identity("2")),
+        transition: {
+          status: "blocked",
+          selected: false,
+          reason: "Unsafe source field omitted",
+        },
+      },
+    ])).toBe(2);
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(queue.snapshot().entries.map((entry) => ({
+      itemId: entry.identity.itemId,
+      status: entry.status,
+      selected: entry.selected,
+    }))).toEqual([
+      { itemId: "1", status: "current", selected: true },
+      { itemId: "2", status: "blocked", selected: false },
+    ]);
+  });
 });

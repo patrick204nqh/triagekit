@@ -4,6 +4,7 @@ import {
 } from "../../src/runtime/delegation/controller";
 import {
   createDelegationQueue,
+  queueKey,
 } from "../../src/runtime/delegation/queue";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 import { runtimeCatalog } from "../../src/runtime/catalog/built-in";
@@ -36,7 +37,11 @@ const items = (count: number): ScoredItem[] =>
     tier: index < 10 ? "P0" : index < 30 ? "P1" : "P2",
   }));
 
-function fixture(input: { count?: number; clipboardError?: string } = {}) {
+function fixture(input: {
+  count?: number;
+  clipboardError?: string;
+  revalidate?: boolean;
+} = {}) {
   const rows = items(input.count ?? 2);
   const queue = createDelegationQueue();
   queue.addMany(rows.map((item) => ({
@@ -67,6 +72,23 @@ function fixture(input: { count?: number; clipboardError?: string } = {}) {
     clock: () => new Date("2026-07-29T00:00:00.000Z"),
     clipboard,
     downloads,
+    ...(input.revalidate
+      ? {
+          revalidateQueue: vi.fn().mockResolvedValue({
+            transitions: rows.map((item) => ({
+              key: queueKey({
+                provider: item.provider,
+                itemId: item.id,
+                kind: item.kind,
+                repository: item.location,
+              }),
+              itemId: item.id,
+              status: "current" as const,
+              selected: true,
+            })),
+          }),
+        }
+      : {}),
   });
   return { controller, clipboard, downloads, queue };
 }
@@ -93,5 +115,15 @@ describe("delegation controller", () => {
       "# Delegation bundle",
     );
     expect(controller.snapshot().canDownload).toBe(true);
+  });
+
+  it("publishes one checking and one final snapshot during revalidation", async () => {
+    const { controller } = fixture({ count: 56, revalidate: true });
+    const listener = vi.fn();
+    controller.subscribe(listener);
+
+    await controller.revalidate();
+
+    expect(listener).toHaveBeenCalledTimes(2);
   });
 });

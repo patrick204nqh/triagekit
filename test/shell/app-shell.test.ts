@@ -7,6 +7,13 @@ import type { TriageConfigT } from "../../src/config/schema";
 import type { TriageItem } from "../../src/runtime/dataset/item";
 
 const flush = () => new Promise<void>(r => setTimeout(r, 0));
+const waitForGithubRefresh = async (
+  shell: ReturnType<typeof bootstrap>,
+  fetchSpy: ReturnType<typeof mockGithubItems>,
+): Promise<void> => {
+  await shell.ready;
+  await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(4));
+};
 
 const config: TriageConfigT = {
   source: "github",
@@ -347,8 +354,8 @@ describe("mountShell artifact navigation", () => {
     );
     const fetchSpy = mockGithubItems([]);
     try {
-      bootstrap(config);
-      await flush();
+      const shell = bootstrap(config);
+      await waitForGithubRefresh(shell, fetchSpy);
 
       // (a) the toolbar (Filter/Sort) lives in the nav; #root is a render-only body.
       expect(document.querySelector("#viewswitch .toolbar")).toBeTruthy();
@@ -449,10 +456,16 @@ describe("mountShell artifact navigation", () => {
       }]);
 
     try {
-      bootstrap(config);
-      await flush();
+      const shell = bootstrap(config);
+      await waitForGithubRefresh(shell, fetchSpy);
 
-      const tiers = [...document.querySelectorAll<HTMLElement>("#root .surface-body .tier")].map(t => t.textContent);
+      await vi.waitFor(() => {
+        expect(document.querySelectorAll("#root .surface-body .tier").length)
+          .toBeGreaterThan(0);
+      });
+      const tiers = [...document.querySelectorAll<HTMLElement>(
+        "#root .surface-body .tier",
+      )].map(t => t.textContent);
       expect(tiers.length).toBeGreaterThan(0);
       if (tiers.length) expect(tiers.every(t => t === "P3")).toBe(true);
     } finally {

@@ -61,6 +61,12 @@ export interface DelegationQueue {
   remove(key: string): boolean;
   setSelected(key: string, selected: boolean): boolean;
   transition(key: string, transition: QueueTransition): boolean;
+  transitionMany(
+    transitions: readonly {
+      readonly key: string;
+      readonly transition: QueueTransition;
+    }[],
+  ): number;
   markTransferred(keys: readonly string[], transferredAt: number): number;
   snapshot(): QueueSnapshot;
   serialize(): readonly QueueEntry[];

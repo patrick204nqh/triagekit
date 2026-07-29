@@ -56,6 +56,25 @@ export function createDelegationQueue(
     publish();
     return true;
   };
+  const transitioned = (
+    key: string,
+    transition: QueueTransition,
+  ): boolean => {
+    const entry = entries.get(key);
+    if (!entry) return false;
+    entries.set(key, freezeEntry({
+      ...entry,
+      status: transition.status,
+      selected: transition.selected ?? entry.selected,
+      ...(transition.reason === undefined
+        ? {}
+        : { reason: transition.reason }),
+      ...(transition.changedFields === undefined
+        ? {}
+        : { changedFields: transition.changedFields }),
+    }));
+    return true;
+  };
 
   return {
     add(identity, selectedAt) {
@@ -97,19 +116,17 @@ export function createDelegationQueue(
       return replace(key, { ...entry, selected });
     },
     transition(key, transition: QueueTransition) {
-      const entry = entries.get(key);
-      if (!entry) return false;
-      return replace(key, {
-        ...entry,
-        status: transition.status,
-        selected: transition.selected ?? entry.selected,
-        ...(transition.reason === undefined
-          ? {}
-          : { reason: transition.reason }),
-        ...(transition.changedFields === undefined
-          ? {}
-          : { changedFields: transition.changedFields }),
-      });
+      const changed = transitioned(key, transition);
+      if (changed) publish();
+      return changed;
+    },
+    transitionMany(transitions) {
+      let changed = 0;
+      for (const { key, transition } of transitions) {
+        if (transitioned(key, transition)) changed += 1;
+      }
+      if (changed > 0) publish();
+      return changed;
     },
     markTransferred(keys, transferredAt) {
       let changed = 0;

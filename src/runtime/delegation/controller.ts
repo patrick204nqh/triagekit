@@ -254,22 +254,24 @@ export function createDelegationController(
     async revalidate() {
       const selected = deps.queue.snapshot().entries
         .filter((entry) => entry.selected);
-      for (const entry of selected) {
-        deps.queue.transition(queueKey(entry.identity), {
+      deps.queue.transitionMany(selected.map((entry) => ({
+        key: queueKey(entry.identity),
+        transition: {
           status: "checking",
           selected: true,
-        });
-      }
+        },
+      })));
       if (!deps.revalidateQueue) return;
       const result = await deps.revalidateQueue();
-      for (const transition of result.transitions) {
-        deps.queue.transition(transition.key, {
+      deps.queue.transitionMany(result.transitions.map((transition) => ({
+        key: transition.key,
+        transition: {
           status: transition.status,
           selected: transition.selected,
           reason: transition.reason,
           changedFields: transition.changedFields,
-        });
-      }
+        },
+      })));
     },
     async copyBundle() {
       const built = projection();
