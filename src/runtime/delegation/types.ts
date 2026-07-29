@@ -58,6 +58,11 @@ export interface DelegationQueueStore {
 export interface DelegationQueue {
   add(identity: QueueIdentity, selectedAt: number): boolean;
   addMany(identities: readonly QueueIdentity[], selectedAt: number): number;
+  setSelectedMany(
+    identities: readonly QueueIdentity[],
+    selected: boolean,
+    selectedAt: number,
+  ): number;
   remove(key: string): boolean;
   setSelected(key: string, selected: boolean): boolean;
   transition(key: string, transition: QueueTransition): boolean;
