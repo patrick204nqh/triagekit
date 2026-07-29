@@ -4,6 +4,7 @@ import type {
   TriageFailure,
 } from "../catalog/types";
 import type { Kind, TriageItem } from "../dataset/item";
+import type { ActionDefinition } from "../actions/types";
 
 export interface SliceRequest {
   readonly target: string;
@@ -33,6 +34,7 @@ export type SliceOutcome =
   };
 
 export interface BoundProvider {
+  readonly actions?: readonly ActionDefinition[];
   discoverScope(signal?: AbortSignal): Promise<readonly DiscoveryOption[]>;
   canonicalizeScope(scope: Scope): Scope;
   targets(scope: Scope): readonly string[];
