@@ -13,7 +13,7 @@ describe("unified save bar", () => {
     s.open();
     const count = () => h.querySelector("[data-unsaved-count]")!.textContent;
     expect(count()).toContain("0");
-    h.querySelector<HTMLElement>("[data-category='filters']")!.click();
+    h.querySelector<HTMLElement>("[data-category='exclusions']")!.click();
     const add = h.querySelector<HTMLInputElement>("[data-bot-add]")!;
     add.value = "spambot";
     add.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));

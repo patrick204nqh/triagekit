@@ -13,7 +13,7 @@ function setup() {
     policy, onChange: () => {},
   });
   api.open();
-  host.querySelector<HTMLButtonElement>('[data-category="filters"]')!.click();
+  host.querySelector<HTMLButtonElement>('[data-category="exclusions"]')!.click();
   return { host, policy };
 }
 
@@ -32,7 +32,7 @@ function setupAuto(autoBots: string[]) {
     policy, onChange: () => {}, getAutoBots: () => autoBots,
   });
   api.open();
-  host.querySelector<HTMLButtonElement>('[data-category="filters"]')!.click();
+  host.querySelector<HTMLButtonElement>('[data-category="exclusions"]')!.click();
   return { host, policy };
 }
 

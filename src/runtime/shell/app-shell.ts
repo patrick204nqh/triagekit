@@ -646,7 +646,10 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
       repositories: [...new Set(activeItems().map((item) => item.location))],
     });
     if (resolved.destination === "settings") {
-      settings.open(primaryProvider(active).id, resolved.category);
+      settings.open(
+        primaryProvider(active).id,
+        resolved.category === "filters" ? "exclusions" : resolved.category,
+      );
       return;
     }
     applySessionUpdate(session.openInsightRoute(resolved));

@@ -46,6 +46,12 @@ function mount(extra?: Partial<Parameters<typeof mountSettings>[1]>) {
   return { host, ...fixture, policy, s };
 }
 
+async function clickAndFlush(host: HTMLElement, selector: string): Promise<void> {
+  host.querySelector<HTMLElement>(selector)!.click();
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
 class MemoryFocusPolicyStore implements FocusPolicyStore {
   private readonly policies = new Map<string, FocusPolicySnapshot>();
 
@@ -72,6 +78,7 @@ function mountWithRepositories(repositories: string[]) {
   const host = document.createElement("div");
   document.body.appendChild(host);
   const fixture = createConnectionSettingsFixture();
+  fixture.creds.set("github", "token");
   fixture.scopes.set("github", { repos: repositories });
   const focusPolicies = new MemoryFocusPolicyStore();
   const policy = new PolicyStore(focusPolicies);
@@ -95,7 +102,7 @@ describe("mountSettings", () => {
     expect(host.querySelectorAll("[data-theme-seg] [data-theme]").length).toBe(3);
   });
 
-  it.each(["scoring", "filters"] as const)(
+  it.each(["scoring", "repositories", "exclusions"] as const)(
     "opens directly to the requested %s category",
     (category) => {
       const { host, s } = mount();
@@ -110,15 +117,15 @@ describe("mountSettings", () => {
     },
   );
 
-  it("reorders active repositories without committing before Save", () => {
+  it("reorders active repositories without committing before Save", async () => {
     const { host, s, focusPolicies } = mountWithRepositories([
       "acme-corp/core",
       "acme-corp/web",
       "acme-corp/docs",
     ]);
-    s.open("github", "filters");
+    s.open("github", "repositories");
     const web = host.querySelector<HTMLElement>(
-      '[data-focus-repo="acme-corp/web"]',
+      '[data-selected-repository][data-repository="acme-corp/web"]',
     )!;
     web.dispatchEvent(new KeyboardEvent("keydown", {
       key: "ArrowUp",
@@ -127,6 +134,8 @@ describe("mountSettings", () => {
     }));
     expect(focusPolicies.get("github").repositoryOrder).toEqual([]);
     host.querySelector<HTMLElement>("[data-save]")!.click();
+    await Promise.resolve();
+    await Promise.resolve();
     expect(focusPolicies.get("github").repositoryOrder).toEqual([
       "acme-corp/web",
       "acme-corp/core",
@@ -142,13 +151,13 @@ describe("mountSettings", () => {
       "acme-corp/web",
       "acme-corp/docs",
     ]);
-    s.open("github", "filters");
+    s.open("github", "repositories");
     const search = host.querySelector<HTMLInputElement>(
-      "[data-focus-repo-search]",
+      "[data-selected-search]",
     )!;
     search.value = "docs";
     search.dispatchEvent(new Event("input", { bubbles: true }));
-    expect(host.querySelectorAll("[data-focus-repo]")).toHaveLength(1);
+    expect(host.querySelectorAll("[data-selected-repository]")).toHaveLength(1);
     host.querySelector<HTMLElement>("[data-save]")!.click();
     expect(focusPolicies.get("github").repositoryOrder).toEqual([]);
   });
@@ -220,7 +229,7 @@ describe("mountSettings", () => {
     expect(host.querySelector("[data-conns] .muted")).toBeTruthy();
   });
 
-  it("discovers into a tag-style multiselect (chips + add-list) and caches the result", async () => {
+  it("stages repository discovery and selection until Save", async () => {
     const discover = vi.fn(async () => [
       { value: "acme/web", label: "web", group: "acme" },
       { value: "acme/api", label: "api", group: "acme" },
@@ -237,41 +246,162 @@ describe("mountSettings", () => {
       policy: new PolicyStore(),
       onChange: () => {},
     });
-    s.open("github");
+    s.open("github", "repositories");
 
-    host.querySelector<HTMLElement>('[data-discover="repos"]')!.click();
+    host.querySelector<HTMLElement>("[data-discover-repositories]")!.click();
     await Promise.resolve(); await Promise.resolve();
     expect(discover).toHaveBeenCalledTimes(1);
-    expect(host.querySelectorAll(".ms-options .opt-row").length).toBe(2);   // both addable
-    expect(host.querySelectorAll(".ms-chip").length).toBe(0);               // none selected
-    expect(host.querySelector("[data-count]")?.textContent).toBe("0 selected");
+    expect(host.querySelectorAll("[data-available-repository]")).toHaveLength(2);
 
-    // clicking an add-row promotes it to a chip and drops it from the list
-    host.querySelector<HTMLElement>('[data-add="acme/web"]')!.click();
-    expect(host.querySelectorAll(".ms-chip").length).toBe(1);
-    expect(host.querySelectorAll(".ms-options .opt-row").length).toBe(1);
-    expect(scopes.get("github")).toEqual({});                               // staged, not yet saved
+    host.querySelector<HTMLElement>(
+      '[data-add-repository="acme/api"]',
+    )!.click();
+    expect(host.querySelectorAll("[data-selected-repository]")).toHaveLength(1);
+    expect(scopes.get("github")).toEqual({});
 
-    // removing the chip returns it to the add-list
-    host.querySelector<HTMLElement>("[data-rm]")!.click();
-    expect(host.querySelectorAll(".ms-chip").length).toBe(0);
-    expect(host.querySelectorAll(".ms-options .opt-row").length).toBe(2);
-
-    // searching narrows the add-list (input stays mounted, keeps focus)
-    const lf = host.querySelector<HTMLInputElement>("[data-lf]")!;
-    lf.value = "api"; lf.dispatchEvent(new Event("input"));
-    expect(host.querySelectorAll(".ms-options .opt-row").length).toBe(1);
-
-    // "Add all" over the current filter, then Save commits to scope
-    host.querySelector<HTMLElement>("[data-all]")!.click();
-    expect(host.querySelector("[data-count]")?.textContent).toBe("1 selected");
     host.querySelector<HTMLElement>("[data-save]")!.click();
     expect(scopes.get("github")).toEqual({ repos: ["acme/api"] });
 
-    // re-opening re-renders from cache, no second API call
-    s.open("github");
+    s.open("github", "repositories");
     expect(discover).toHaveBeenCalledTimes(1);
-    expect(host.querySelectorAll(".ms-chip").length).toBe(1);               // saved selection shown
+    expect(host.querySelector(
+      '[data-selected-repository][data-repository="acme/api"]',
+    )).not.toBeNull();
+  });
+
+  it("discards staged repository selection and order on Cancel", async () => {
+    const { host, s, creds, scopes, policy, setDiscover } = mount();
+    creds.set("github", "token");
+    scopes.set("github", {
+      repos: ["acme-corp/core", "acme-corp/web"],
+    });
+    const discover = vi.fn(async () => [
+      { value: "acme-corp/core", label: "core", group: "acme-corp" },
+      { value: "acme-corp/web", label: "web", group: "acme-corp" },
+      { value: "acme-corp/api", label: "api", group: "acme-corp" },
+    ]);
+    setDiscover(discover);
+
+    s.open("github", "repositories");
+    const discoverButton = host.querySelector<HTMLElement>(
+      "[data-discover-repositories]",
+    )!;
+    discoverButton.click();
+    await Promise.resolve();
+    await Promise.resolve();
+    host.querySelector<HTMLElement>(
+      '[data-add-repository="acme-corp/api"]',
+    )!.click();
+    host.querySelector<HTMLElement>(
+      '[data-selected-repository][data-repository="acme-corp/web"]',
+    )!.dispatchEvent(new KeyboardEvent("keydown", {
+      key: "ArrowUp",
+      altKey: true,
+      bubbles: true,
+    }));
+    host.querySelector<HTMLElement>("[data-cancel]")!.click();
+
+    expect(scopes.get("github")).toEqual({
+      repos: ["acme-corp/core", "acme-corp/web"],
+    });
+    expect(policy.getFocusPolicy("github").repositoryOrder).toEqual([]);
+  });
+
+  it("keeps repository drafts independent while switching providers", async () => {
+    const gitlab = provider({
+      id: "gitlab",
+      label: "GitLab",
+      scopeFields: [{
+        key: "repos",
+        label: "Repositories",
+        type: "multiselect",
+        discoverable: true,
+      }],
+    });
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const fixture = createConnectionSettingsFixture();
+    fixture.creds.set("github", "github-token");
+    fixture.creds.set("gitlab", "gitlab-token");
+    fixture.setDiscover(async (providerId) => providerId === "github"
+      ? [{ value: "acme-corp/api", label: "api", group: "acme-corp" }]
+      : [{ value: "acme-labs/app", label: "app", group: "acme-labs" }]);
+    const settings = mountSettings(host, {
+      providers: [github, gitlab],
+      connections: fixture.connections,
+      policy: new PolicyStore(),
+      onChange: () => {},
+    });
+    settings.open("github", "repositories");
+
+    await clickAndFlush(host, "[data-discover-repositories]");
+    host.querySelector<HTMLElement>(
+      '[data-add-repository="acme-corp/api"]',
+    )!.click();
+
+    const providerSelect = host.querySelector<HTMLSelectElement>(
+      "[data-provider-select]",
+    )!;
+    providerSelect.value = "gitlab";
+    providerSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    await clickAndFlush(host, "[data-discover-repositories]");
+    host.querySelector<HTMLElement>(
+      '[data-add-repository="acme-labs/app"]',
+    )!.click();
+
+    providerSelect.value = "github";
+    providerSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(host.querySelector(
+      '[data-selected-repository][data-repository="acme-corp/api"]',
+    )).not.toBeNull();
+
+    host.querySelector<HTMLElement>("[data-save]")!.click();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(fixture.scopes.get("github")).toEqual({
+      repos: ["acme-corp/api"],
+    });
+    expect(fixture.scopes.get("gitlab")).toEqual({
+      repos: ["acme-labs/app"],
+    });
+  });
+
+  it("keeps repository drafts open and retryable when Save fails", async () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const fixture = createConnectionSettingsFixture();
+    fixture.creds.set("github", "token");
+    fixture.setDiscover(async () => [
+      { value: "acme-corp/api", label: "api", group: "acme-corp" },
+    ]);
+    const settings = mountSettings(host, {
+      providers: [github],
+      connections: {
+        ...fixture.connections,
+        async save() {
+          throw new Error("credential rejected");
+        },
+      },
+      policy: new PolicyStore(),
+      onChange: () => {},
+    });
+    settings.open("github", "repositories");
+    await clickAndFlush(host, "[data-discover-repositories]");
+    host.querySelector<HTMLElement>(
+      '[data-add-repository="acme-corp/api"]',
+    )!.click();
+
+    host.querySelector<HTMLElement>("[data-save]")!.click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(host.querySelector("[data-panel]")?.classList.contains("open"))
+      .toBe(true);
+    expect(host.querySelector("[data-save-error]")?.textContent)
+      .toContain("credential rejected");
+    expect(host.querySelector(
+      "[data-category='repositories'] [data-unsaved]",
+    )).not.toBeNull();
   });
 
   it("saves credentials under the stable provider id", async () => {
@@ -302,7 +432,7 @@ describe("mountSettings", () => {
     expect(host.querySelectorAll(".conn-item")).toHaveLength(1);
     expect(creds.get("github")).toBe("ghp_x");
   });
-  it("shows saved repos as chips on open, before any discovery", () => {
+  it("shows saved repositories on open before any discovery", () => {
     const discover = vi.fn(async () => [{ value: "acme/web", label: "web", group: "acme" }]);
     const src = github;
     const host = document.createElement("div"); document.body.appendChild(host);
@@ -317,10 +447,12 @@ describe("mountSettings", () => {
       policy: new PolicyStore(),
       onChange: () => {},
     });
-    s.open("github");
-    const chips = [...host.querySelectorAll(".ms-chip .repo")].map(c => c.textContent);
-    expect(chips).toEqual(expect.arrayContaining(["acme/web", "acme/api"]));
-    expect(discover).not.toHaveBeenCalled();   // saved scope shown without discovery
+    s.open("github", "repositories");
+    const repositories = [
+      ...host.querySelectorAll<HTMLElement>("[data-selected-repository]"),
+    ].map((row) => row.dataset.repository);
+    expect(repositories).toEqual(["acme/web", "acme/api"]);
+    expect(discover).not.toHaveBeenCalled();
   });
 
   it("surfaces provider setup guidance (row ⓘ + form link)", () => {
@@ -444,11 +576,34 @@ describe("mountSettings", () => {
     expect(p0.getAttribute("aria-invalid")).toBe("false");
   });
 
-  it("offers four sidebar categories", () => {
+  it("offers the five approved sidebar categories", () => {
     const { host, s } = mount();
     s.open("github");
     const cats = [...host.querySelectorAll("[data-category]")].map(c => (c as HTMLElement).dataset.category);
-    expect(cats).toEqual(["connections", "scoring", "filters", "general"]);
+    expect(cats).toEqual([
+      "connections",
+      "repositories",
+      "scoring",
+      "exclusions",
+      "general",
+    ]);
+  });
+
+  it("keeps repository discovery out of Connections and mounts its workspace separately", () => {
+    const { host, s } = mount();
+    s.open("github", "connections");
+
+    expect(host.querySelector(
+      "[data-cat-pane='connections'] [data-discover]",
+    )).toBeNull();
+    expect(host.querySelector(
+      "[data-cat-pane='connections'] [data-selected-repository]",
+    )).toBeNull();
+
+    s.open("github", "repositories");
+    expect(host.querySelector(
+      "[data-cat-pane='repositories'] [data-repository-settings]",
+    )).not.toBeNull();
   });
 
   it("defaults to the Connections category on open", () => {
@@ -456,7 +611,7 @@ describe("mountSettings", () => {
     s.open("github");
     expect(host.querySelector("[data-category='connections']")!.classList.contains("on")).toBe(true);
     expect(host.querySelector<HTMLElement>("[data-cat-pane='connections']")!.hidden).toBe(false);
-    for (const id of ["scoring", "filters", "general"]) {
+    for (const id of ["repositories", "scoring", "exclusions", "general"]) {
       expect(host.querySelector<HTMLElement>(`[data-cat-pane='${id}']`)!.hidden).toBe(true);
     }
   });
@@ -481,13 +636,13 @@ describe("mountSettings", () => {
   it("marks only the edited category with an unsaved dot, cleared on Cancel", () => {
     const { host, s } = mount();
     s.open("github");
-    // navigate to Filters and stage a bot add
-    host.querySelector<HTMLElement>("[data-category='filters']")!.click();
+    // navigate to Exclusions and stage a bot add
+    host.querySelector<HTMLElement>("[data-category='exclusions']")!.click();
     const botAdd = host.querySelector<HTMLInputElement>("[data-bot-add]")!;
     botAdd.value = "renovate";
     botAdd.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
 
-    expect(host.querySelector("[data-category='filters'] [data-unsaved]")).toBeTruthy();
+    expect(host.querySelector("[data-category='exclusions'] [data-unsaved]")).toBeTruthy();
     expect(host.querySelector("[data-category='connections'] [data-unsaved]")).toBeNull();
     expect(host.querySelector("[data-category='scoring'] [data-unsaved]")).toBeNull();
     expect(host.querySelector("[data-category='general'] [data-unsaved]")).toBeNull();
@@ -499,11 +654,11 @@ describe("mountSettings", () => {
   it("clears the unsaved dot after Save", () => {
     const { host, s } = mount();
     s.open("github");
-    host.querySelector<HTMLElement>("[data-category='filters']")!.click();
+    host.querySelector<HTMLElement>("[data-category='exclusions']")!.click();
     const botAdd = host.querySelector<HTMLInputElement>("[data-bot-add]")!;
     botAdd.value = "dependabot";
     botAdd.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
-    expect(host.querySelector("[data-category='filters'] [data-unsaved]")).toBeTruthy();
+    expect(host.querySelector("[data-category='exclusions'] [data-unsaved]")).toBeTruthy();
     host.querySelector<HTMLElement>("[data-save]")!.click();
     expect(host.querySelector("[data-unsaved]")).toBeNull();
   });

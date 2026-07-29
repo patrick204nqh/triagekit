@@ -31,20 +31,19 @@ import { dismissible } from "./dismissible";
 import type { ScoredItem } from "../layout/table/kind-renderer";
 import { esc } from "../layout/util";
 import type { FocusPolicySnapshot } from "../focus/types";
-import {
-  moveRepository,
-  reconcileRepositoryOrder,
-} from "../focus/policy";
+import { reconcileRepositoryOrder } from "../focus/policy";
+import { mountRepositorySettings } from "./repository-settings";
 
 // Single source of truth for the sidebar nav — id paired with its label. The id
 // drives data-category, the categoryIcon() lookup, and the per-category unsaved-dot.
 const CATEGORIES = [
   ["connections", "Connections"],
+  ["repositories", "Repositories"],
   ["scoring", "Scoring &amp; priority"],
-  ["filters", "Filters"],
+  ["exclusions", "Exclusions"],
   ["general", "General"],
 ] as const;
-type SettingsCategory = (typeof CATEGORIES)[number][0];
+export type SettingsCategory = (typeof CATEGORIES)[number][0];
 
 export interface ConnectionSettingsPort {
   has(provider: string): boolean;
@@ -115,6 +114,9 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
               <div class="conn-list" data-conns></div>
               <span class="set-helper">One credential per provider — kept in this tab only (session), never persisted or embedded.</span></section>
           </div>
+          <div class="cat-pane" data-cat-pane="repositories" hidden>
+            <div data-repository-settings></div>
+          </div>
           <div class="cat-pane" data-cat-pane="scoring" hidden>
             <section class="set-section"><label class="set-label">Default priority cutoffs</label>
               <p class="set-helper">Minimum score for each tier, applied to any kind using built-in scoring (no custom model). Items below P2 are P3.</p>
@@ -128,14 +130,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
               <p class="set-helper">Per-kind score model. Simple = weight sliders; Advanced = formula + signals. Saved in this browser.</p>
               <div data-scoring-editor></div></section>
           </div>
-          <div class="cat-pane" data-cat-pane="filters" hidden>
-            <section class="set-section wide">
-              <label class="set-label" for="focus-repository-search">Repository priority</label>
-              <p class="set-helper">Repositories are triaged in this order before item priority. Use Alt+Arrow keys or drag the handle to reorder.</p>
-              <input id="focus-repository-search" class="focus-repo-search" data-focus-repo-search type="search" placeholder="Filter repositories…" />
-              <div class="focus-repo-list" data-focus-repo-list></div>
-              <p class="set-helper" role="status" aria-live="polite" data-focus-status></p>
-            </section>
+          <div class="cat-pane" data-cat-pane="exclusions" hidden>
             <section class="set-section wide">
               <label class="set-label">Auto-detected bots</label>
               <p class="set-helper">Accounts the provider flags as bots in the current data — always treated as bots.</p>
@@ -151,17 +146,12 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
             <section class="set-section"><label class="set-label">Auto-refresh</label>
               <div class="seg" data-refresh-seg></div>
               <span class="set-helper">Re-fetch on a timer. Snapshot only — there is no backend history to trend.</span></section>
-            <section class="set-section"><label class="set-label">Data</label>
-              <div class="data-actions">
-                <button class="btn-ghost" data-clear="cache">Clear cached data</button>
-                <button class="btn-ghost" data-disconnect="retain-cache">Disconnect</button>
-                <button class="btn-ghost danger" data-disconnect="erase">Disconnect &amp; erase</button></div>
-              <span class="set-helper">Repository data is stored locally in this browser for up to 7 days. Credentials stay in this tab session.</span></section>
           </div>
         </div>
       </div>
       <div class="panel-foot">
         <span class="unsaved-summary"><span class="dot" data-unsaved-any hidden></span><span data-unsaved-count>0 unsaved changes</span></span>
+        <span class="se-error" role="alert" data-save-error hidden></span>
         <span class="foot-actions"><button class="btn-ghost" data-cancel>Cancel</button><button class="btn-primary" data-save>Save</button></span>
       </div>
     </aside>`;
@@ -171,6 +161,11 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   const seg = host.querySelector<HTMLElement>("[data-theme-seg]")!;
   const rseg = host.querySelector<HTMLElement>("[data-refresh-seg]")!;
   const filter = host.querySelector<HTMLInputElement>("[data-conn-filter]")!;
+  const saveError = host.querySelector<HTMLElement>("[data-save-error]")!;
+  const clearSaveError = () => {
+    saveError.textContent = "";
+    saveError.hidden = true;
+  };
 
   // Credential/scope edits are staged and committed on Save; clear applies now.
   const draftCred = new Map<string, string>();
@@ -186,7 +181,8 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   const draftModels = new Map<string, ScoreModel | "reset">();
   let draftBots: string[] | null = null;
   const draftFocusPolicies = new Map<string, FocusPolicySnapshot>();
-  let focusRepositoryQuery = "";
+  const dirtyRepositoryProviders = new Set<string>();
+  const dirtyConnectionProviders = new Set<string>();
   const getBots = () => draftBots ?? policy.getBotLogins();
   const allDraftsValid = () => {
     for (const [k, d] of draftModels) {
@@ -237,6 +233,42 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   const repOf = (prov: string) => providerReps.find(s => providerOf(s) === prov)!;
   const activeProviderId = () =>
     expanded ?? providerReps[0]?.id ?? "";
+  const repositorySettings = mountRepositorySettings(
+    host.querySelector<HTMLElement>("[data-repository-settings]")!,
+    {
+      providers: providerReps.map((provider) => provider.id),
+      snapshot(provider) {
+        return {
+          provider,
+          connected: connections.has(provider)
+            || credentialDraft(provider) !== undefined,
+          repositories: repositoriesFor(provider),
+          repositoryOrder: focusPolicyFor(provider).repositoryOrder,
+          discoveryKey: `${provider}:${fingerprint(getCred(provider))}`,
+        };
+      },
+      discover(provider) {
+        return connections.discover(provider, credentialDraft(provider));
+      },
+      change(provider, next) {
+        draftScope.set(provider, {
+          ...getScope(provider),
+          repos: next.repositories,
+        });
+        draftFocusPolicies.set(provider, {
+          ...focusPolicyFor(provider),
+          repositoryOrder: next.repositoryOrder,
+        });
+        dirtyRepositoryProviders.add(provider);
+        updateSaveGate();
+      },
+      openConnections(provider) {
+        expanded = provider;
+        showCategory("connections");
+        renderConns();
+      },
+    },
+  );
 
   function renderTheme() {
     const choice = getThemeChoice();
@@ -293,103 +325,6 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       : `<span class="muted">No provider-flagged bots in the current data.</span>`;
   }
 
-  function renderRepositoryPriority() {
-    const list = host.querySelector<HTMLElement>("[data-focus-repo-list]");
-    if (!list) return;
-    const provider = activeProviderId();
-    const snapshot = focusPolicyFor(provider);
-    const active = new Set(repositoriesFor(provider));
-    const query = focusRepositoryQuery.trim().toLowerCase();
-    const visible = snapshot.repositoryOrder.filter((repository) =>
-      active.has(repository)
-      && (!query || repository.toLowerCase().includes(query)));
-    list.innerHTML = visible.length
-      ? visible.map((repository) => {
-        const index = snapshot.repositoryOrder.indexOf(repository);
-        return `<div class="focus-repo-row" data-focus-repo="${esc(repository)}" tabindex="0">
-          <button type="button" class="focus-repo-drag" data-focus-drag="${esc(repository)}" draggable="true" aria-label="Drag ${esc(repository)} to reorder">⋮⋮</button>
-          <span class="focus-repo-rank">${index + 1}</span>
-          <span class="focus-repo-name">${esc(repository)}</span>
-          <span class="focus-repo-actions">
-            <button type="button" class="btn-ghost mini" data-focus-up="${esc(repository)}" aria-label="Move ${esc(repository)} up">↑</button>
-            <button type="button" class="btn-ghost mini" data-focus-down="${esc(repository)}" aria-label="Move ${esc(repository)} down">↓</button>
-          </span>
-        </div>`;
-      }).join("")
-      : `<p class="muted focus-repo-empty">No repositories match.</p>`;
-
-    const move = (repository: string, targetIndex: number) => {
-      const current = focusPolicyFor(provider);
-      const currentIndex = current.repositoryOrder.indexOf(repository);
-      const boundedIndex = Math.max(
-        0,
-        Math.min(targetIndex, current.repositoryOrder.length - 1),
-      );
-      if (currentIndex < 0 || currentIndex === boundedIndex) return;
-      const next: FocusPolicySnapshot = {
-        ...current,
-        repositoryOrder: moveRepository(
-          current.repositoryOrder,
-          repository,
-          boundedIndex,
-        ),
-      };
-      draftFocusPolicies.set(provider, next);
-      renderRepositoryPriority();
-      const status = host.querySelector<HTMLElement>("[data-focus-status]");
-      if (status) {
-        status.textContent =
-          `${repository} moved to priority ${boundedIndex + 1}`;
-      }
-      [...host.querySelectorAll<HTMLElement>("[data-focus-repo]")]
-        .find((row) => row.dataset.focusRepo === repository)
-        ?.focus();
-      updateSaveGate();
-    };
-
-    list.querySelectorAll<HTMLElement>("[data-focus-repo]").forEach((row) =>
-      row.addEventListener("keydown", (event) => {
-        if (!event.altKey
-          || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return;
-        event.preventDefault();
-        const repository = row.dataset.focusRepo!;
-        const index = focusPolicyFor(provider).repositoryOrder
-          .indexOf(repository);
-        move(repository, index + (event.key === "ArrowUp" ? -1 : 1));
-      }));
-    list.querySelectorAll<HTMLElement>("[data-focus-up]").forEach((button) =>
-      button.addEventListener("click", () => {
-        const repository = button.dataset.focusUp!;
-        move(repository, focusPolicyFor(provider).repositoryOrder
-          .indexOf(repository) - 1);
-      }));
-    list.querySelectorAll<HTMLElement>("[data-focus-down]").forEach((button) =>
-      button.addEventListener("click", () => {
-        const repository = button.dataset.focusDown!;
-        move(repository, focusPolicyFor(provider).repositoryOrder
-          .indexOf(repository) + 1);
-      }));
-
-    let draggedRepository = "";
-    list.querySelectorAll<HTMLElement>("[data-focus-drag]").forEach((handle) => {
-      handle.addEventListener("dragstart", (event) => {
-        draggedRepository = handle.dataset.focusDrag!;
-        event.dataTransfer?.setData("text/plain", draggedRepository);
-      });
-    });
-    list.querySelectorAll<HTMLElement>("[data-focus-repo]").forEach((row) => {
-      row.addEventListener("dragover", (event) => event.preventDefault());
-      row.addEventListener("drop", (event) => {
-        event.preventDefault();
-        const repository = draggedRepository
-          || event.dataTransfer?.getData("text/plain")
-          || "";
-        if (!repository) return;
-        move(repository, focusPolicyFor(provider).repositoryOrder
-          .indexOf(row.dataset.focusRepo!));
-      });
-    });
-  }
   // Inline mirror of the tier "strictly decrease" rule for the GLOBAL cutoffs
   // (equivalent of scoring-editor's per-kind renderTierBands hint — that closure
   // can't be imported here). Presentational only: flags offending [data-tier-input]
@@ -479,6 +414,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
         </div>
         ${setup}<span class="set-helper">Session-only, never persisted or embedded.</span></div>`;
     for (const f of scopeFieldsOf(s)) {
+      if (f.key === "repos") continue;
       html += `<div class="set-group"><label class="set-label">${esc(f.label)}</label>`;
       if (f.discoverable) {
         const cached = getCred(prov) ? discoverCache.get(`${prov}:${fingerprint(getCred(prov))}`) : undefined;
@@ -491,10 +427,30 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       }
       html += `</div>`;
     }
+    if (connections.has(prov)) {
+      html += `<div class="set-group">
+        <label class="set-label">Repository scope</label>
+        <button type="button" class="btn-ghost" data-manage-repositories>Manage repositories</button>
+      </div>
+      <div class="set-group">
+        <label class="set-label">Provider Connection data</label>
+        <div class="data-actions">
+          <button type="button" class="btn-ghost" data-clear="cache">Clear Cached Dataset</button>
+          <button type="button" class="btn-ghost" data-disconnect="retain-cache">Disconnect</button>
+          <button type="button" class="btn-ghost danger" data-disconnect="erase">Disconnect &amp; Erase</button>
+        </div>
+        <span class="set-helper">Repository data is stored locally in this browser for up to 7 days. Credentials stay in this tab session.</span>
+      </div>`;
+    }
     body.innerHTML = html;
 
     const cred = body.querySelector<HTMLInputElement>("[data-cred]");
-    cred?.addEventListener("input", () => { draftCred.set(prov, cred.value.includes("•") ? getCred(prov) : cred.value); renderMeta(prov); });
+    cred?.addEventListener("input", () => {
+      draftCred.set(prov, cred.value.includes("•") ? getCred(prov) : cred.value);
+      dirtyConnectionProviders.add(prov);
+      renderMeta(prov);
+      updateSaveGate();
+    });
     const credToggle = body.querySelector<HTMLButtonElement>("[data-cred-toggle]");
     credToggle?.addEventListener("click", () => {
       const i = body.querySelector<HTMLInputElement>("[data-cred]")!;
@@ -502,15 +458,36 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       else { i.type = "password"; if (getCred(prov)) i.value = "••••••••"; credToggle.textContent = "show"; }
     });
     body.querySelectorAll<HTMLInputElement>("[data-field]").forEach(inp =>
-      inp.addEventListener("change", () => { draftScope.set(prov, { ...getScope(prov), [inp.dataset.field!]: inp.value.split(/[\s,]+/).filter(Boolean) }); renderMeta(prov); }));
+      inp.addEventListener("change", () => {
+        draftScope.set(prov, {
+          ...getScope(prov),
+          [inp.dataset.field!]: inp.value.split(/[\s,]+/).filter(Boolean),
+        });
+        dirtyConnectionProviders.add(prov);
+        renderMeta(prov);
+        updateSaveGate();
+      }));
     body.querySelectorAll<HTMLElement>("[data-discover]").forEach(btn =>
       btn.addEventListener("click", () => runDiscover(s, btn.dataset.discover!, true)));
     // Always surface the *selected* scope as chips (independent of discovery);
     // the "Find/Re-scan" button loads the option list to add more.
     for (const f of scopeFieldsOf(s)) if (f.discoverable && getCred(prov)) {
+      if (f.key === "repos") continue;
       const cached = discoverCache.get(`${prov}:${fingerprint(getCred(prov))}`) ?? [];
       mountMultiSelect(body.querySelector<HTMLElement>(`[data-list="${f.key}"]`)!, s, f.key, cached);
     }
+    body.querySelector<HTMLElement>("[data-manage-repositories]")
+      ?.addEventListener("click", () => {
+        showCategory("repositories");
+      });
+    body.querySelector<HTMLElement>('[data-clear="cache"]')
+      ?.addEventListener("click", () => {
+        void clearCachedData();
+      });
+    body.querySelectorAll<HTMLElement>("[data-disconnect]").forEach((button) =>
+      button.addEventListener("click", () => {
+        void disconnect(button.dataset.disconnect as DisconnectMode);
+      }));
   }
 
   // Refresh just the collapsed-row summary/status without collapsing the open body.
@@ -568,7 +545,12 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     const count = list.querySelector<HTMLElement>("[data-count]")!;
     const lf = list.querySelector<HTMLInputElement>("[data-lf]")!;
 
-    const commit = () => { draftScope.set(prov, { ...getScope(prov), [key]: [...sel] }); renderMeta(prov); };
+    const commit = () => {
+      draftScope.set(prov, { ...getScope(prov), [key]: [...sel] });
+      dirtyConnectionProviders.add(prov);
+      renderMeta(prov);
+      updateSaveGate();
+    };
     const drawCount = () => { count.textContent = `${sel.size} selected`; };
     const drawChips = () => {
       chips.innerHTML = sel.size
@@ -634,29 +616,58 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     draftTheme = null; draftRefresh = null;
     draftCred.clear(); draftScope.clear(); draftTiers = null; draftModels.clear(); draftBots = null;
     draftFocusPolicies.clear();
+    dirtyRepositoryProviders.clear();
+    dirtyConnectionProviders.clear();
     updateSaveGate(); setHidden(true);
   }
   async function save() {
-    const changedProviders = new Set([
-      ...draftCred.keys(),
-      ...draftScope.keys(),
-    ]);
-    for (const prov of changedProviders) {
-      await connections.save(prov, credentialDraft(prov), getScope(prov));
+    saveBtn.disabled = true;
+    clearSaveError();
+    try {
+      const changedProviders = new Set([
+        ...draftCred.keys(),
+        ...draftScope.keys(),
+      ]);
+      for (const prov of changedProviders) {
+        await connections.save(prov, credentialDraft(prov), getScope(prov));
+      }
+      if (draftTiers) policy.setTiers(draftTiers);
+      for (const [k, d] of draftModels) {
+        if (d === "reset") policy.clearScoreModel(k);
+        else policy.setScoreModel(k, d);
+      }
+      if (draftBots) policy.setBotLogins(draftBots);
+      for (const [provider, snapshot] of draftFocusPolicies) {
+        policy.setFocusPolicy(snapshot);
+        opts.onFocusPolicyChange?.(provider, snapshot);
+      }
+
+      draftTiers = null;
+      draftModels.clear();
+      draftBots = null;
+      draftFocusPolicies.clear();
+      dirtyRepositoryProviders.clear();
+      dirtyConnectionProviders.clear();
+      // Theme/refresh are already applied via live preview; commit the baseline.
+      if (draftTheme !== null) {
+        savedTheme = draftTheme;
+        draftTheme = null;
+      }
+      if (draftRefresh !== null) {
+        savedRefresh = draftRefresh;
+        draftRefresh = null;
+      }
+      draftCred.clear();
+      draftScope.clear();
+      updateSaveGate();
+      onChange();
+      setHidden(true);
+    } catch (error) {
+      saveError.textContent =
+        error instanceof Error ? error.message : String(error);
+      saveError.hidden = false;
+      saveBtn.disabled = !allDraftsValid();
     }
-    if (draftTiers) { policy.setTiers(draftTiers); draftTiers = null; }
-    for (const [k, d] of draftModels) { if (d === "reset") policy.clearScoreModel(k); else policy.setScoreModel(k, d); }
-    draftModels.clear();
-    if (draftBots) { policy.setBotLogins(draftBots); draftBots = null; }
-    for (const [provider, snapshot] of draftFocusPolicies) {
-      policy.setFocusPolicy(snapshot);
-      opts.onFocusPolicyChange?.(provider, snapshot);
-    }
-    draftFocusPolicies.clear();
-    // Theme/refresh are already applied via live preview; just commit the baseline.
-    if (draftTheme !== null) { savedTheme = draftTheme; draftTheme = null; }
-    if (draftRefresh !== null) { savedRefresh = draftRefresh; draftRefresh = null; }
-    draftCred.clear(); draftScope.clear(); updateSaveGate(); onChange(); setHidden(true);
   }
   host.querySelector("[data-close]")!.addEventListener("click", discard);
   host.querySelector("[data-cancel]")!.addEventListener("click", discard);
@@ -669,9 +680,10 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
   // it and tests can query it; absent when that category has no pending edits.
   const updateUnsavedDots = () => {
     const dirty: Record<string, boolean> = {
-      connections: draftCred.size > 0 || draftScope.size > 0,
+      connections: draftCred.size > 0 || dirtyConnectionProviders.size > 0,
+      repositories: dirtyRepositoryProviders.size > 0,
       scoring: draftModels.size > 0 || draftTiers !== null,
-      filters: draftBots !== null || draftFocusPolicies.size > 0,
+      exclusions: draftBots !== null,
       general: draftTheme !== null || draftRefresh !== null,
     };
     host.querySelectorAll<HTMLElement>("[data-category]").forEach(b => {
@@ -693,7 +705,12 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     if (el) el.textContent = `${n} unsaved change${n === 1 ? "" : "s"}`;
     host.querySelector<HTMLElement>("[data-unsaved-any]")?.toggleAttribute("hidden", n === 0);
   };
-  const updateSaveGate = () => { saveBtn.disabled = !allDraftsValid(); updateUnsavedDots(); updateSaveBar(); };
+  const updateSaveGate = () => {
+    clearSaveError();
+    saveBtn.disabled = !allDraftsValid();
+    updateUnsavedDots();
+    updateSaveBar();
+  };
   const botAdd = host.querySelector<HTMLInputElement>("[data-bot-add]");
   botAdd?.addEventListener("keydown", (e) => {
     if (e.key !== "Enter" && e.key !== ",") return;
@@ -717,19 +734,6 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     previewRows: (k) => (getRows?.() ?? []).filter(r => r.kind === k),
   });
   filter.addEventListener("input", () => renderConns());
-  host.querySelector<HTMLInputElement>("[data-focus-repo-search]")
-    ?.addEventListener("input", (event) => {
-      focusRepositoryQuery = (event.currentTarget as HTMLInputElement).value;
-      renderRepositoryPriority();
-    });
-  host.querySelector<HTMLElement>('[data-clear="cache"]')
-    ?.addEventListener("click", () => {
-      void clearCachedData();
-    });
-  host.querySelectorAll<HTMLElement>("[data-disconnect]").forEach((button) =>
-    button.addEventListener("click", () => {
-      void disconnect(button.dataset.disconnect as DisconnectMode);
-    }));
 
   // Sidebar category switching. All four panes live in the DOM at once (only
   // visibility toggles), so every render function still finds its controls by
@@ -742,6 +746,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     host.querySelectorAll<HTMLElement>("[data-cat-pane]").forEach(p =>
       p.hidden = p.dataset.catPane !== id);
     if (id === "scoring" && !scoringRendered) { renderScoring(); scoringRendered = true; }
+    if (id === "repositories") repositorySettings.show(activeProviderId());
   }
   host.querySelectorAll<HTMLElement>("[data-category]").forEach(b =>
     b.addEventListener("click", () =>
@@ -752,11 +757,9 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       expanded = provider ?? (providerReps[0] ? providerOf(providerReps[0]) : null);
       draftCred.clear(); draftScope.clear(); draftTiers = null; draftModels.clear(); draftBots = null;
       draftFocusPolicies.clear();
-      focusRepositoryQuery = "";
-      const focusSearch = host.querySelector<HTMLInputElement>(
-        "[data-focus-repo-search]",
-      );
-      if (focusSearch) focusSearch.value = "";
+      dirtyRepositoryProviders.clear();
+      dirtyConnectionProviders.clear();
+      repositorySettings.resetView();
       savedTheme = getThemeChoice(); draftTheme = null;
       const refreshProvider = activeProviderId();
       savedRefresh = connections.cadence(refreshProvider);
@@ -767,7 +770,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
       // Theme/refresh/bots live in other panes but their elements exist in the
       // DOM regardless of visibility, so render them up front like before.
       renderTheme(); renderRefresh(); renderAutoBots(); renderBots();
-      renderRepositoryPriority(); renderConns(); setHidden(false);
+      renderConns(); setHidden(false);
     },
   };
 }
