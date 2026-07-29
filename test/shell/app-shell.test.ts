@@ -640,13 +640,19 @@ describe("mountShell artifact navigation", () => {
         title: "axios", location: "acme/web", signal: 100,
         createdAt: new Date().toISOString(), url: "https://github.com/acme/web/security/dependabot/2",
         details: { package: "axios", severity: "critical", cvss: 10, scope: "runtime", fixAvailable: true, fixVersion: "1.7.0" },
-      }]);
+    }]);
 
     try {
-      bootstrap(config);
-      await flush();
+      const shell = bootstrap(config);
+      await waitForGithubRefresh(shell, fetchSpy);
 
-      const tiers = [...document.querySelectorAll<HTMLElement>("#root .surface-body .tier")].map(t => t.textContent);
+      await vi.waitFor(() => {
+        expect(document.querySelectorAll("#root .surface-body .tier").length)
+          .toBeGreaterThan(0);
+      });
+      const tiers = [...document.querySelectorAll<HTMLElement>(
+        "#root .surface-body .tier",
+      )].map(t => t.textContent);
       expect(tiers.length).toBeGreaterThan(0);
       // The stored model's bands must win: P0, not P3 from the absurd-threshold fallback.
       expect(tiers.every(t => t === "P0")).toBe(true);

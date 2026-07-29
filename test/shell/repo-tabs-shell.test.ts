@@ -7,8 +7,6 @@ import { bootstrap } from "../../src/runtime/bootstrap";
 import { mockGithubItems } from "../helpers/github-fetch";
 import type { TriageConfigT } from "../../src/config/schema";
 
-const flush = () => new Promise<void>(r => setTimeout(r, 0));
-
 const config: TriageConfigT = {
   source: "github",
   views: ["code-security", "insights"],
@@ -54,7 +52,10 @@ describe("repo tabs render end-to-end after data loads", () => {
     try {
       const shell = bootstrap(config);
       await shell.ready;
-      await flush();
+      await vi.waitFor(() => {
+        expect(document.querySelectorAll(".fbar [data-repo]").length)
+          .toBe(4);
+      });
 
       const fbar = document.querySelector(".fbar");
       expect(fbar).not.toBeNull();
@@ -80,7 +81,10 @@ describe("repo tabs render end-to-end after data loads", () => {
     try {
       const shell = bootstrap(config);
       await shell.ready;
-      await flush();
+      await vi.waitFor(() => {
+        expect(document.querySelectorAll("#root .surface-body tr").length)
+          .toBeGreaterThan(0);
+      });
       // Single distinct repo → renderRepoTabs renders nothing.
       expect(document.querySelectorAll(".fbar [data-repo]").length).toBe(0);
     } finally {
