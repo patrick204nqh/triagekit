@@ -34,6 +34,42 @@ describe("renderTriageList + DetailPanel", () => {
     expect(root.querySelector<HTMLElement>(".drawer")!.hidden).toBe(true);
   });
 
+  it("groups repeated failures in a collapsed repository disclosure", () => {
+    const root = document.createElement("div");
+    const failure = {
+      provider: "github",
+      kind: "code-scanning" as const,
+      category: "scope" as const,
+      message: "Code Security must be enabled",
+    };
+
+    renderTriageList(root, [], [
+      { ...failure, target: "acme-corp/web" },
+      { ...failure, target: "acme-corp/api" },
+    ]);
+
+    const warning = root.querySelector<HTMLDetailsElement>(
+      "details.warnings",
+    )!;
+    expect(warning.open).toBe(false);
+    expect(warning.querySelector("summary")?.textContent)
+      .toContain("Code scanning unavailable in 2 repositories");
+    expect(warning.querySelectorAll("[data-warning-cause]")).toHaveLength(1);
+    expect(warning.querySelector("[data-warning-cause]")?.textContent)
+      .toContain("Code Security must be enabled");
+    expect(
+      [...warning.querySelectorAll("[data-warning-repository]")]
+        .map((node) => node.textContent),
+    ).toEqual(["acme-corp/api", "acme-corp/web"]);
+    expect(warning.querySelector("[role='alert']")).toBeNull();
+
+    renderTriageList(root, [], [
+      { ...failure, target: "acme-corp/web" },
+    ]);
+    expect(root.querySelector("summary")?.textContent)
+      .toContain("Code scanning unavailable in 1 repository");
+  });
+
   it("toggles queue selection without opening the detail drawer", () => {
     const root = document.createElement("div");
     const selected: string[] = [];

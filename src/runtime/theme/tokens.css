@@ -127,9 +127,16 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outlin
 main { padding:24px 32px 64px; }
 
 /* ── Warnings ──────────────────────────────────────────────────────── */
-.warnings { border:1px solid color-mix(in srgb,var(--p2) 55%,var(--line)); border-radius:10px; padding:12px 16px; margin-bottom:20px; }
+.warnings { border:1px solid color-mix(in srgb,var(--p2) 55%,var(--line)); border-radius:10px; padding:9px 14px; margin-bottom:14px; }
+.warnings summary { display:flex; align-items:center; gap:12px; cursor:pointer; }
+.warnings summary:focus-visible { outline:2px solid var(--accent); outline-offset:3px; border-radius:4px; }
 .warnings strong { color:var(--p2); font-weight:600; }
+.warnings .warning-show,.warnings .warning-hide { margin-left:auto; color:var(--muted); font-size:12px; }
+.warnings .warning-hide,.warnings[open] .warning-show { display:none; }
+.warnings[open] .warning-hide { display:inline; }
 .warnings ul { margin:6px 0 0; padding-left:18px; color:var(--muted); font-size:13px; }
+.warnings .warning-causes { margin-top:10px; }
+.warnings [data-warning-cause] > span { color:var(--fg); }
 
 /* ── Table (pure — no charts here) ─────────────────────────────────── */
 table.alerts { width:100%; border-collapse:collapse; }

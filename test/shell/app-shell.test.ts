@@ -427,7 +427,23 @@ describe("mountShell artifact navigation", () => {
       codeScanning!.click();
 
       await vi.waitFor(() =>
-        expect(document.querySelector("#root .warnings")).not.toBeNull());
+        expect(document.querySelector("#root details.warnings")).not.toBeNull());
+      const warning = document.querySelector<HTMLDetailsElement>(
+        "#root details.warnings",
+      )!;
+      expect(warning.open).toBe(false);
+      expect(warning.querySelector("summary")?.textContent)
+        .toContain("Code scanning unavailable in 1 repository");
+      warning.open = true;
+      expect(warning.textContent).toContain("acme-corp/web");
+      expect(warning.textContent).toContain("Code Security must be enabled");
+
+      const dependencies = [
+        ...document.querySelectorAll<HTMLButtonElement>("#domainRail button"),
+      ].find((button) => button.textContent?.trim() === "Dependencies");
+      dependencies!.click();
+      await vi.waitFor(() =>
+        expect(document.querySelector("#root .warnings")).toBeNull());
     } finally {
       fetchSpy.mockRestore();
     }
