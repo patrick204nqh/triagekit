@@ -288,9 +288,10 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
       queuedKeys: selectedQueueKeys(),
       selectedCount: snapshot.selectedCount,
       totalCount: snapshot.entries.length,
-      onAddVisible: (rows) => {
-        delegationQueue.addMany(
+      onSetVisible: (rows, selected) => {
+        delegationQueue.setSelectedMany(
           rows.map(queueIdentityForItem),
+          selected,
           Date.now(),
         );
       },

@@ -449,6 +449,80 @@ describe("mountShell artifact navigation", () => {
     }
   });
 
+  it("bulk-selects and clears only dependency rows visible in the repository filter", async () => {
+    sessionStorage.setItem("triagekit.cred.github", "token");
+    localStorage.setItem(
+      "triagekit.scope.github",
+      JSON.stringify({ repos: ["acme-corp/web", "acme-corp/api"] }),
+    );
+    const fetchSpy = mockGithubItems([
+      {
+        ...dependencyItem("web-one", "acme-corp/web"),
+        providerRef: { number: 1 },
+      },
+      {
+        ...dependencyItem("web-two", "acme-corp/web"),
+        providerRef: { number: 2 },
+      },
+      dependencyItem("api-one", "acme-corp/api"),
+    ]);
+
+    try {
+      const shell = bootstrap(config);
+      await shell.ready;
+      await vi.waitFor(() =>
+        expect(document.querySelectorAll("#root .alert-row")).toHaveLength(3));
+
+      document.querySelector<HTMLElement>(
+        "[data-repo='acme-corp/web']",
+      )!.click();
+      await vi.waitFor(() =>
+        expect(document.querySelectorAll("#root .alert-row")).toHaveLength(2));
+      document.querySelector<HTMLInputElement>(
+        "[data-toggle-visible]",
+      )!.click();
+      await vi.waitFor(() =>
+        expect(document.querySelector("[data-queue-badge]")?.textContent)
+          .toContain("2 selected · 2 retained"));
+
+      document.querySelector<HTMLElement>("[data-repo='']")!.click();
+      await vi.waitFor(() =>
+        expect(document.querySelectorAll("#root .alert-row")).toHaveLength(3));
+      let bulk = document.querySelector<HTMLInputElement>(
+        "[data-toggle-visible]",
+      )!;
+      expect(bulk.checked).toBe(false);
+      expect(bulk.indeterminate).toBe(true);
+      bulk.click();
+      await vi.waitFor(() =>
+        expect(document.querySelector("[data-queue-badge]")?.textContent)
+          .toContain("3 selected · 3 retained"));
+
+      document.querySelector<HTMLElement>(
+        "[data-repo='acme-corp/web']",
+      )!.click();
+      bulk = document.querySelector("[data-toggle-visible]")!;
+      expect(bulk.checked).toBe(true);
+      bulk.click();
+      await vi.waitFor(() =>
+        expect(document.querySelector("[data-queue-badge]")?.textContent)
+          .toContain("1 selected · 3 retained"));
+
+      document.querySelector<HTMLElement>("[data-repo='']")!.click();
+      await vi.waitFor(() =>
+        expect(document.querySelectorAll("#root .alert-row")).toHaveLength(3));
+      const selectedRows = [
+        ...document.querySelectorAll<HTMLElement>("#root .alert-row"),
+      ].filter((row) =>
+        row.querySelector("[data-queue-select]")?.getAttribute("aria-pressed")
+          === "true");
+      expect(selectedRows).toHaveLength(1);
+      expect(selectedRows[0].textContent).toContain("acme-corp/api");
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
   it("renders neutral, provider-agnostic kind nouns in the sidebar rail", async () => {
     // The sidebar rail is a shared nav surface, so it shows the NEUTRAL KIND_LABEL
     // noun ("Change requests"/"Issues"), not a per-provider noun. GitHub's manifest

@@ -854,7 +854,10 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 .fbar-focus { display:flex; align-items:center; min-width:0; gap:10px; }
 .fbar-controls { display: flex; align-items:center; gap: 8px; }
 [data-delegation-selection] { display:flex; align-items:center; gap:6px; }
-.add-visible { white-space:nowrap; }
+.visible-selection { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+.visible-selection input { width:14px; height:14px; margin:0; accent-color:var(--accent); }
+.visible-selection:focus-within { outline:2px solid var(--accent); outline-offset:2px; }
+.visible-selection:has(input:disabled) { opacity:.4; cursor:not-allowed; }
 .queue-badge { min-height:30px; padding:4px 10px; white-space:nowrap; border:1px solid var(--line-strong);
   border-radius:999px; background:var(--slate); color:var(--fg); font:500 11px var(--mono); }
 .queue-badge:hover { border-color:var(--accent); }
