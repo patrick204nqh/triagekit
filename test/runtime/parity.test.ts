@@ -22,6 +22,8 @@ import {
   bootstrap,
 } from "../../src/runtime/bootstrap";
 import { createGithubProvider } from "../../src/runtime/providers/github/provider";
+import { createActionCatalog } from "../../src/runtime/actions/catalog";
+import type { TriageItem } from "../../src/runtime/dataset/item";
 import { mockGithubItems } from "../helpers/github-fetch";
 import type { TriageConfigT } from "../../src/config/schema";
 
@@ -148,6 +150,43 @@ describe("parity — scores/tiers/sort unchanged through the re-layered core", (
 });
 
 describe("production Provider parity", () => {
+  it("derives advertised capabilities from the definitions that execute", async () => {
+    const requests: Request[] = [];
+    const github = createGithubProvider(async (input, init) => {
+      requests.push(new Request(input, init));
+      return new Response("{}", { status: 200 });
+    });
+    const bound = await github.bind("token");
+    const catalog = createActionCatalog(bound.actions ?? []);
+    const issue: TriageItem = {
+      id: "github:acme-corp/web:42",
+      provider: "github",
+      providerRef: { repository: "acme-corp/web", number: 42 },
+      kind: "issue",
+      title: "Ship it",
+      location: "acme-corp/web",
+      signal: 50,
+      createdAt: "2026-07-29T00:00:00Z",
+      url: "https://example.invalid/42",
+      details: { state: "open" },
+    };
+
+    expect(catalog.forItem(issue).map(({ intent }) => intent).sort())
+      .toEqual([...(github.capabilities.actions.issue ?? [])].sort());
+    const comment = catalog.definition("comment")!;
+    await expect(comment.execute({
+      intent: "comment",
+      itemId: issue.id,
+      markdown: "ship it",
+    }, issue, new AbortController().signal)).resolves.toMatchObject({
+      status: "confirmed",
+    });
+    expect(requests).toHaveLength(1);
+    expect(requests[0].method).toBe("POST");
+    expect(new URL(requests[0].url).pathname)
+      .toBe("/repos/acme-corp/web/issues/42/comments");
+  });
+
   it("loads every ready GitHub Kind through one stable provider", async () => {
     const fetchMock: typeof fetch = async (input) => {
       const url = String(input);

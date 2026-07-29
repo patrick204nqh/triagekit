@@ -78,4 +78,31 @@ describe("runtime architecture guardrails", () => {
       expect(existsSync(join(runtime, relative)), relative).toBe(false);
     }
   });
+
+  it("keeps GitHub transport details out of UI modules", () => {
+    const forbiddenUiKnowledge = [
+      "merge_method",
+      "{ body:",
+      "{ labels:",
+      "{ assignees:",
+      "ProviderCommand",
+      "Authorization",
+      "If-None-Match",
+    ];
+    const uiDirectories = [
+      join(runtime, "layout"),
+      join(runtime, "views"),
+      join(runtime, "shell"),
+      join(runtime, "adapters"),
+    ];
+    const source = uiDirectories
+      .flatMap(filesUnder)
+      .filter((path) => path.endsWith(".ts"))
+      .map((path) => readFileSync(path, "utf8"))
+      .join("\n");
+
+    for (const marker of forbiddenUiKnowledge) {
+      expect(source, marker).not.toContain(marker);
+    }
+  });
 });
