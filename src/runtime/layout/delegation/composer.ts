@@ -126,23 +126,42 @@ function packageHtml(
   </section>`;
 }
 
-function queueSectionHtml(
-  id: "needs-attention" | "handed-off",
-  label: string,
-  items: DelegationControllerSnapshot[
-    "needsAttention" | "handedOff"
-  ],
+function handedOffHtml(
+  items: DelegationControllerSnapshot["handedOff"],
+): string {
+  if (!items.length) return "";
+  return `<details class="delegation-queue-section" data-queue-section="handed-off">
+    <summary>Handed off · ${items.length}</summary>
+    <ul>${items.map((item) =>
+      `<li data-queue-history-item>
+        <div><strong>${esc(item.title)}</strong><span>${esc(item.repository)} · handed off</span>${item.reason ? `<span>${esc(item.reason)}</span>` : ""}</div>
+        <button type="button" class="btn-ghost mini" data-remove-queue-item="${esc(item.key)}">Remove from queue</button>
+      </li>`).join("")}</ul>
+  </details>`;
+}
+
+function notInNextBundleHtml(
+  items: DelegationControllerSnapshot["notInNextBundle"],
 ): string {
   if (!items.length) return "";
   const statusLabel = (status: string) =>
-    status === "transferred" ? "handed off" : status.replaceAll("-", " ");
-  return `<details class="delegation-queue-section" data-queue-section="${id}">
-    <summary>${label} · ${items.length}</summary>
-    <ul>${items.map((item) =>
-      `<li data-queue-history-item>
+    status === "resolved"
+      ? "No longer found"
+      : status === "unavailable"
+      ? "Could not verify"
+      : "Blocked";
+  return `<details class="delegation-queue-section" data-queue-section="not-in-next-bundle" open>
+    <summary>Not in next bundle · ${items.length}</summary>
+    <p class="delegation-queue-helper">These targets need review or no longer exist.</p>
+    <ul>${items.map((item) => {
+      const action = item.status === "resolved"
+        ? `<button type="button" class="btn-ghost mini" data-remove-queue-item="${esc(item.key)}">Remove</button>`
+        : `<button type="button" class="btn-ghost mini" data-remove-target="${esc(item.itemId)}">Deselect</button>`;
+      return `<li data-queue-history-item>
         <div><strong>${esc(item.title)}</strong><span>${esc(item.repository)} · ${esc(statusLabel(item.status))}</span>${item.reason ? `<span>${esc(item.reason)}</span>` : ""}</div>
-        <button type="button" class="btn-ghost mini" data-remove-queue-item="${esc(item.key)}">Remove from queue</button>
-      </li>`).join("")}</ul>
+        ${action}
+      </li>`;
+    }).join("")}</ul>
   </details>`;
 }
 
@@ -152,113 +171,9 @@ export function mountDelegationComposer(
 ): () => void {
   let wasOpen = false;
   let activeDismiss: ReturnType<typeof dismissible> | null = null;
+  let lastBodyHtml = "";
 
-  const render = (snapshot: DelegationControllerSnapshot) => {
-    const activeElement = document.activeElement;
-    const focusedField = activeElement instanceof HTMLTextAreaElement
-      && host.contains(activeElement)
-      && activeElement.id
-      ? {
-          id: activeElement.id,
-          start: activeElement.selectionStart,
-          end: activeElement.selectionEnd,
-        }
-      : null;
-    activeDismiss?.destroy();
-    activeDismiss = null;
-    if (!snapshot.open) {
-      host.innerHTML = "";
-      if (wasOpen) {
-        document.querySelector<HTMLElement>("[data-queue-badge]")?.focus();
-      }
-      wasOpen = false;
-      return;
-    }
-    const opening = !wasOpen;
-    wasOpen = true;
-    const packageCount = snapshot.packages.length;
-    const targetCount = snapshot.packages.reduce(
-      (total, pkg) => total + pkg.targets.length,
-      0,
-    );
-    const readyLabel = `${snapshot.selectedCount} ${snapshot.selectedCount === 1 ? "target" : "targets"} ready`;
-    const bundleLabel = `${packageCount} ${packageCount === 1 ? "package" : "packages"} in next bundle`;
-    const laterLabel = snapshot.remainingPackages
-      ? ` · ${snapshot.remainingPackages} later`
-      : "";
-    const handedOffLabel = snapshot.handedOff.length
-      ? ` · ${snapshot.handedOff.length} handed off`
-      : "";
-    const notice = snapshot.notice
-      ? `<span class="delegation-notice ${snapshot.notice.tone}" data-delegation-notice>${esc(snapshot.notice.message)}</span>`
-      : `<span>${packageCount} ${packageCount === 1 ? "package" : "packages"} ready</span>`;
-    const confirmation = snapshot.pendingConfirmation
-      ? `<button type="button" class="btn-ghost" data-confirm-handoff>Confirm handed off</button>`
-      : "";
-    const undo = snapshot.canUndoHandoff
-      ? `<button type="button" class="btn-ghost" data-undo-handoff>Undo handoff</button>`
-      : "";
-    const copyLabel = snapshot.busyAction === "copy"
-      ? "Copying…"
-      : `Copy next bundle — ${packageCount} ${packageCount === 1 ? "package" : "packages"}, ${targetCount} ${targetCount === 1 ? "target" : "targets"}`;
-    host.innerHTML = `<div class="scrim open" data-delegation-scrim></div>
-      <aside class="delegation-composer open" role="dialog" aria-modal="true" aria-labelledby="delegation-title">
-        <header class="delegation-composer-head">
-          <div><h2 id="delegation-title" tabindex="-1">Delegation queue</h2>
-            <p>${readyLabel} · ${bundleLabel}${laterLabel}${handedOffLabel}</p></div>
-          <button type="button" class="drawer-close" data-delegation-close aria-label="Close delegation queue">×</button>
-        </header>
-        <div class="delegation-live" role="status" aria-live="polite" aria-atomic="true">${notice}<span class="delegation-live-actions">${confirmation}${undo}<button type="button" class="btn-ghost mini" data-revalidate ${snapshot.busyAction !== null || snapshot.selectedCount === 0 ? "disabled" : ""}>${snapshot.busyAction === "revalidate" ? "Checking…" : "Check again"}</button></span></div>
-        <div class="delegation-composer-body">
-          ${snapshot.packages.length
-            ? snapshot.packages.map((pkg) =>
-              packageHtml(pkg, snapshot.errors, snapshot.packages.length > 1)).join("")
-            : `<div class="delegation-empty"><h3>No targets ready</h3><p>Select rows from the table to prepare the next bundle.</p></div>`}
-          ${queueSectionHtml("needs-attention", "Needs attention", snapshot.needsAttention)}
-          ${queueSectionHtml("handed-off", "Handed off", snapshot.handedOff)}
-          ${snapshot.error
-            ? `<label class="delegation-preview-label">Markdown preview<textarea class="delegation-preview" readonly>${esc(snapshot.previewMarkdown)}</textarea></label>`
-            : ""}
-        </div>
-        <footer class="delegation-composer-foot">
-          <details class="delegation-action-menu" data-download-menu>
-            <summary class="btn-ghost">Download…</summary>
-            <div class="delegation-action-menu-pop">
-              <button type="button" class="btn-ghost" data-download-all data-format="md" ${snapshot.canDownload ? "" : "disabled"}>Download Markdown</button>
-              <button type="button" class="btn-ghost" data-download-all data-format="json" ${snapshot.canDownload ? "" : "disabled"}>Download JSON</button>
-            </div>
-          </details>
-          <button type="button" class="btn-primary" data-copy-all ${snapshot.packages.length && !snapshot.errors.length && snapshot.busyAction !== "copy" ? "" : "disabled"}>${copyLabel}</button>
-        </footer>
-      </aside>`;
-    const composer = host.querySelector<HTMLElement>(
-      ".delegation-composer",
-    )!;
-    const scrim = host.querySelector<HTMLElement>(
-      "[data-delegation-scrim]",
-    )!;
-    activeDismiss = dismissible(composer, {
-      scrim,
-      modal: true,
-      restoreFocus: false,
-      onDismiss: () => controller.close(),
-    });
-    activeDismiss.activate();
-    host.querySelector<HTMLElement>("[data-delegation-close]")
-      ?.addEventListener("click", () => controller.close());
-    scrim.addEventListener("click", () => controller.close());
-    if (opening) {
-      host.querySelector<HTMLElement>("#delegation-title")?.focus();
-    } else if (focusedField) {
-      const candidate = document.getElementById(focusedField.id);
-      const field = candidate instanceof HTMLTextAreaElement
-        && host.contains(candidate)
-        ? candidate
-        : null;
-      field?.focus();
-      field?.setSelectionRange(focusedField.start, focusedField.end);
-    }
-
+  const bindBodyActions = () => {
     const intent = (
       selector: string,
       field: "outcome" | "constraints" | "verification",
@@ -316,22 +231,174 @@ export function mountDelegationComposer(
           button.dataset.format as "md" | "json",
         );
       }));
-    host.querySelector<HTMLElement>("[data-copy-all]")
-      ?.addEventListener("click", () => {
-        void controller.copyBundle();
-      });
+  };
+
+  const bindLiveActions = () => {
     host.querySelector<HTMLElement>("[data-confirm-handoff]")
       ?.addEventListener("click", () => controller.confirmHandoff());
     host.querySelector<HTMLElement>("[data-undo-handoff]")
       ?.addEventListener("click", () => controller.undoHandoff());
-    host.querySelectorAll<HTMLElement>("[data-download-all]")
-      .forEach((button) => button.addEventListener("click", () => {
-        controller.downloadBundle(button.dataset.format as "md" | "json");
-      }));
     host.querySelector<HTMLElement>("[data-revalidate]")
       ?.addEventListener("click", () => {
         void controller.revalidate();
       });
+  };
+
+  const bindShellActions = () => {
+    host.querySelector<HTMLElement>("[data-delegation-close]")
+      ?.addEventListener("click", () => controller.close());
+    host.querySelector<HTMLElement>("[data-copy-all]")
+      ?.addEventListener("click", () => {
+        void controller.copyBundle();
+      });
+    host.querySelectorAll<HTMLElement>("[data-download-all]")
+      .forEach((button) => button.addEventListener("click", () => {
+        controller.downloadBundle(button.dataset.format as "md" | "json");
+      }));
+  };
+
+  const render = (snapshot: DelegationControllerSnapshot) => {
+    if (!snapshot.open) {
+      activeDismiss?.destroy();
+      activeDismiss = null;
+      host.innerHTML = "";
+      lastBodyHtml = "";
+      if (wasOpen) {
+        document.querySelector<HTMLElement>("[data-queue-badge]")?.focus();
+      }
+      wasOpen = false;
+      return;
+    }
+
+    const opening = !wasOpen;
+    if (opening) {
+      host.innerHTML = `<div class="scrim open" data-delegation-scrim></div>
+        <aside class="delegation-composer open" role="dialog" aria-modal="true" aria-labelledby="delegation-title">
+          <header class="delegation-composer-head">
+            <div><h2 id="delegation-title" tabindex="-1">Delegation queue</h2>
+              <p data-delegation-summary></p></div>
+            <button type="button" class="drawer-close" data-delegation-close aria-label="Close delegation queue">×</button>
+          </header>
+          <div class="delegation-live" role="status" aria-live="polite" aria-atomic="true"></div>
+          <div class="delegation-composer-body"></div>
+          <footer class="delegation-composer-foot">
+            <details class="delegation-action-menu" data-download-menu>
+              <summary class="btn-ghost">Download…</summary>
+              <div class="delegation-action-menu-pop">
+                <button type="button" class="btn-ghost" data-download-all data-format="md">Download Markdown</button>
+                <button type="button" class="btn-ghost" data-download-all data-format="json">Download JSON</button>
+              </div>
+            </details>
+            <button type="button" class="btn-primary" data-copy-all></button>
+          </footer>
+        </aside>`;
+      const composer = host.querySelector<HTMLElement>(
+        ".delegation-composer",
+      )!;
+      const scrim = host.querySelector<HTMLElement>(
+        "[data-delegation-scrim]",
+      )!;
+      activeDismiss = dismissible(composer, {
+        scrim,
+        modal: true,
+        restoreFocus: false,
+        onDismiss: () => controller.close(),
+      });
+      activeDismiss.activate();
+      bindShellActions();
+      wasOpen = true;
+    }
+
+    const packageCount = snapshot.packages.length;
+    const targetCount = snapshot.packages.reduce(
+      (total, pkg) => total + pkg.targets.length,
+      0,
+    );
+    const readyLabel =
+      `${targetCount} ${targetCount === 1 ? "target" : "targets"} ready`;
+    const bundleLabel = `${packageCount} ${packageCount === 1 ? "package" : "packages"} in next bundle`;
+    const laterLabel = snapshot.remainingPackages
+      ? ` · ${snapshot.remainingPackages} later`
+      : "";
+    const handedOffLabel = snapshot.handedOff.length
+      ? ` · ${snapshot.handedOff.length} handed off`
+      : "";
+    host.querySelector<HTMLElement>("[data-delegation-summary]")!.textContent =
+      `${readyLabel} · ${bundleLabel}${laterLabel}${handedOffLabel}`;
+
+    const notice = snapshot.notice
+      ? `<span class="delegation-notice ${snapshot.notice.tone}" data-delegation-notice>${esc(snapshot.notice.message)}</span>`
+      : `<span>${packageCount} ${packageCount === 1 ? "package" : "packages"} ready</span>`;
+    const confirmation = snapshot.pendingConfirmation
+      ? `<button type="button" class="btn-ghost" data-confirm-handoff>Confirm handed off</button>`
+      : "";
+    const undo = snapshot.canUndoHandoff
+      ? `<button type="button" class="btn-ghost" data-undo-handoff>Undo handoff</button>`
+      : "";
+    const live = host.querySelector<HTMLElement>(".delegation-live")!;
+    live.innerHTML = `${notice}<span class="delegation-live-actions">${confirmation}${undo}<button type="button" class="btn-ghost mini" data-revalidate ${snapshot.busyAction !== null || snapshot.selectedCount === 0 ? "disabled" : ""}>${snapshot.busyAction === "revalidate" ? "Checking…" : "Check again"}</button></span>`;
+    bindLiveActions();
+
+    const bodyHtml = `${
+      snapshot.packages.length
+        ? snapshot.packages.map((pkg) =>
+          packageHtml(
+            pkg,
+            snapshot.errors,
+            snapshot.packages.length > 1,
+          )).join("")
+        : `<div class="delegation-empty"><h3>No targets ready</h3><p>Select rows from the table to prepare the next bundle.</p></div>`
+    }
+      ${notInNextBundleHtml(snapshot.notInNextBundle)}
+      ${handedOffHtml(snapshot.handedOff)}
+      ${snapshot.error
+        ? `<label class="delegation-preview-label">Markdown preview<textarea class="delegation-preview" readonly>${esc(snapshot.previewMarkdown)}</textarea></label>`
+        : ""}`;
+    const body = host.querySelector<HTMLElement>(
+      ".delegation-composer-body",
+    )!;
+    if (bodyHtml !== lastBodyHtml) {
+      const activeElement = document.activeElement;
+      const focusedField = activeElement instanceof HTMLTextAreaElement
+        && body.contains(activeElement)
+        && activeElement.id
+        ? {
+            id: activeElement.id,
+            start: activeElement.selectionStart,
+            end: activeElement.selectionEnd,
+          }
+        : null;
+      const scrollTop = body.scrollTop;
+      body.innerHTML = bodyHtml;
+      body.scrollTop = scrollTop;
+      lastBodyHtml = bodyHtml;
+      bindBodyActions();
+      if (focusedField) {
+        const candidate = document.getElementById(focusedField.id);
+        const field = candidate instanceof HTMLTextAreaElement
+          && body.contains(candidate)
+          ? candidate
+          : null;
+        field?.focus();
+        field?.setSelectionRange(focusedField.start, focusedField.end);
+      }
+    }
+
+    host.querySelectorAll<HTMLButtonElement>("[data-download-all]")
+      .forEach((button) => {
+        button.disabled = !snapshot.canDownload;
+      });
+    const copy = host.querySelector<HTMLButtonElement>("[data-copy-all]")!;
+    copy.disabled = !snapshot.packages.length
+      || snapshot.errors.length > 0
+      || snapshot.busyAction === "copy";
+    copy.textContent = snapshot.busyAction === "copy"
+      ? "Copying…"
+      : `Copy next bundle — ${packageCount} ${packageCount === 1 ? "package" : "packages"}, ${targetCount} ${targetCount === 1 ? "target" : "targets"}`;
+
+    if (opening) {
+      host.querySelector<HTMLElement>("#delegation-title")?.focus();
+    }
   };
 
   const unsubscribe = controller.subscribe(render);

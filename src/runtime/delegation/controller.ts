@@ -79,7 +79,8 @@ export function createDelegationController(
       entry.selected
       && entry.status !== "resolved"
       && entry.status !== "transferred"
-      && entry.status !== "blocked");
+      && entry.status !== "blocked"
+      && entry.status !== "unavailable");
     const selectedKeys = new Set(selected.map((entry) =>
       queueKey(entry.identity)));
     const selectedItems = deps.items().filter((item) =>
@@ -217,11 +218,12 @@ export function createDelegationController(
       pendingConfirmation,
       canUndoHandoff: lastHandoffUndo.length > 0,
       busyAction,
-      needsAttention: queue.entries
+      notInNextBundle: queue.entries
         .filter((entry) =>
-          !entry.selected
-          && entry.status !== "transferred"
-          && entry.status !== "queued")
+          entry.status === "resolved"
+          || (entry.selected
+            && (entry.status === "blocked"
+              || entry.status === "unavailable")))
         .map(summarize),
       handedOff: queue.entries
         .filter((entry) => entry.status === "transferred")

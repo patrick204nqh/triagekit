@@ -1164,6 +1164,11 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
   font-weight:600;
   cursor:pointer;
 }
+.delegation-queue-helper {
+  margin:6px 0 0;
+  color:var(--muted);
+  font-size:12px;
+}
 .delegation-queue-section ul {
   margin:10px 0 0;
   padding:0;

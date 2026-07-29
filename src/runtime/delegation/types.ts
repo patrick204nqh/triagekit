@@ -203,7 +203,7 @@ export interface DelegationControllerSnapshot {
   } | null;
   readonly canUndoHandoff: boolean;
   readonly busyAction: "copy" | "revalidate" | null;
-  readonly needsAttention: readonly DelegationQueueSummaryItem[];
+  readonly notInNextBundle: readonly DelegationQueueSummaryItem[];
   readonly handedOff: readonly DelegationQueueSummaryItem[];
 }
 
