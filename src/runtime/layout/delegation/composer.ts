@@ -26,7 +26,23 @@ function packageErrors(
   const matching = errors.filter((error) => error.packageId === pkg.id);
   if (!matching.length) return "";
   return `<ul class="delegation-errors">${matching.map((error) =>
-    `<li><a href="#${esc(fieldId(pkg, error.field))}" data-package-error="${esc(pkg.id)}">${esc(error.message)}</a></li>`).join("")}</ul>`;
+    `<li id="${esc(pkg.id)}-error-${errors.indexOf(error)}"><a href="#${esc(fieldId(pkg, error.field))}" data-package-error="${esc(pkg.id)}">${esc(error.message)}</a></li>`).join("")}</ul>`;
+}
+
+function fieldErrorAttributes(
+  pkg: WorkPackageV1,
+  errors: readonly DelegationValidationError[],
+  field: string,
+): string {
+  const ids = errors
+    .map((error, index) => ({ error, index }))
+    .filter(
+      ({ error }) => error.packageId === pkg.id && error.field === field,
+    )
+    .map(({ index }) => `${pkg.id}-error-${index}`);
+  return ids.length
+    ? ` aria-invalid="true" aria-describedby="${esc(ids.join(" "))}"`
+    : "";
 }
 
 function targetHtml(
@@ -38,9 +54,29 @@ function targetHtml(
   const truncation = target.details.truncation as
     | { field?: string; originalLength?: number }
     | undefined;
+  const queue = target.details.queue as
+    | {
+        status?: string;
+        reason?: string;
+        changedFields?: readonly string[];
+      }
+    | undefined;
+  const state = [
+    queue?.status,
+    queue?.changedFields?.length
+      ? `changed ${queue.changedFields.join(", ")}`
+      : undefined,
+    queue?.reason,
+    freshness?.validatedAt
+      ? `${freshness.stale ? "stale" : "current"} · ${freshness.validatedAt}`
+      : undefined,
+    truncation?.field
+      ? `${truncation.field} bounded ${truncation.originalLength}`
+      : undefined,
+  ].filter(Boolean).join(" · ") || "not revalidated";
   return `<li class="delegation-target" data-target="${esc(target.id)}">
     <div><strong>${esc(target.title)}</strong><span class="delegation-target-meta">${esc(target.priority.tier)} · ${target.priority.score}</span></div>
-    <div class="delegation-target-state">${freshness?.validatedAt ? `${freshness.stale ? "stale" : "current"} · ${esc(freshness.validatedAt)}` : "not revalidated"}${truncation?.field ? ` · ${esc(truncation.field)} bounded from ${truncation.originalLength}` : ""}</div>
+    <div class="delegation-target-state">${esc(state)}</div>
     <button type="button" class="btn-ghost mini" data-remove-target="${esc(target.id)}" aria-label="Remove ${esc(target.title)} from package">Remove</button>
   </li>`;
 }
@@ -58,13 +94,13 @@ function packageHtml(
     <p class="delegation-reason">${esc(pkg.selectionReason)}</p>
     ${packageErrors(pkg, errors)}
     <label for="${esc(pkg.id)}-intent-outcome">Outcome</label>
-    <textarea id="${esc(pkg.id)}-intent-outcome" data-intent-outcome="${esc(pkg.id)}" rows="2">${esc(pkg.intent.outcome)}</textarea>
+    <textarea id="${esc(pkg.id)}-intent-outcome" data-intent-outcome="${esc(pkg.id)}" rows="2"${fieldErrorAttributes(pkg, errors, "intent.outcome")}>${esc(pkg.intent.outcome)}</textarea>
     <div class="delegation-intent-grid">
       <label>Constraints
-        <textarea id="${esc(pkg.id)}-intent-constraints" data-intent-constraints="${esc(pkg.id)}" rows="3">${esc(pkg.intent.constraints.join("\n"))}</textarea>
+        <textarea id="${esc(pkg.id)}-intent-constraints" data-intent-constraints="${esc(pkg.id)}" rows="3"${fieldErrorAttributes(pkg, errors, "intent.constraints")}>${esc(pkg.intent.constraints.join("\n"))}</textarea>
       </label>
       <label>Verification
-        <textarea id="${esc(pkg.id)}-intent-verification" data-intent-verification="${esc(pkg.id)}" rows="3">${esc(pkg.intent.verification.join("\n"))}</textarea>
+        <textarea id="${esc(pkg.id)}-intent-verification" data-intent-verification="${esc(pkg.id)}" rows="3"${fieldErrorAttributes(pkg, errors, "intent.verification")}>${esc(pkg.intent.verification.join("\n"))}</textarea>
       </label>
     </div>
     <ul class="delegation-targets">${pkg.targets.map(targetHtml).join("")}</ul>

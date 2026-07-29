@@ -15,4 +15,12 @@ describe("build smoke assertion", () => {
       ),
     ).toThrow("external script");
   });
+
+  it("accepts the browser-local delegation host without runtime requests", () => {
+    expect(() =>
+      assertSelfContainedHtml(
+        '<html><div id="delegation-host"></div><script>globalThis.queue = []</script></html>',
+      ),
+    ).not.toThrow();
+  });
 });

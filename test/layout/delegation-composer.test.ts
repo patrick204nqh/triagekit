@@ -68,6 +68,13 @@ describe("delegation composer", () => {
     )!;
     expect(error.getAttribute("href"))
       .toBe("#pkg-core-issues-intent-outcome");
+    const outcome = host.querySelector<HTMLTextAreaElement>(
+      "#pkg-core-issues-intent-outcome",
+    )!;
+    expect(outcome.getAttribute("aria-invalid")).toBe("true");
+    expect(outcome.getAttribute("aria-describedby")).toBe(
+      "pkg-core-issues-error-0",
+    );
     expect(host.querySelector("[data-copy-all]")?.textContent)
       .toContain("Copy all packages as Markdown");
   });

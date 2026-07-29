@@ -105,4 +105,16 @@ describe("runtime architecture guardrails", () => {
       expect(source, marker).not.toContain(marker);
     }
   });
+
+  it("keeps delegation browser-local and provider-neutral", () => {
+    const delegation = filesUnder(join(runtime, "delegation"))
+      .filter((path) => path.endsWith(".ts"))
+      .map((path) => readFileSync(path, "utf8"))
+      .join("\n");
+
+    expect(delegation).not.toMatch(/\b(fetch|WebSocket|EventSource)\s*\(/);
+    expect(delegation).not.toContain("credential:");
+    expect(delegation).not.toContain("rawResponse:");
+    expect(delegation).not.toContain("mcp");
+  });
 });

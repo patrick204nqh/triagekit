@@ -13,4 +13,14 @@ describe("buildCspMeta", () => {
     const out = buildCspMeta('<!--CSP-META-PLACEHOLDER--><style>a{}</style>', []);
     expect(out).toMatch(/font-src 'self' data:/);
   });
+
+  it("does not require a new delegation network origin", () => {
+    const out = buildCspMeta(
+      '<!--CSP-META-PLACEHOLDER--><div id="delegation-host"></div>',
+      ["https://api.github.com"],
+    );
+
+    expect(out).toMatch(/connect-src 'self' https:\/\/api\.github\.com/);
+    expect(out).not.toMatch(/connect-src[^"]*(localhost|websocket|mcp)/i);
+  });
 });

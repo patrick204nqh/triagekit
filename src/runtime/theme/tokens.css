@@ -1031,6 +1031,12 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 }
 .delegation-empty h3 { font-size:16px; font-weight:650; }
 .delegation-empty p { max-width:38ch; color:var(--muted); }
+.delegation-composer button:focus-visible,
+.delegation-composer a:focus-visible {
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+}
+.delegation-composer [aria-invalid="true"] { border-color:var(--p0); }
 @keyframes delegation-enter {
   from { transform:translateX(18px); opacity:.72; }
 }
@@ -1039,6 +1045,9 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
   .delegation-composer-body { padding-inline:14px; }
   .delegation-composer-head,
   .delegation-composer-foot { padding-inline:14px; }
+  .delegation-package-head { align-items:flex-start; flex-direction:column; }
+  .delegation-package-head > div { width:100%; }
+  .delegation-package-meta { margin-left:36px; }
   .delegation-intent-grid { grid-template-columns:1fr; }
   .delegation-target { grid-template-columns:minmax(0,1fr) auto; }
   .delegation-target-state { grid-column:1; text-align:left; }
@@ -1047,4 +1056,10 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 }
 @media (prefers-reduced-motion:reduce) {
   .delegation-composer { animation:none; }
+}
+@media (pointer:coarse) {
+  .delegation-composer button,
+  .delegation-composer-foot button,
+  .delegation-package-actions .btn-ghost,
+  .delegation-target .mini { min-height:44px; }
 }

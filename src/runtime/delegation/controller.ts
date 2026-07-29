@@ -1,6 +1,6 @@
 import type { RuntimeCatalog } from "../catalog/types";
 import type { FocusPolicySnapshot } from "../focus/types";
-import type { TransportResult } from "../handoff/types";
+import type { HandoffValueV1, TransportResult } from "../handoff/types";
 import type { ScoreExplanation } from "../scoring/score-model";
 import type { ScoredItem } from "../layout/table/kind-renderer";
 import { planPackages } from "./planner";
@@ -68,7 +68,8 @@ export function createDelegationController(
     const selected = queueSnapshot.entries.filter((entry) =>
       entry.selected
       && entry.status !== "resolved"
-      && entry.status !== "transferred");
+      && entry.status !== "transferred"
+      && entry.status !== "blocked");
     const selectedKeys = new Set(selected.map((entry) =>
       queueKey(entry.identity)));
     const selectedItems = deps.items().filter((item) =>
@@ -95,14 +96,34 @@ export function createDelegationController(
           constraints: edit?.constraints ?? planned.intent.constraints,
           verification: edit?.verification ?? planned.intent.verification,
         };
-        const targets = planned.targets.flatMap((item) => {
-          try {
-            return [projectDelegationTarget({
-              item,
-              explanation: deps.scoreExplain(item),
-              catalog: deps.catalog,
-            })];
-          } catch (error) {
+      const targets = planned.targets.flatMap((item) => {
+        try {
+          const projected = projectDelegationTarget({
+            item,
+            explanation: deps.scoreExplain(item),
+            catalog: deps.catalog,
+          });
+          const entry = selected.find(
+            (candidate) => candidate.identity.itemId === item.id,
+          );
+          const queueDetails: Record<string, HandoffValueV1> | undefined =
+            entry
+              ? {
+                  status: entry.status,
+                  ...(entry.reason ? { reason: entry.reason } : {}),
+                  ...(entry.changedFields?.length
+                    ? { changedFields: entry.changedFields }
+                    : {}),
+                }
+              : undefined;
+          return [{
+            ...projected,
+            details: {
+              ...projected.details,
+              ...(queueDetails ? { queue: queueDetails } : {}),
+            },
+          }];
+        } catch (error) {
             projectionErrors.push({
               packageId: planned.id,
               field: `targets.${item.id}`,
