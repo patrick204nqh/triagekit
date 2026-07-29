@@ -10,6 +10,10 @@ import { renderRepoTabs, type RepoOption } from "../navigation/repo-tabs";
 import { chipHtml } from "../atoms/atoms";
 import { wirePopovers } from "./toolbar-popover";
 import type { FocusPolicySnapshot, LabelRules } from "../../focus/types";
+import {
+  renderSelectionControls,
+  type SelectionControlsProps,
+} from "../delegation/selection-controls";
 
 export interface ToolbarViewMode { id: string; label: string; }
 // The toolbar's provider rows ARE the provider-switch's inputs — one shape, one source of truth.
@@ -30,6 +34,7 @@ export interface ToolbarProps {
   onProviderSelect: (id: string) => void;
   onRepoSelect: (id: string) => void;
   catalog?: RuntimeCatalog;
+  delegationSelection?: SelectionControlsProps;
 }
 
 function activeFilterCount(state: ListState): number {
@@ -167,6 +172,7 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
   <div class="fbar">
     <div class="fbar-focus"><div data-repo-tabs></div><div class="focus-label-summary"><span>${esc(labelSummaryText)}</span>${labelSummaryActions}</div></div>
     <div class="fbar-controls">
+      <div data-delegation-selection></div>
       <div class="tb-ctl"><button class="tb-btn" data-tb-filter aria-haspopup="true" aria-controls="tb-pop-filter">≡ Filter${fcount ? ` · ${fcount}` : ""}</button>${filterPop}</div>
       <div class="tb-ctl"><button class="tb-btn" data-tb-sort aria-haspopup="true" aria-controls="tb-pop-sort">↕ ${esc(curSort)}</button>${sortPop}</div>
     </div>
@@ -178,6 +184,14 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
 
   const repoHost = host.querySelector<HTMLElement>("[data-repo-tabs]")!;
   renderRepoTabs(repoHost, { repos: p.repos, active: p.activeRepo, onSelect: p.onRepoSelect });
+  const selectionHost = host.querySelector<HTMLElement>(
+    "[data-delegation-selection]",
+  )!;
+  if (p.delegationSelection) {
+    renderSelectionControls(selectionHost, p.delegationSelection);
+  } else {
+    selectionHost.remove();
+  }
 
   // View tabs
   const viewButtons = [

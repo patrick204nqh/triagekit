@@ -34,6 +34,28 @@ describe("renderTriageList + DetailPanel", () => {
     expect(root.querySelector<HTMLElement>(".drawer")!.hidden).toBe(true);
   });
 
+  it("toggles queue selection without opening the detail drawer", () => {
+    const root = document.createElement("div");
+    const selected: string[] = [];
+    renderTriageList(
+      root,
+      [row({ id: "a" })],
+      [],
+      {
+        delegationSelection: {
+          queuedKeys: new Set(),
+          onToggle: (item) => selected.push(item.id),
+        },
+      },
+    );
+    const toggle = root.querySelector<HTMLButtonElement>(
+      "[data-queue-select]",
+    )!;
+    toggle.click();
+    expect(selected).toEqual(["a"]);
+    expect(root.querySelector<HTMLElement>(".drawer")!.hidden).toBe(true);
+  });
+
   it("opens the drawer with the row's kind detail, passing ctx", () => {
     const seen: { title?: string; token?: string } = {};
     const renderer: KindRenderer = {

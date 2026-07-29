@@ -48,6 +48,16 @@ import {
   migrateLegacyLabels,
   reconcileRepositoryOrder,
 } from "../focus/policy";
+import { createBrowserQueueStore } from "../delegation/browser-queue-store";
+import {
+  createDelegationQueue,
+  queueKey,
+} from "../delegation/queue";
+import {
+  queueIdentityForItem,
+  type RowDelegationSelection,
+  type SelectionControlsProps,
+} from "../layout/delegation/selection-controls";
 
 export interface ShellEnv {
   catalog: RuntimeCatalog;
@@ -141,6 +151,10 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
   const session = env.session ?? createTriageSession({ catalog });
   const sessionUrl = env.sessionUrl ?? createBrowserSessionUrl(window);
   const policy = new PolicyStore();
+  const delegationQueue = createDelegationQueue(createBrowserQueueStore({
+    get: (key) => sessionStorage.getItem(key),
+    set: (key, value) => sessionStorage.setItem(key, value),
+  }));
   const hasInsights = true;
 
   const providersForArtifact = (a: Artifact) =>
@@ -192,6 +206,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
     return policySnapshot;
   };
   let lastRows: ScoredItem[] = [];
+  let lastShownRows: ScoredItem[] = [];
   let lastFetchedAt: number | null = null;
   let insightSnapshot: InsightSnapshot | null = null;
   let insightRefreshing = false;
@@ -223,6 +238,43 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
         : {}),
     }),
   };
+  const selectedQueueKeys = () => new Set(
+    delegationQueue.snapshot().entries
+      .filter((entry) => entry.selected)
+      .map((entry) => queueKey(entry.identity)),
+  );
+  const toggleQueueItem = (item: ScoredItem) => {
+    const identity = queueIdentityForItem(item);
+    const key = queueKey(identity);
+    const existing = delegationQueue.snapshot().entries.find((entry) =>
+      queueKey(entry.identity) === key);
+    if (existing) delegationQueue.setSelected(key, !existing.selected);
+    else delegationQueue.add(identity, Date.now());
+  };
+  const rowDelegationSelection = (): RowDelegationSelection => ({
+    queuedKeys: selectedQueueKeys(),
+    onToggle: toggleQueueItem,
+  });
+  const delegationSelectionControls = (): SelectionControlsProps => {
+    const snapshot = delegationQueue.snapshot();
+    return {
+      visible: lastShownRows,
+      queuedKeys: selectedQueueKeys(),
+      selectedCount: snapshot.selectedCount,
+      totalCount: snapshot.entries.length,
+      onAddVisible: (rows) => {
+        delegationQueue.addMany(
+          rows.map(queueIdentityForItem),
+          Date.now(),
+        );
+      },
+      onOpenQueue: () => {
+        document.dispatchEvent(new CustomEvent(
+          "triagekit:open-delegation",
+        ));
+      },
+    };
+  };
 
   // Signature of the toolbar's row-derived inputs (distinct repo locations + applicable
   // extra-tab ids for the active artifact). dispatchView rebuilds the toolbar only when
@@ -252,6 +304,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
   const dispatchView: ViewPort = {
     render(vm) {
       lastRows = vm.scored;
+      lastShownRows = vm.shown;
       lastFetchedAt = activeDatasetSnapshot()?.slices.reduce<number | null>(
         (latest, slice) => slice.validatedAt !== undefined
           ? Math.max(latest ?? 0, slice.validatedAt)
@@ -298,6 +351,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
         catalog: catalog,
         handoffController,
         actions: actionPort,
+        delegationSelection: rowDelegationSelection(),
       }).render(vm);
     },
   };
@@ -323,6 +377,11 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
     focusPolicy: currentFocusPolicy,
     repoView: currentRepository,
   });
+  delegationQueue.subscribe(() => {
+    if (!coreReady) return;
+    buildNav();
+    if (currentView() === "list") core.rerender();
+  });
 
   function applySessionUpdate(update: SessionUpdate): void {
     active = catalog.artifact(update.state.kind) ?? active;
@@ -330,6 +389,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
 
     if (update.work === "refresh") {
       lastRows = [];
+      lastShownRows = [];
       lastFetchedAt = null;
       buildRail();
       buildNav();
@@ -446,7 +506,12 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
       core.rerender();
       buildNav();
     },
-    onChange: () => { lastRows = []; refreshBar(); render(); },
+    onChange: () => {
+      lastRows = [];
+      lastShownRows = [];
+      refreshBar();
+      render();
+    },
     onThemeChange: () => syncTheme(),
     getRows: () => lastRows,
     getAutoBots: () => adapterBotLogins(activeItems(), active.kinds),
@@ -542,6 +607,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
   gear.addEventListener("click", openSettings);
   refresh.addEventListener("click", () => {
     lastRows = [];
+    lastShownRows = [];
     void core.refreshNow();
   });
 
@@ -641,6 +707,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
       onRepoSelect: (id) => {
         applySessionUpdate(session.selectRepository(id, lastRows));
       },
+      delegationSelection: delegationSelectionControls(),
     });
   }
 

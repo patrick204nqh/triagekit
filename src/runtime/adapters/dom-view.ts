@@ -8,6 +8,9 @@ import type { RuntimeCatalog } from "../catalog/types";
 import type { TriageActionPort } from "../layout/table/kind-renderer";
 import type { HandoffController } from "../handoff/controller";
 import { renderTriageList } from "../layout/table/detail-panel";
+import type {
+  RowDelegationSelection,
+} from "../layout/delegation/selection-controls";
 
 export interface DomViewDeps {
   artifact: Artifact;
@@ -15,6 +18,7 @@ export interface DomViewDeps {
   catalog?: RuntimeCatalog;
   handoffController?: HandoffController;
   actions?: TriageActionPort;
+  delegationSelection?: RowDelegationSelection;
 }
 
 // Render-only list surface. Filtering/sorting is driven by the unified toolbar
@@ -29,7 +33,12 @@ export function createDomView(host: HTMLElement, deps: DomViewDeps): ViewPort {
         body,
         vm.shown,
         vm.errors,
-        { actions: deps.actions, scoreExplain: deps.scoreExplain, handoffController: deps.handoffController },
+        {
+          actions: deps.actions,
+          scoreExplain: deps.scoreExplain,
+          handoffController: deps.handoffController,
+          delegationSelection: deps.delegationSelection,
+        },
         deps.catalog,
       );
     },
