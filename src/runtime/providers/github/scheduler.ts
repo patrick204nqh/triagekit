@@ -20,12 +20,29 @@ export interface GithubRequestScheduler {
   close(): void;
 }
 
+export interface GithubSchedulerStatus {
+  readonly paused: boolean;
+  readonly retryAt?: number;
+  readonly reason?: string;
+}
+
 export interface GithubRequestSchedulerOptions {
   readonly fetch: typeof fetch;
   readonly concurrency?: number;
   readonly now?: () => number;
+  readonly random?: () => number;
   readonly setTimeout?: (callback: () => void, delay: number) => unknown;
   readonly clearTimeout?: (handle: unknown) => void;
+  readonly onStatusChange?: (status: GithubSchedulerStatus) => void;
+}
+
+export class GithubOutcomeUnknownError extends Error {
+  readonly kind = "outcome-unknown";
+
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = "GithubOutcomeUnknownError";
+  }
 }
 
 interface QueueEntry {
@@ -55,6 +72,7 @@ export const createGithubRequestScheduler = (
   }
 
   const now = options.now ?? Date.now;
+  const random = options.random ?? Math.random;
   const scheduleTimeout = options.setTimeout
     ?? ((callback, delay) => globalThis.setTimeout(callback, delay));
   const cancelTimeout = options.clearTimeout
@@ -71,6 +89,108 @@ export const createGithubRequestScheduler = (
 
   const paused = (): boolean =>
     retryAt !== undefined && retryAt > now();
+
+  const currentStatus = (): GithubSchedulerStatus => {
+    if (!paused()) return { paused: false };
+    return {
+      paused: true,
+      retryAt,
+      reason: pauseReason,
+    };
+  };
+
+  const publishStatus = (): void => {
+    options.onStatusChange?.(currentStatus());
+  };
+
+  const sleep = (
+    delay: number,
+    signal: AbortSignal,
+  ): Promise<void> => new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(signal.reason ?? abortError("Request aborted"));
+      return;
+    }
+    let handle: unknown;
+    const aborted = (): void => {
+      if (handle !== undefined) cancelTimeout(handle);
+      reject(signal.reason ?? abortError("Request aborted"));
+    };
+    signal.addEventListener("abort", aborted, { once: true });
+    handle = scheduleTimeout(() => {
+      signal.removeEventListener("abort", aborted);
+      resolve();
+    }, delay);
+  });
+
+  const retryDelay = (response: Response | undefined, attempt: number): number => {
+    const retryAfter = response?.headers.get("retry-after");
+    if (retryAfter) {
+      const seconds = Number(retryAfter);
+      if (Number.isFinite(seconds)) return Math.max(0, seconds * 1_000);
+      const epochMs = Date.parse(retryAfter);
+      if (Number.isFinite(epochMs)) return Math.max(0, epochMs - now());
+    }
+
+    if (response?.headers.get("x-ratelimit-remaining") === "0") {
+      const resetSeconds = Number(response.headers.get("x-ratelimit-reset"));
+      if (Number.isFinite(resetSeconds)) {
+        return Math.max(0, resetSeconds * 1_000 - now());
+      }
+    }
+
+    return Math.min(2_000, 250 * 2 ** attempt)
+      + Math.floor(Math.max(0, Math.min(1, random())) * 101);
+  };
+
+  const isRetryableStatus = (status: number): boolean =>
+    status === 429 || status === 502 || status === 503 || status === 504;
+
+  const isProviderPause = (response: Response): boolean =>
+    response.status === 429
+    || (response.status === 403
+      && (response.headers.has("retry-after")
+        || response.headers.get("x-ratelimit-remaining") === "0"));
+
+  const execute = async (
+    request: ScheduledRequest,
+    signal: AbortSignal,
+  ): Promise<Response> => {
+    for (let attempt = 0; ; attempt += 1) {
+      signal.throwIfAborted();
+      let response: Response;
+      try {
+        response = await options.fetch(request.pathOrUrl, {
+          ...request.init,
+          signal,
+        });
+      } catch (error) {
+        if (signal.aborted) {
+          throw signal.reason ?? abortError("Request aborted");
+        }
+        if (request.retry === "never") {
+          throw new GithubOutcomeUnknownError(
+            error instanceof Error ? error.message : String(error),
+            { cause: error },
+          );
+        }
+        if (attempt >= 2) throw error;
+        await sleep(retryDelay(undefined, attempt), signal);
+        continue;
+      }
+
+      const delay = retryDelay(response, attempt);
+      if (isProviderPause(response)) {
+        scheduler.pauseUntil(now() + delay, "GitHub rate limit");
+      }
+      if (request.retry !== "safe-read"
+        || !isRetryableStatus(response.status)
+        || attempt >= 2) {
+        return response;
+      }
+      await sleep(delay, signal);
+    }
+  };
 
   const nextEntry = (): QueueEntry | undefined => {
     for (const priority of PRIORITIES) {
@@ -94,10 +214,8 @@ export const createGithubRequestScheduler = (
       activeControllers.add(controller);
       active += 1;
 
-      void options.fetch(entry.request.pathOrUrl, {
-        ...entry.request.init,
-        signal: controller.signal,
-      }).then(entry.resolve, entry.reject).finally(() => {
+      void execute(entry.request, controller.signal)
+        .then(entry.resolve, entry.reject).finally(() => {
         entry.request.signal?.removeEventListener("abort", abortActive);
         activeControllers.delete(controller);
         active -= 1;
@@ -106,7 +224,7 @@ export const createGithubRequestScheduler = (
     }
   };
 
-  return {
+  const scheduler: GithubRequestScheduler = {
     run(request) {
       if (closed) return Promise.reject(abortError("Scheduler closed"));
       if (request.signal?.aborted) {
@@ -141,17 +259,12 @@ export const createGithubRequestScheduler = (
         pauseTimer = undefined;
         retryAt = undefined;
         pauseReason = undefined;
+        publishStatus();
         pump();
       }, Math.max(0, epochMs - now()));
+      publishStatus();
     },
-    status() {
-      if (!paused()) return { paused: false };
-      return {
-        paused: true,
-        retryAt,
-        reason: pauseReason,
-      };
-    },
+    status: currentStatus,
     close() {
       if (closed) return;
       closed = true;
@@ -167,4 +280,5 @@ export const createGithubRequestScheduler = (
       }
     },
   };
+  return scheduler;
 };
