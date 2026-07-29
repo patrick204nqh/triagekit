@@ -2,29 +2,37 @@ import type { Kind, TriageItem } from "../../dataset/item";
 import type {
   DiscoveryOption,
   FailureCategory,
-  KindRefreshOutcome,
-  RefreshRequest,
-  TriageFailure,
+  Scope,
 } from "../../catalog/types";
-import { GithubHttpError, type GithubHttp } from "./http";
+import type {
+  SliceOutcome,
+  SliceRequest,
+} from "../../cached-dataset/provider";
+import { GithubHttpError } from "./http";
 import { GithubRepository } from "./schemas";
+
+export interface BoundGithubHttp {
+  get<T>(pathOrUrl: string, init?: RequestInit): Promise<T>;
+  request<T>(pathOrUrl: string, init?: RequestInit): Promise<T>;
+  paginate<T>(pathOrUrl: string, init?: RequestInit): Promise<readonly T[]>;
+}
 
 export interface GithubKindIngest {
   kinds: readonly Kind[];
   fetchRepository(
-    http: GithubHttp,
+    http: BoundGithubHttp,
     repository: string,
-    credential: string,
+    signal: AbortSignal,
   ): Promise<readonly TriageItem[]>;
 }
 
 export async function discoverGithubRepositories(
-  http: GithubHttp,
-  credential: string,
+  http: BoundGithubHttp,
+  signal?: AbortSignal,
 ): Promise<readonly DiscoveryOption[]> {
   const repositories = await http.paginate<unknown>(
     "/user/repos?per_page=100&affiliation=owner,collaborator,organization_member&sort=full_name",
-    credential,
+    signal ? { signal } : undefined,
   );
   return repositories.map((raw) => {
     const repo = GithubRepository.parse(raw);
@@ -44,62 +52,59 @@ const failureCategory = (error: unknown): FailureCategory => {
   return error.status === 0 ? "network" : "provider";
 };
 
-export async function refreshGithubKinds(
-  http: GithubHttp,
+export async function* fetchGithubSlices(
+  http: BoundGithubHttp,
   ingests: readonly GithubKindIngest[],
-  request: RefreshRequest,
-): Promise<readonly KindRefreshOutcome[]> {
-  const repositories = Array.isArray(request.scope.repos)
-    ? request.scope.repos.filter((value): value is string => typeof value === "string")
-    : [];
-  const selectedKinds = new Set(request.kinds);
-  const outcomes = new Map<Kind, {
-    items: TriageItem[];
-    failures: TriageFailure[];
-    successes: number;
-  }>();
-  for (const kind of request.kinds) {
-    outcomes.set(kind, { items: [], failures: [], successes: 0 });
+  request: {
+    readonly scope: Scope;
+    readonly slices: readonly SliceRequest[];
+    readonly signal: AbortSignal;
+  },
+  redact: (message: string) => string = (message) => message,
+): AsyncIterable<SliceOutcome> {
+  const byTarget = new Map<string, Set<Kind>>();
+  for (const slice of request.slices) {
+    const kinds = byTarget.get(slice.target) ?? new Set<Kind>();
+    kinds.add(slice.kind);
+    byTarget.set(slice.target, kinds);
   }
 
-  await Promise.all(ingests.flatMap((ingest) =>
-    repositories.map(async (repository) => {
-      const kinds = ingest.kinds.filter((kind) => selectedKinds.has(kind));
-      if (!kinds.length) return;
+  for (const [repository, requestedKinds] of byTarget) {
+    for (const ingest of ingests) {
+      const kinds = ingest.kinds.filter((kind) => requestedKinds.has(kind));
+      if (kinds.length === 0) continue;
+      request.signal.throwIfAborted();
       try {
         const items = await ingest.fetchRepository(
           http,
           repository,
-          request.credential,
+          request.signal,
         );
         for (const kind of kinds) {
-          const outcome = outcomes.get(kind)!;
-          outcome.successes++;
-          outcome.items.push(...items.filter((item) => item.kind === kind));
+          yield {
+            type: "changed",
+            target: repository,
+            kind,
+            items: items.filter((item) => item.kind === kind),
+          };
         }
       } catch (error) {
+        if (request.signal.aborted) throw request.signal.reason;
         for (const kind of kinds) {
-          outcomes.get(kind)!.failures.push({
-            provider: "github",
-            kind,
+          yield {
+            type: "failed",
             target: repository,
-            category: failureCategory(error),
-            message: error instanceof Error ? error.message : String(error),
-          });
+            kind,
+            failure: {
+              provider: "github",
+              kind,
+              target: repository,
+              category: failureCategory(error),
+              message: redact(error instanceof Error ? error.message : String(error)),
+            },
+          };
         }
       }
-    })));
-
-  return request.kinds.map((kind) => {
-    const outcome = outcomes.get(kind)!;
-    const status = outcome.failures.length === 0
-      ? "success"
-      : outcome.successes > 0 ? "partial" : "failed";
-    return {
-      kind,
-      status,
-      items: status === "failed" ? [] : outcome.items,
-      failures: outcome.failures,
-    };
-  });
+    }
+  }
 }

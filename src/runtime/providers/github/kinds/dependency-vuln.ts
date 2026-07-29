@@ -12,10 +12,10 @@ const severities: readonly Severity[] = ["critical", "high", "medium", "low"];
 
 export const dependencyVulnIngest: GithubKindIngest = {
   kinds: [DEPENDENCY_VULN],
-  async fetchRepository(http, repository, credential) {
+  async fetchRepository(http, repository, signal) {
     const rows = await http.paginate<unknown>(
       `/repos/${repository}/dependabot/alerts?state=open&per_page=100`,
-      credential,
+      { signal },
     );
     return rows.filter((raw) => {
       const parsed = GithubDependabotAlert.parse(raw);

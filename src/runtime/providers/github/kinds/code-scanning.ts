@@ -21,12 +21,12 @@ const signal: Record<CodeScanningSeverity, number> = {
 
 export const codeScanningIngest: GithubKindIngest = {
   kinds: [CODE_SCANNING],
-  async fetchRepository(http, repository, credential) {
+  async fetchRepository(http, repository, abortSignal) {
     let rows: readonly unknown[];
     try {
       rows = await http.paginate<unknown>(
         `/repos/${repository}/code-scanning/alerts?state=open&per_page=100`,
-        credential,
+        { signal: abortSignal },
       );
     } catch (error) {
       if (error instanceof GithubHttpError && error.status === 404) return [];

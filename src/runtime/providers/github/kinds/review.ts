@@ -27,10 +27,10 @@ const label = (raw: { name?: string; color?: string }): Label => ({
 
 export const reviewIngest: GithubKindIngest = {
   kinds: [CHANGE_REQUEST, ISSUE],
-  async fetchRepository(http, repository, credential) {
+  async fetchRepository(http, repository, signal) {
     const rows = await http.paginate<unknown>(
       `/repos/${repository}/issues?state=open&per_page=100`,
-      credential,
+      { signal },
     );
     return rows.map((raw) => {
       const parsed = GithubIssue.parse(raw);

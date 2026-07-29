@@ -4,11 +4,17 @@ import type {
   ProviderCommand,
   ProviderDeclaration,
 } from "../../catalog/types";
+import type {
+  BoundProvider,
+  ProviderDefinition,
+} from "../../cached-dataset/provider";
+import { canonicalGithubScope } from "../../cached-dataset/identity";
 import { createGithubHttp, type GithubHttp } from "./http";
 import { GithubPullRequest, GithubCheckRunsResponse } from "./schemas";
 import {
+  type BoundGithubHttp,
   discoverGithubRepositories,
-  refreshGithubKinds,
+  fetchGithubSlices,
   type GithubKindIngest,
 } from "./repository-ingest";
 import { dependencyVulnIngest } from "./kinds/dependency-vuln";
@@ -44,10 +50,9 @@ const actions: Readonly<Partial<Record<Kind, readonly string[]>>> = {
 };
 
 async function enrichGithubItem(
-  http: GithubHttp,
+  http: BoundGithubHttp,
   kind: Kind,
   providerRef: unknown,
-  credential: string,
 ): Promise<unknown> {
   if (kind !== "change-request") {
     throw new ProviderError("github", "enrich", `enrichment is not declared for "${kind}"`);
@@ -55,14 +60,12 @@ async function enrichGithubItem(
   const { repository, number } = reference(providerRef);
   const pullRaw = await http.get<unknown>(
     `/repos/${repository}/pulls/${number}`,
-    credential,
   );
   const pull = GithubPullRequest.parse(pullRaw);
   let checks = null;
   if (pull.head?.sha) {
     const resultRaw = await http.get<unknown>(
       `/repos/${repository}/commits/${pull.head.sha}/check-runs`,
-      credential,
     );
     const result = GithubCheckRunsResponse.parse(resultRaw);
     const runs = result.check_runs ?? [];
@@ -87,9 +90,8 @@ async function enrichGithubItem(
 }
 
 async function executeGithubCommand(
-  http: GithubHttp,
+  http: BoundGithubHttp,
   command: ProviderCommand,
-  credential: string,
 ): Promise<void> {
   const declared = actions[command.kind] ?? [];
   if (!declared.includes(command.action)) {
@@ -126,16 +128,35 @@ async function executeGithubCommand(
     },
   };
   const route = routes[command.action];
-  await http.request(route.path, credential, {
+  await http.request(route.path, {
     method: route.method,
     headers: { "content-type": "application/json" },
     body: JSON.stringify(route.body),
   });
 }
 
+export interface GithubBoundProvider extends BoundProvider {
+  enrich(kind: Kind, providerRef: unknown): Promise<unknown>;
+  execute(command: ProviderCommand): Promise<void>;
+}
+
+export type GithubProviderDefinition =
+  ProviderDefinition & ProviderDeclaration & {
+  bind(credential: string): Promise<GithubBoundProvider>;
+};
+
+const bindHttp = (
+  http: GithubHttp,
+  credential: string,
+): BoundGithubHttp => ({
+  get: (pathOrUrl, init) => http.get(pathOrUrl, credential, init),
+  request: (pathOrUrl, init) => http.request(pathOrUrl, credential, init),
+  paginate: (pathOrUrl, init) => http.paginate(pathOrUrl, credential, init),
+});
+
 export function createGithubProvider(
   fetchImpl: typeof fetch,
-): ProviderDeclaration {
+): GithubProviderDefinition {
   const http = createGithubHttp(fetchImpl);
   return {
     id: "github",
@@ -163,15 +184,56 @@ export function createGithubProvider(
       enrich: ["change-request"],
       actions,
     },
-    adapter: {
-      refresh: (request) =>
-        refreshGithubKinds(http, githubKindIngests, request),
-      discoverScope: (credential) =>
-        discoverGithubRepositories(http, credential),
-      enrich: (kind, providerRef, credential) =>
-        enrichGithubItem(http, kind, providerRef, credential),
-      execute: (command, credential) =>
-        executeGithubCommand(http, command, credential),
+    async bind(rawCredential) {
+      const credential = rawCredential.trim();
+      const boundHttp = bindHttp(http, credential);
+      let closed = false;
+      const ensureOpen = (): void => {
+        if (closed) {
+          throw new ProviderError("github", "connection", "Provider Connection is closed");
+        }
+      };
+      const redact = (message: string): string =>
+        credential.length > 0
+          ? message.split(credential).join("[redacted]")
+          : message;
+
+      return {
+        discoverScope(signal) {
+          ensureOpen();
+          return discoverGithubRepositories(boundHttp, signal);
+        },
+        canonicalizeScope: canonicalGithubScope,
+        targets(scope) {
+          return canonicalGithubScope(scope).repos as readonly string[];
+        },
+        fetchSlices(request) {
+          const stream = async function* () {
+            ensureOpen();
+            yield* fetchGithubSlices(
+              boundHttp,
+              githubKindIngests,
+              {
+                ...request,
+                scope: canonicalGithubScope(request.scope),
+              },
+              redact,
+            );
+          };
+          return stream();
+        },
+        enrich(kind, providerRef) {
+          ensureOpen();
+          return enrichGithubItem(boundHttp, kind, providerRef);
+        },
+        execute(command) {
+          ensureOpen();
+          return executeGithubCommand(boundHttp, command);
+        },
+        close() {
+          closed = true;
+        },
+      };
     },
   };
 }

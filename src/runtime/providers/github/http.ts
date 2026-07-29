@@ -12,13 +12,21 @@ export class GithubHttpError extends Error {
 }
 
 export interface GithubHttp {
-  get<T>(pathOrUrl: string, credential: string): Promise<T>;
+  get<T>(
+    pathOrUrl: string,
+    credential: string,
+    init?: RequestInit,
+  ): Promise<T>;
   request<T>(
     pathOrUrl: string,
     credential: string,
     init?: RequestInit,
   ): Promise<T>;
-  paginate<T>(pathOrUrl: string, credential: string): Promise<readonly T[]>;
+  paginate<T>(
+    pathOrUrl: string,
+    credential: string,
+    init?: RequestInit,
+  ): Promise<readonly T[]>;
 }
 
 const urlFor = (pathOrUrl: string): string =>
@@ -70,14 +78,18 @@ export function createGithubHttp(fetchImpl: typeof fetch): GithubHttp {
     (await fetchResponse(pathOrUrl, credential, init)).json() as Promise<T>;
 
   return {
-    get: <T>(pathOrUrl: string, credential: string) =>
-      request<T>(pathOrUrl, credential),
+    get: <T>(pathOrUrl: string, credential: string, init?: RequestInit) =>
+      request<T>(pathOrUrl, credential, init),
     request,
-    async paginate<T>(pathOrUrl: string, credential: string) {
+    async paginate<T>(
+      pathOrUrl: string,
+      credential: string,
+      init: RequestInit = {},
+    ) {
       const rows: T[] = [];
       let next: string | null = urlFor(pathOrUrl);
       while (next) {
-        const response = await fetchResponse(next, credential);
+        const response = await fetchResponse(next, credential, init);
         rows.push(...await response.json() as T[]);
         const link = response.headers.get("link") ?? "";
         const match = link.match(/<([^>]+)>;\s*rel="next"/);
