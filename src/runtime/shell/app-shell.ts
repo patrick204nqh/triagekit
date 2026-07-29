@@ -38,7 +38,6 @@ import { buildInsightSnapshot } from "../insights/projector";
 import { resolveInsightRoute } from "../insights/routes";
 import type { InsightSnapshot } from "../insights/types";
 import type { Kind } from "../dataset/item";
-import type { TriageFailure } from "../catalog/types";
 import type {
   CachedDatasets,
   ConnectedProvider,
@@ -79,6 +78,10 @@ import {
 } from "../handoff/adapters/download";
 import { mountDelegationComposer } from "../layout/delegation/composer";
 import type { Tier } from "../scoring/tier";
+import {
+  failuresForKinds,
+  providerFailures,
+} from "./failure-scope";
 
 export interface ShellEnv {
   catalog: RuntimeCatalog;
@@ -241,9 +244,10 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
   const activeDatasetSession = () => datasetSessions.get(currentProvider());
   const activeDatasetSnapshot = () => datasetSnapshots.get(currentProvider());
   const activeItems = () => activeDatasetSnapshot()?.items ?? [];
-  const activeFailures = (): readonly TriageFailure[] =>
-    activeDatasetSnapshot()?.slices
-      .flatMap((slice) => slice.failure ? [slice.failure] : []) ?? [];
+  const activeArtifactFailures = () =>
+    failuresForKinds(activeDatasetSnapshot(), active.kinds);
+  const activeProviderFailures = () =>
+    providerFailures(activeDatasetSnapshot());
   const actionPort = {
     available: (item: ScoredItem) =>
       activeDatasetSession()?.available(item) ?? [],
@@ -392,7 +396,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
 
   const core = env.createCore({
     items: activeItems,
-    failures: activeFailures,
+    failures: activeArtifactFailures,
     refresh: async () => {
       await activeDatasetSession()?.refresh();
     },
@@ -688,7 +692,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
       return;
     }
 
-    const failures = activeFailures();
+    const failures = activeProviderFailures();
     insightSnapshot = projectInsights();
     if (insightSnapshot) {
       renderInsights(root, insightSnapshot, {
@@ -708,7 +712,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
         return;
       }
       const hasItems = activeItems().length > 0;
-      const currentFailures = activeFailures();
+      const currentFailures = activeProviderFailures();
       renderInsights(root, insightSnapshot, {
         state: hasItems
           ? (currentFailures.length ? "partial" : "ready")

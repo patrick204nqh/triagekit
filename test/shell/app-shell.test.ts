@@ -376,6 +376,63 @@ describe("mountShell artifact navigation", () => {
     }
   });
 
+  it("shows provider failures only on the artifact that owns their kind", async () => {
+    sessionStorage.setItem("triagekit.cred.github", "token");
+    localStorage.setItem(
+      "triagekit.scope.github",
+      JSON.stringify({ repos: ["acme-corp/web"] }),
+    );
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(
+      async (input) => {
+        const url = String(input);
+        if (url.includes("/dependabot/alerts")) {
+          return new Response(JSON.stringify([{
+            number: 1,
+            security_advisory: {
+              severity: "critical",
+              cvss: { score: 10 },
+            },
+            security_vulnerability: {
+              first_patched_version: { identifier: "2.0.0" },
+            },
+            dependency: {
+              scope: "runtime",
+              package: { name: "demo-package" },
+            },
+            created_at: "2026-07-01T00:00:00Z",
+            html_url: "https://example.invalid/dependabot/1",
+          }]), { status: 200 });
+        }
+        if (url.includes("/code-scanning/alerts")) {
+          return new Response(JSON.stringify({
+            message: "Code Security must be enabled for this repository to use code scanning.",
+          }), { status: 403 });
+        }
+        return new Response("[]", { status: 200 });
+      },
+    );
+
+    try {
+      const shell = bootstrap(config);
+      await shell.ready;
+      await vi.waitFor(() =>
+        expect(document.querySelector("#root")?.textContent)
+          .toContain("demo-package"));
+      expect(document.querySelector("#root .warnings")).toBeNull();
+
+      const codeScanning = [
+        ...document.querySelectorAll<HTMLButtonElement>("#domainRail button"),
+      ].find((button) => button.textContent?.trim() === "Code scanning");
+      expect(codeScanning).toBeDefined();
+      codeScanning!.click();
+
+      await vi.waitFor(() =>
+        expect(document.querySelector("#root .warnings")).not.toBeNull());
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
   it("renders neutral, provider-agnostic kind nouns in the sidebar rail", async () => {
     // The sidebar rail is a shared nav surface, so it shows the NEUTRAL KIND_LABEL
     // noun ("Change requests"/"Issues"), not a per-provider noun. GitHub's manifest
