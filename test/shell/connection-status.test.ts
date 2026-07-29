@@ -155,4 +155,26 @@ describe("mountConnectionStatus", () => {
     controller.close();
     expect(menu.hidden).toBe(true);
   });
+
+  it("links the trigger to an accessibly named menu", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const controller = mountConnectionStatus(host, {
+      openSettings: vi.fn(),
+    });
+    controller.render(model());
+    const trigger = host.querySelector<HTMLButtonElement>(
+      "[data-connection-status-trigger]",
+    )!;
+    const menu = host.querySelector<HTMLElement>(
+      "[data-connection-status-menu]",
+    )!;
+
+    expect(trigger.getAttribute("aria-controls")).toBe(menu.id);
+    expect(menu.getAttribute("aria-labelledby")).not.toBeNull();
+    expect(document.getElementById(menu.getAttribute("aria-labelledby")!))
+      .not.toBeNull();
+    expect(host.querySelector("[data-status-connections]")).not.toBeNull();
+    expect(host.querySelector("[data-status-repositories]")).not.toBeNull();
+  });
 });

@@ -30,6 +30,8 @@ export interface RepositorySettingsController {
   resetView(): void;
 }
 
+let workspaceSequence = 0;
+
 function button(label: string, data: Record<string, string>): HTMLButtonElement {
   const element = document.createElement("button");
   element.type = "button";
@@ -89,11 +91,28 @@ export function mountRepositorySettings(
     ).saved;
     const selected = new Set(snapshot.repositories);
     host.replaceChildren();
+    const workspace = document.createElement("div");
+    workspace.className = "repository-workspace";
+    const headingId = `repository-workspace-${++workspaceSequence}`;
+    const header = document.createElement("header");
+    header.className = "repository-workspace-header";
+    const heading = document.createElement("h2");
+    heading.id = headingId;
+    heading.textContent = "Repository scope";
+    const introduction = document.createElement("p");
+    introduction.textContent =
+      "Choose repositories and set their triage priority.";
+    header.append(heading, introduction);
+    workspace.setAttribute("aria-labelledby", headingId);
+    workspace.append(header);
+    host.append(workspace);
 
     if (options.providers.length > 1) {
       const label = document.createElement("label");
+      label.className = "repository-provider";
       label.textContent = "Provider";
       const selector = document.createElement("select");
+      selector.className = "repository-provider-select";
       selector.dataset.providerSelect = "";
       for (const provider of options.providers) {
         const option = document.createElement("option");
@@ -109,11 +128,12 @@ export function mountRepositorySettings(
         render();
       });
       label.append(selector);
-      host.append(label);
+      header.append(label);
     }
 
     if (!snapshot.connected) {
       const disconnected = document.createElement("div");
+      disconnected.className = "repository-empty";
       disconnected.dataset.repositoryDisconnected = "";
       const copy = document.createElement("p");
       copy.textContent = `${snapshot.provider} is not connected.`;
@@ -122,17 +142,20 @@ export function mountRepositorySettings(
         options.openConnections(activeProvider);
       });
       disconnected.append(copy, open);
-      host.append(disconnected);
+      workspace.append(disconnected);
       return;
     }
 
     const selectedHeading = document.createElement("h3");
+    selectedHeading.id = `${headingId}-selected`;
     selectedHeading.textContent = "Selected";
     const selectedCount = document.createElement("span");
+    selectedCount.className = "repository-count";
     selectedCount.dataset.selectedCount = "";
     selectedCount.textContent = `${snapshot.repositories.length} selected`;
     const selectedFilter = document.createElement("input");
     selectedFilter.type = "search";
+    selectedFilter.className = "repository-search";
     selectedFilter.dataset.selectedSearch = "";
     selectedFilter.setAttribute("aria-label", "Search selected repositories");
     selectedFilter.value = selectedSearch;
@@ -141,6 +164,7 @@ export function mountRepositorySettings(
       render();
     });
     const selectedList = document.createElement("div");
+    selectedList.className = "repository-list";
     const discovered = discoveries.get(snapshot.discoveryKey);
     const discoveredValues = new Set(
       discovered?.map((option) => option.value) ?? [],
@@ -151,6 +175,7 @@ export function mountRepositorySettings(
         continue;
       }
       const row = document.createElement("div");
+      row.className = "repository-row selected";
       row.dataset.selectedRepository = "";
       row.dataset.repository = repository;
       row.tabIndex = 0;
@@ -174,23 +199,31 @@ export function mountRepositorySettings(
         draggedRepository = undefined;
       });
       const name = document.createElement("span");
+      name.className = "repository-name";
       name.textContent = repository;
-      const drag = button("Drag", { repositoryDrag: repository });
+      const drag = button("⋮⋮", { repositoryDrag: repository });
+      drag.classList.add("repository-handle");
+      drag.setAttribute("aria-label", `Drag ${repository} to reorder`);
       drag.draggable = true;
       drag.addEventListener("dragstart", () => {
         draggedRepository = repository;
       });
-      const up = button("Move up", { repositoryUp: repository });
+      const rank = document.createElement("span");
+      rank.className = "repository-rank";
+      rank.textContent = String(index + 1);
+      const up = button("↑", { repositoryUp: repository });
+      up.setAttribute("aria-label", `Move ${repository} up`);
       up.disabled = index === 0;
       up.addEventListener("click", () => {
         move(repository, index - 1);
       });
-      const down = button("Move down", { repositoryDown: repository });
+      const down = button("↓", { repositoryDown: repository });
+      down.setAttribute("aria-label", `Move ${repository} down`);
       down.disabled = index === ordered.length - 1;
       down.addEventListener("click", () => {
         move(repository, index + 1);
       });
-      row.append(drag, name);
+      row.append(drag, rank, name);
       if (discovered && !discoveredValues.has(repository)) {
         const unavailable = document.createElement("span");
         unavailable.dataset.unavailableSelected = "";
@@ -213,9 +246,11 @@ export function mountRepositorySettings(
     discover.disabled = pending;
     if (pending) discover.textContent = "Scanning…";
     const availableHeading = document.createElement("h3");
+    availableHeading.id = `${headingId}-available`;
     availableHeading.textContent = "Available";
     const availableFilter = document.createElement("input");
     availableFilter.type = "search";
+    availableFilter.className = "repository-search";
     availableFilter.dataset.availableSearch = "";
     availableFilter.setAttribute("aria-label", "Search available repositories");
     availableFilter.value = availableSearch;
@@ -224,15 +259,18 @@ export function mountRepositorySettings(
       render();
     });
     const availableList = document.createElement("div");
+    availableList.className = "repository-list";
     for (const option of discovered ?? []) {
       if (selected.has(option.value)) continue;
       if (!option.value.toLowerCase().includes(availableSearch.toLowerCase())) {
         continue;
       }
       const row = document.createElement("div");
+      row.className = "repository-row available";
       row.dataset.availableRepository = "";
       row.dataset.repository = option.value;
       const name = document.createElement("span");
+      name.className = "repository-name";
       name.textContent = option.value;
       row.append(
         name,
@@ -241,29 +279,39 @@ export function mountRepositorySettings(
       availableList.append(row);
     }
 
-    host.append(
+    const selectedSection = document.createElement("section");
+    selectedSection.className = "repository-section repository-selected";
+    selectedSection.setAttribute("aria-labelledby", selectedHeading.id);
+    selectedSection.append(
       selectedHeading,
       selectedCount,
       selectedFilter,
       selectedList,
+    );
+    const availableSection = document.createElement("section");
+    availableSection.className = "repository-section repository-available";
+    availableSection.setAttribute("aria-labelledby", availableHeading.id);
+    availableSection.append(
       availableHeading,
       availableFilter,
       discover,
     );
     const status = document.createElement("p");
+    status.className = "repository-status";
     status.dataset.repositoryStatus = "";
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
-    host.append(status);
+    selectedSection.append(status);
     const error = discoveryErrors.get(snapshot.discoveryKey);
     if (error) {
       const alert = document.createElement("p");
       alert.setAttribute("role", "alert");
       alert.dataset.discoveryError = "";
       alert.textContent = error;
-      host.append(alert);
+      availableSection.append(alert);
     }
-    host.append(availableList);
+    availableSection.append(availableList);
+    workspace.append(selectedSection, availableSection);
 
     discover.addEventListener("click", async () => {
       pendingDiscoveries.add(snapshot.discoveryKey);

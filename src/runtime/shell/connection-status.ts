@@ -83,6 +83,8 @@ export function mountConnectionStatus(
   menu.hidden = true;
   const heading = document.createElement("div");
   heading.className = "connection-status-heading";
+  heading.id = `${menuId}-heading`;
+  menu.setAttribute("aria-labelledby", heading.id);
   const menuIcon = document.createElement("span");
   const menuProvider = document.createElement("strong");
   const connection = document.createElement("span");

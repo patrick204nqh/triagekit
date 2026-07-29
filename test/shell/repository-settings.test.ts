@@ -291,4 +291,20 @@ describe("mountRepositorySettings", () => {
       ],
     });
   });
+
+  it("uses labeled sections, a live region, and visible ordering alternatives", () => {
+    const { host, controller } = mount({
+      repositories: ["acme-corp/core", "acme-corp/web"],
+    });
+    controller.show("github");
+
+    expect(host.querySelector("h2")?.textContent).toContain(
+      "Repository scope",
+    );
+    expect(host.querySelectorAll("section[aria-labelledby]")).toHaveLength(2);
+    expect(host.querySelector("[data-repository-status]")?.getAttribute("role"))
+      .toBe("status");
+    expect(host.querySelector("[data-repository-up]")).not.toBeNull();
+    expect(host.querySelector("[data-repository-down]")).not.toBeNull();
+  });
 });
