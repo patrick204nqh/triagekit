@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { copyMarkdown } from "../../../src/runtime/handoff/adapters/clipboard";
-import { filenameFor, downloadMarkdown, downloadJSON } from "../../../src/runtime/handoff/adapters/download";
+import {
+  downloadJson,
+  downloadJSON,
+  downloadMarkdown,
+  downloadText,
+  filenameFor,
+} from "../../../src/runtime/handoff/adapters/download";
 import type { AgentHandoffV1 } from "../../../src/runtime/handoff/types";
 
 const handoff: AgentHandoffV1 = {
@@ -23,6 +29,7 @@ const handoff: AgentHandoffV1 = {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
   Object.defineProperty(navigator, "clipboard", {
     value: { writeText: vi.fn() },
     writable: true,
@@ -73,5 +80,22 @@ describe("downloadJSON", () => {
     vi.spyOn(URL, "revokeObjectURL").mockReturnValue();
     const r = downloadJSON(handoff);
     expect(r).toEqual({ ok: true });
+  });
+});
+
+describe("generic downloads", () => {
+  it("downloads arbitrary safe text and JSON payloads", () => {
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");
+    vi.spyOn(URL, "revokeObjectURL").mockReturnValue();
+    expect(downloadText(
+      "triagekit-delegation.md",
+      "# bundle",
+      "text/markdown",
+    )).toEqual({ ok: true });
+    expect(downloadJson(
+      "triagekit-delegation.json",
+      { schema: "triagekit.delegation-bundle" },
+    )).toEqual({ ok: true });
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(2);
   });
 });

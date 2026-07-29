@@ -1,5 +1,8 @@
 import type { Kind } from "../dataset/item";
-import type { HandoffIntent } from "../handoff/types";
+import type {
+  HandoffIntent,
+  HandoffTargetV1,
+} from "../handoff/types";
 import type { ScoredItem } from "../layout/table/kind-renderer";
 
 export interface QueueIdentity {
@@ -80,3 +83,47 @@ export interface PlanPackagesInput {
   readonly includeLabels?: readonly string[];
   readonly excludeLabels?: readonly string[];
 }
+
+export interface DelegationFocusV1 {
+  readonly provider: string;
+  readonly repositoryOrder: readonly string[];
+  readonly includeLabels: readonly string[];
+  readonly excludeLabels: readonly string[];
+}
+
+export interface DelegationInstructionsV1 {
+  readonly processPackagesInOrder: true;
+  readonly generatedFrom: "explicit-session-queue";
+}
+
+export interface WorkPackageV1 {
+  readonly id: string;
+  readonly order: number;
+  readonly repository: string;
+  readonly kind: Kind;
+  readonly intent: HandoffIntent;
+  readonly targets: readonly HandoffTargetV1[];
+  readonly selectionReason: string;
+}
+
+export interface DelegationBundleV1 {
+  readonly schema: "triagekit.delegation-bundle";
+  readonly version: 1;
+  readonly createdAt: string;
+  readonly focus: DelegationFocusV1;
+  readonly instructions: DelegationInstructionsV1;
+  readonly packages: readonly WorkPackageV1[];
+}
+
+export interface DelegationValidationError {
+  readonly packageId?: string;
+  readonly field: string;
+  readonly message: string;
+}
+
+export type DelegationValidationResult =
+  | { readonly valid: true }
+  | {
+    readonly valid: false;
+    readonly errors: readonly DelegationValidationError[];
+  };

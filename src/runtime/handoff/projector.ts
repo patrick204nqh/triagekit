@@ -16,12 +16,20 @@ export interface ProjectInput {
   timestamp?: string;
 }
 
-export function project(input: ProjectInput): AgentHandoffV1 {
-  const { item, explanation, session, catalog, timestamp } = input;
+export interface TargetProjectionInput {
+  item: ScoredItem;
+  explanation: ScoreExplanation | null;
+  catalog: RuntimeCatalog;
+}
+
+export function projectTarget(
+  input: TargetProjectionInput,
+): HandoffTargetV1 {
+  const { item, explanation, catalog } = input;
   const kindDecl = catalog.readyKind(item.kind);
   const kindProjection = kindDecl?.projectTarget?.(item);
 
-  const target: HandoffTargetV1 = {
+  return {
     id: item.id,
     kind: item.kind,
     provider: item.provider,
@@ -45,6 +53,11 @@ export function project(input: ProjectInput): AgentHandoffV1 {
     },
     details: kindProjection?.details ?? {},
   };
+}
+
+export function project(input: ProjectInput): AgentHandoffV1 {
+  const { item, explanation, session, catalog, timestamp } = input;
+  const target = projectTarget({ item, explanation, catalog });
 
   const baseIntent = defaultIntent(item.kind);
   const mergedIntent: HandoffIntent = {
