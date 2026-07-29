@@ -66,6 +66,23 @@ const actionRequest = (pathOrUrl: string): ScheduledRequest => ({
 });
 
 describe("GitHub request scheduler", () => {
+  it("invokes browser fetch with the global receiver", async () => {
+    const receiverSensitiveFetch = function (
+      this: typeof globalThis,
+    ): Promise<Response> {
+      if (this !== globalThis) {
+        throw new TypeError("Illegal invocation");
+      }
+      return Promise.resolve(new Response("{}", { status: 200 }));
+    } as typeof fetch;
+    const scheduler = createGithubRequestScheduler({
+      fetch: receiverSensitiveFetch,
+    });
+
+    await expect(scheduler.run(actionRequest("/user/repos")))
+      .resolves.toMatchObject({ status: 200 });
+  });
+
   it("runs at most four requests", async () => {
     const fixture = schedulerFixture(4);
     const requests = Array.from({ length: 8 }, (_, index) =>

@@ -160,7 +160,7 @@ export const createGithubRequestScheduler = (
       signal.throwIfAborted();
       let response: Response;
       try {
-        response = await options.fetch(request.pathOrUrl, {
+        response = await options.fetch.call(globalThis, request.pathOrUrl, {
           ...request.init,
           signal,
         });
