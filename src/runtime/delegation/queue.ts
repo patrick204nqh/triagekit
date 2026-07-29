@@ -105,6 +105,32 @@ export function createDelegationQueue(
       if (added > 0) publish();
       return added;
     },
+    setSelectedMany(identities, selected, selectedAt) {
+      let changed = 0;
+      const visited = new Set<string>();
+      for (const identity of identities) {
+        const key = queueKey(identity);
+        if (visited.has(key)) continue;
+        visited.add(key);
+        const entry = entries.get(key);
+        if (entry) {
+          if (entry.selected === selected) continue;
+          entries.set(key, freezeEntry({ ...entry, selected }));
+          changed += 1;
+          continue;
+        }
+        if (!selected) continue;
+        entries.set(key, freezeEntry({
+          identity,
+          selectedAt,
+          selected: true,
+          status: "queued",
+        }));
+        changed += 1;
+      }
+      if (changed > 0) publish();
+      return changed;
+    },
     remove(key) {
       const removed = entries.delete(key);
       if (removed) publish();

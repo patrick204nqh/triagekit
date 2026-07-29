@@ -93,4 +93,51 @@ describe("delegation queue", () => {
       { itemId: "2", status: "blocked", selected: false },
     ]);
   });
+
+  it("selects and deselects identity batches with one published snapshot", () => {
+    const queue = createDelegationQueue();
+    const retained = identity("retained");
+    queue.add(retained, 1000);
+    queue.transition(queueKey(retained), {
+      status: "changed",
+      selected: false,
+    });
+    const listener = vi.fn();
+    queue.subscribe(listener);
+
+    expect(queue.setSelectedMany(
+      [retained, identity("new"), identity("new")],
+      true,
+      2000,
+    )).toBe(2);
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(queue.snapshot().entries).toEqual([
+      expect.objectContaining({
+        identity: expect.objectContaining({ itemId: "retained" }),
+        status: "changed",
+        selected: true,
+        selectedAt: 1000,
+      }),
+      expect.objectContaining({
+        identity: expect.objectContaining({ itemId: "new" }),
+        status: "queued",
+        selected: true,
+        selectedAt: 2000,
+      }),
+    ]);
+
+    listener.mockClear();
+    expect(queue.setSelectedMany(
+      [retained, identity("new"), identity("missing")],
+      false,
+      3000,
+    )).toBe(2);
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(queue.snapshot().entries).toHaveLength(2);
+    expect(queue.snapshot().entries.every((entry) => !entry.selected)).toBe(true);
+    expect(queue.snapshot().entries[0]).toMatchObject({
+      status: "changed",
+      selectedAt: 1000,
+    });
+  });
 });

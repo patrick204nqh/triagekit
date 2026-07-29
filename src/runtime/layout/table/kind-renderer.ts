@@ -34,12 +34,31 @@ export interface KindRenderer {
   columns?: { header: string; cell: (i: ScoredItem) => string }[];
   detail?: (i: ScoredItem, ctx: DetailCtx) => DetailView;
 }
-export function warningsHtml(errors: TriageFailure[]): string {
+export function warningsHtml(
+  errors: readonly TriageFailure[],
+  surfaceLabel: string,
+): string {
   if (!errors.length) return "";
-  const items = errors.map(e => {
-    const target = e.target ?? e.kind ?? e.provider;
-    return `<li>${esc(target)}: ${esc(e.message)}</li>`;
-  }).join("");
-  const noun = errors.length === 1 ? "target" : "targets";
-  return `<div class="warnings"><strong>${errors.length} ${noun} couldn't be loaded</strong><ul>${items}</ul></div>`;
+  const grouped = new Map<string, Set<string>>();
+  for (const error of errors) {
+    const repositories = grouped.get(error.message) ?? new Set<string>();
+    repositories.add(error.target ?? error.kind ?? error.provider);
+    grouped.set(error.message, repositories);
+  }
+  const repositories = new Set(
+    [...grouped.values()].flatMap((targets) => [...targets]),
+  );
+  const noun = repositories.size === 1 ? "repository" : "repositories";
+  const causes = [...grouped.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([message, targets]) =>
+      `<li data-warning-cause><span>${esc(message)}</span><ul>${
+        [...targets]
+          .sort((left, right) => left.localeCompare(right))
+          .map((target) =>
+            `<li data-warning-repository>${esc(target)}</li>`)
+          .join("")
+      }</ul></li>`)
+    .join("");
+  return `<details class="warnings"><summary><strong>${esc(surfaceLabel)} unavailable in ${repositories.size} ${noun}</strong><span class="warning-show">Show details</span><span class="warning-hide">Hide details</span></summary><ul class="warning-causes">${causes}</ul></details>`;
 }

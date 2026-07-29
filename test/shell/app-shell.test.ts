@@ -376,6 +376,153 @@ describe("mountShell artifact navigation", () => {
     }
   });
 
+  it("shows provider failures only on the artifact that owns their kind", async () => {
+    sessionStorage.setItem("triagekit.cred.github", "token");
+    localStorage.setItem(
+      "triagekit.scope.github",
+      JSON.stringify({ repos: ["acme-corp/web"] }),
+    );
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(
+      async (input) => {
+        const url = String(input);
+        if (url.includes("/dependabot/alerts")) {
+          return new Response(JSON.stringify([{
+            number: 1,
+            security_advisory: {
+              severity: "critical",
+              cvss: { score: 10 },
+            },
+            security_vulnerability: {
+              first_patched_version: { identifier: "2.0.0" },
+            },
+            dependency: {
+              scope: "runtime",
+              package: { name: "demo-package" },
+            },
+            created_at: "2026-07-01T00:00:00Z",
+            html_url: "https://example.invalid/dependabot/1",
+          }]), { status: 200 });
+        }
+        if (url.includes("/code-scanning/alerts")) {
+          return new Response(JSON.stringify({
+            message: "Code Security must be enabled for this repository to use code scanning.",
+          }), { status: 403 });
+        }
+        return new Response("[]", { status: 200 });
+      },
+    );
+
+    try {
+      const shell = bootstrap(config);
+      await shell.ready;
+      await vi.waitFor(() =>
+        expect(document.querySelector("#root")?.textContent)
+          .toContain("demo-package"));
+      expect(document.querySelector("#root .warnings")).toBeNull();
+
+      const codeScanning = [
+        ...document.querySelectorAll<HTMLButtonElement>("#domainRail button"),
+      ].find((button) => button.textContent?.trim() === "Code scanning");
+      expect(codeScanning).toBeDefined();
+      codeScanning!.click();
+
+      await vi.waitFor(() =>
+        expect(document.querySelector("#root details.warnings")).not.toBeNull());
+      const warning = document.querySelector<HTMLDetailsElement>(
+        "#root details.warnings",
+      )!;
+      expect(warning.open).toBe(false);
+      expect(warning.querySelector("summary")?.textContent)
+        .toContain("Code scanning unavailable in 1 repository");
+      warning.open = true;
+      expect(warning.textContent).toContain("acme-corp/web");
+      expect(warning.textContent).toContain("Code Security must be enabled");
+
+      const dependencies = [
+        ...document.querySelectorAll<HTMLButtonElement>("#domainRail button"),
+      ].find((button) => button.textContent?.trim() === "Dependencies");
+      dependencies!.click();
+      await vi.waitFor(() =>
+        expect(document.querySelector("#root .warnings")).toBeNull());
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("bulk-selects and clears only dependency rows visible in the repository filter", async () => {
+    sessionStorage.setItem("triagekit.cred.github", "token");
+    localStorage.setItem(
+      "triagekit.scope.github",
+      JSON.stringify({ repos: ["acme-corp/web", "acme-corp/api"] }),
+    );
+    const fetchSpy = mockGithubItems([
+      {
+        ...dependencyItem("web-one", "acme-corp/web"),
+        providerRef: { number: 1 },
+      },
+      {
+        ...dependencyItem("web-two", "acme-corp/web"),
+        providerRef: { number: 2 },
+      },
+      dependencyItem("api-one", "acme-corp/api"),
+    ]);
+
+    try {
+      const shell = bootstrap(config);
+      await shell.ready;
+      await vi.waitFor(() =>
+        expect(document.querySelectorAll("#root .alert-row")).toHaveLength(3));
+
+      document.querySelector<HTMLElement>(
+        "[data-repo='acme-corp/web']",
+      )!.click();
+      await vi.waitFor(() =>
+        expect(document.querySelectorAll("#root .alert-row")).toHaveLength(2));
+      document.querySelector<HTMLInputElement>(
+        "[data-toggle-visible]",
+      )!.click();
+      await vi.waitFor(() =>
+        expect(document.querySelector("[data-queue-badge]")?.textContent)
+          .toContain("2 selected · 2 retained"));
+
+      document.querySelector<HTMLElement>("[data-repo='']")!.click();
+      await vi.waitFor(() =>
+        expect(document.querySelectorAll("#root .alert-row")).toHaveLength(3));
+      let bulk = document.querySelector<HTMLInputElement>(
+        "[data-toggle-visible]",
+      )!;
+      expect(bulk.checked).toBe(false);
+      expect(bulk.indeterminate).toBe(true);
+      bulk.click();
+      await vi.waitFor(() =>
+        expect(document.querySelector("[data-queue-badge]")?.textContent)
+          .toContain("3 selected · 3 retained"));
+
+      document.querySelector<HTMLElement>(
+        "[data-repo='acme-corp/web']",
+      )!.click();
+      bulk = document.querySelector("[data-toggle-visible]")!;
+      expect(bulk.checked).toBe(true);
+      bulk.click();
+      await vi.waitFor(() =>
+        expect(document.querySelector("[data-queue-badge]")?.textContent)
+          .toContain("1 selected · 3 retained"));
+
+      document.querySelector<HTMLElement>("[data-repo='']")!.click();
+      await vi.waitFor(() =>
+        expect(document.querySelectorAll("#root .alert-row")).toHaveLength(3));
+      const selectedRows = [
+        ...document.querySelectorAll<HTMLElement>("#root .alert-row"),
+      ].filter((row) =>
+        row.querySelector("[data-queue-select]")?.getAttribute("aria-pressed")
+          === "true");
+      expect(selectedRows).toHaveLength(1);
+      expect(selectedRows[0].textContent).toContain("acme-corp/api");
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
   it("renders neutral, provider-agnostic kind nouns in the sidebar rail", async () => {
     // The sidebar rail is a shared nav surface, so it shows the NEUTRAL KIND_LABEL
     // noun ("Change requests"/"Issues"), not a per-provider noun. GitHub's manifest

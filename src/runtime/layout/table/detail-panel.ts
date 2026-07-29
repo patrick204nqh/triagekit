@@ -166,7 +166,11 @@ export function renderTriageList(
   ctx: DetailCtx = {},
   catalog: RuntimeCatalog = runtimeCatalog,
 ): void {
-  const warnings = warningsHtml(errors);
+  const failureKind = errors[0]?.kind;
+  const surfaceLabel = failureKind
+    ? catalog.kind(failureKind)?.label ?? "Data"
+    : "Data";
+  const warnings = warningsHtml(errors, surfaceLabel);
   if (!rows.length) {
     root.innerHTML = warnings + `<div class="empty">
       <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
