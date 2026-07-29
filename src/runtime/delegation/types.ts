@@ -4,6 +4,11 @@ import type {
   HandoffTargetV1,
 } from "../handoff/types";
 import type { ScoredItem } from "../layout/table/kind-renderer";
+import type {
+  DatasetSession,
+  DatasetSnapshot,
+} from "../cached-dataset/types";
+import type { TriageItem } from "../dataset/item";
 
 export interface QueueIdentity {
   readonly provider: string;
@@ -127,3 +132,29 @@ export type DelegationValidationResult =
     readonly valid: false;
     readonly errors: readonly DelegationValidationError[];
   };
+
+export interface QueueRevalidationTransition {
+  readonly key: string;
+  readonly itemId: string;
+  readonly status:
+    | "current"
+    | "changed"
+    | "resolved"
+    | "unavailable"
+    | "blocked";
+  readonly selected: boolean;
+  readonly reason?: string;
+  readonly changedFields?: readonly string[];
+}
+
+export interface RevalidationResult {
+  readonly transitions: readonly QueueRevalidationTransition[];
+}
+
+export interface RevalidateQueueInput {
+  readonly entries: readonly QueueEntry[];
+  readonly before: DatasetSnapshot;
+  readonly session: DatasetSession | null;
+  readonly project: (item: TriageItem) => unknown;
+  readonly onChecking?: (entries: readonly QueueEntry[]) => void;
+}
