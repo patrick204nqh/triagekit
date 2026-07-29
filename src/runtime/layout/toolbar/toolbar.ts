@@ -73,7 +73,7 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
     .filter((axis) => axis.id !== "labels")
     .filter(a => a.appliesTo(p.rows, ctx));
   const labelAxis = catalog.filtersFor(p.artifact.kinds[0])
-    .find((axis) => axis.id === "labels");
+    .find((axis) => axis.id === "labels" && axis.appliesTo(p.rows, ctx));
   const sorts = catalog.sortsFor(p.artifact.kinds[0])
     .filter(s => !s.appliesTo || s.appliesTo(ctx));
   const sel = (id: string) => p.filters.axes[id] ?? [];
@@ -131,14 +131,16 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
       ${search}${long ? `<div class="opt-scroll">${items}</div>` : items}
     </div>`;
   };
-  const labelRules = `<div class="label-rules-head">
+  const labelRules = labelAxis
+    ? `<div class="label-rules-head">
       <span>Label focus</span>
       <button class="clear" data-label-rules-toggle>${p.focusPolicy.labels.enabled ? "Disable" : "Enable"}</button>
     </div>
     <div data-label-rules${p.focusPolicy.labels.enabled ? "" : " aria-disabled=\"true\""}>
       ${labelLane("include", "Show if labelled", p.focusPolicy.labels.include)}
       ${labelLane("exclude", "Hide if labelled", p.focusPolicy.labels.exclude)}
-    </div>`;
+    </div>`
+    : "";
   const genericBody = axes.map(axisGroup).join("");
   const filterBody = `${genericBody}${labelRules}`;
   const filterFoot = fcount
@@ -156,7 +158,7 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
     ...p.focusPolicy.labels.exclude.map((label) => `Not label: ${label}`),
   ];
   const labelSummaryText = p.focusPolicy.labels.enabled
-    ? (labelSummaryParts.join(" · ") || "All labels")
+    ? labelSummaryParts.join(" · ")
     : "Label focus paused";
   const labelSummaryActions = [
     ...p.focusPolicy.labels.include.map((label) =>
@@ -164,13 +166,16 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
     ...p.focusPolicy.labels.exclude.map((label) =>
       `<button class="focus-label-remove" data-remove-label="exclude" data-val="${esc(label)}" aria-label="Remove ${esc(label)} from hidden labels">×</button>`),
   ].join("");
+  const labelSummary = labelAxis && labelSummaryText
+    ? `<div class="focus-label-summary"><span>${esc(labelSummaryText)}</span>${labelSummaryActions}</div>`
+    : "";
 
   host.innerHTML = `<div class="toolbar">
       <div class="tb-left" role="tablist" aria-label="Dashboard view">${views}<span class="tb-count">${countLabel}</span></div>
     <div class="tb-right"><div data-provider-switch></div></div>
   </div>
   <div class="fbar">
-    <div class="fbar-focus"><div data-repo-tabs></div><div class="focus-label-summary"><span>${esc(labelSummaryText)}</span>${labelSummaryActions}</div></div>
+    <div class="fbar-focus"><div data-repo-tabs></div>${labelSummary}</div>
     <div class="fbar-controls">
       <div data-delegation-selection></div>
       <div class="tb-ctl"><button class="tb-btn" data-tb-filter aria-haspopup="true" aria-controls="tb-pop-filter">≡ Filter${fcount ? ` · ${fcount}` : ""}</button>${filterPop}</div>

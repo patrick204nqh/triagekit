@@ -35,6 +35,23 @@ const labelledRows = (...labels: { name: string; color: string }[]): ScoredItem[
 } as ScoredItem];
 
 describe("renderToolbar", () => {
+  it("omits label focus controls for kinds without labels", () => {
+    const host = document.createElement("div");
+    renderToolbar(host, props({
+      artifact: {
+        id: "dependency-vuln",
+        label: "Dependencies",
+        group: "findings",
+        kinds: ["dependency-vuln"],
+      },
+    }));
+
+    expect(host.querySelector(".focus-label-summary")).toBeNull();
+    expect(host.querySelector("[data-label-rules-toggle]")).toBeNull();
+    expect(host.textContent).not.toContain("All labels");
+    expect(host.textContent).not.toContain("Label focus");
+  });
+
   it("renders explicit include and exclude lanes with exclusion summary", () => {
     const host = document.createElement("div");
     renderToolbar(host, props({
