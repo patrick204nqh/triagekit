@@ -11,9 +11,11 @@ scripts/anon-denylist.txt
 .claude/skills/
 .claude/worktrees/
 docs/superpowers/
+docs/specs/
 
 # brainstorming visual companion
 .superpowers/
+.tokensave/
 
 # local scratch (handoffs, notes)
 tmp/

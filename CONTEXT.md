@@ -25,6 +25,24 @@ Architecture decisions: `docs/adr/README.md`. Load relevant ADRs per task.
 
 <GOAL_END>
 
+## Domain language
+
+**Cached Dataset**:
+Provider-fetched triage data retained in browser-controlled storage across sessions. It is partitioned by provider and scope, has bounded retention, and never contains provider credentials.
+_Avoid_: response cache, offline copy, persisted token data
+
+**Provider Connection**:
+A user-authorized relationship with one provider, one credential identity, and a selected triage scope. A Cached Dataset belongs to exactly one Provider Connection and is never visible through another.
+_Avoid_: account, integration, source
+
+**Dataset Slice**:
+The portion of a Cached Dataset for one Kind and one provider target within one Provider Connection. A refresh replaces each Dataset Slice atomically; a failed target leaves its prior Slice available and visibly stale while other targets can become fresh.
+_Avoid_: response page, result batch
+
+**Triage Action**:
+A provider-neutral operator intent applied to one triage item, such as merge, close, comment, label, or assign. Its availability, validation, and provider implementation are defined together.
+_Avoid_: provider command, raw request, mutation payload
+
 ## Source architecture
 
 triagekit has 4 layers compiled into 2 artifacts:
@@ -124,7 +142,3 @@ C) Ask — seems intentional
 
 → Which approach?
 ```
-
-
-
-
