@@ -1,15 +1,14 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
 import {
-  mountDelegationComposer,
+  mountHandoffComposer,
 } from "../../src/runtime/layout/delegation/composer";
 
-function controllerWith(
-  withError = true,
-  overrides: Record<string, unknown> = {},
-) {
+function controllerWith(overrides: Record<string, unknown> = {}) {
   let snapshot = {
     open: true,
+    mode: "investigate",
+    missionNote: undefined,
     selectedCount: 1,
     retainedCount: 1,
     remainingPackages: 0,
@@ -18,10 +17,15 @@ function controllerWith(
       order: 1,
       repository: "acme-corp/core",
       kind: "issue",
+      generatedIntent: {
+        outcome: "Investigate the selected issues",
+        constraints: ["Do not modify files."],
+        verification: ["Outline a concrete action plan."],
+      },
       intent: {
-        outcome: withError ? "" : "Triage selected issues",
-        constraints: [],
-        verification: [],
+        outcome: "Investigate the selected issues",
+        constraints: ["Do not modify files."],
+        verification: ["Outline a concrete action plan."],
       },
       targets: [{
         id: "github:42",
@@ -33,12 +37,8 @@ function controllerWith(
       }],
       selectionReason: "Repository priority 1",
     }],
-    errors: withError ? [{
-      packageId: "pkg-core-issues",
-      field: "intent.outcome",
-      message: "Outcome must be non-empty",
-    }] : [],
-    previewMarkdown: "# Delegation bundle",
+    errors: [],
+    previewMarkdown: "# Handoff bundle",
     canDownload: true,
     error: null,
     notice: null,
@@ -61,7 +61,9 @@ function controllerWith(
       snapshot = { ...snapshot, open: false };
       listeners.forEach((listener) => listener(snapshot));
     }),
-    updateIntent: vi.fn(),
+    setMode: vi.fn(),
+    setMissionNote: vi.fn(),
+    setItemNote: vi.fn(),
     removeTarget: vi.fn(),
     removeQueueItem: vi.fn(),
     revalidate: vi.fn(),
@@ -78,49 +80,90 @@ function controllerWith(
   } as any;
 }
 
-describe("delegation composer", () => {
-  it("presents one clear bundle action and progressive download options", () => {
+describe("Handoff composer", () => {
+  it("shows a safe default without package prompt fields", () => {
     const host = document.createElement("div");
-    mountDelegationComposer(host, controllerWith(false));
+    mountHandoffComposer(host, controllerWith());
 
+    expect(host.querySelector("h2")?.textContent).toBe("Handoff queue");
+    expect(host.querySelector<HTMLInputElement>(
+      "[name='handoff-mode'][value='investigate']",
+    )?.checked).toBe(true);
+    expect(host.textContent).toContain(
+      "Analyze and propose a plan. Make no changes.",
+    );
+    expect(host.querySelector("[data-intent-outcome]")).toBeNull();
+    expect(host.querySelector("[data-intent-constraints]")).toBeNull();
+    expect(host.querySelector("[data-intent-verification]")).toBeNull();
     expect(host.querySelector("[data-copy-all]")?.textContent)
-      .toContain("Copy next bundle — 1 package, 1 target");
-    expect(host.querySelector("[data-copy-package]")).toBeNull();
-    expect(host.querySelector("[data-download-menu]")).toBeTruthy();
-    expect(host.querySelectorAll("[data-download-all]")).toHaveLength(2);
-    expect(host.querySelector("[data-revalidate]")?.textContent)
-      .toBe("Check again");
-    expect(host.querySelector("[data-remove-target]")?.textContent)
-      .toBe("Deselect");
+      .toBe("Copy investigation handoff");
   });
 
-  it("explains that export preserved the queue and offers confirmation", () => {
+  it("changes mode and mission note through accessible controls", () => {
     const host = document.createElement("div");
-    const controller = controllerWith(false, {
-      notice: {
-        tone: "success",
-        message: "Copied 1 package · 1 target · queue unchanged",
-      },
-      pendingConfirmation: { packageCount: 1, targetCount: 1 },
+    const controller = controllerWith();
+    mountHandoffComposer(host, controller);
+
+    host.querySelector<HTMLInputElement>(
+      "[name='handoff-mode'][value='implement']",
+    )!.click();
+    expect(controller.setMode).toHaveBeenCalledWith("implement");
+
+    const note = host.querySelector<HTMLTextAreaElement>(
+      "[data-mission-note]",
+    )!;
+    note.value = "Keep public APIs stable";
+    note.dispatchEvent(new Event("change"));
+    expect(controller.setMissionNote)
+      .toHaveBeenCalledWith("Keep public APIs stable");
+  });
+
+  it("adds and edits an item exception note", () => {
+    const host = document.createElement("div");
+    const controller = controllerWith();
+    mountHandoffComposer(host, controller);
+
+    host.querySelector<HTMLElement>("[data-add-item-note='github:42']")!
+      .click();
+    const field = host.querySelector<HTMLTextAreaElement>(
+      "[data-item-note='github:42']",
+    )!;
+    field.value = "Do not update beyond v4";
+    field.dispatchEvent(new Event("change"));
+    expect(controller.setItemNote)
+      .toHaveBeenCalledWith("github:42", "Do not update beyond v4");
+  });
+
+  it("shows an existing item note inline as editable context", () => {
+    const host = document.createElement("div");
+    const controller = controllerWith({
+      packages: [{
+        ...controllerWith().snapshot().packages[0],
+        targets: [{
+          ...controllerWith().snapshot().packages[0].targets[0],
+          note: "The flaky test is unrelated",
+        }],
+      }],
     });
-    mountDelegationComposer(host, controller);
+    mountHandoffComposer(host, controller);
 
-    expect(host.querySelector("[data-delegation-notice]")?.textContent)
-      .toContain("queue unchanged");
-    host.querySelector<HTMLElement>("[data-confirm-handoff]")!.click();
-    expect(controller.confirmHandoff).toHaveBeenCalledOnce();
+    expect(host.querySelector<HTMLTextAreaElement>(
+      "[data-item-note='github:42']",
+    )?.value).toBe("The flaky test is unrelated");
+    expect(host.querySelector("[data-add-item-note='github:42']")?.textContent)
+      .toBe("Edit note");
   });
 
-  it("keeps the dialog and package body mounted across copy updates", () => {
+  it("keeps the dialog and body mounted across copy updates", () => {
     const host = document.createElement("div");
-    const controller = controllerWith(false);
-    mountDelegationComposer(host, controller);
+    const controller = controllerWith();
+    mountHandoffComposer(host, controller);
     const dialog = host.querySelector("[role='dialog']");
     const body = host.querySelector(".delegation-composer-body");
 
     controller.emit({
       busyAction: "copy",
-      notice: { tone: "info", message: "Copying bundle…" },
+      notice: { tone: "info", message: "Copying handoff…" },
     });
     controller.emit({
       busyAction: null,
@@ -136,57 +179,42 @@ describe("delegation composer", () => {
       .toContain("queue unchanged");
   });
 
-  it("preserves field focus and selection across controller updates", () => {
+  it("preserves mission note focus and selection across updates", () => {
     const host = document.createElement("div");
     document.body.append(host);
-    const controller = controllerWith(false);
-    mountDelegationComposer(host, controller);
-    const outcome = host.querySelector<HTMLTextAreaElement>(
-      "#pkg-core-issues-intent-outcome",
+    const controller = controllerWith({
+      missionNote: "Keep public APIs stable",
+    });
+    mountHandoffComposer(host, controller);
+    const note = host.querySelector<HTMLTextAreaElement>(
+      "[data-mission-note]",
     )!;
-    outcome.focus();
-    outcome.setSelectionRange(3, 8);
+    note.focus();
+    note.setSelectionRange(3, 8);
 
     controller.emit({
       notice: { tone: "info", message: "Checking 1 target…" },
     });
 
     const rerendered = host.querySelector<HTMLTextAreaElement>(
-      "#pkg-core-issues-intent-outcome",
+      "[data-mission-note]",
     )!;
     expect(document.activeElement).toBe(rerendered);
     expect([rerendered.selectionStart, rerendered.selectionEnd])
       .toEqual([3, 8]);
   });
 
-  it("keeps handed-off targets inspectable and removable", () => {
+  it("keeps handed-off and exceptional targets actionable", () => {
     const host = document.createElement("div");
-    const controller = controllerWith(false, {
+    const controller = controllerWith({
       handedOff: [{
-        key: "github:issue:acme-corp/core:github:42",
+        key: "handed-off-key",
         itemId: "github:42",
         title: "Issue 42",
         repository: "acme-corp/core",
         kind: "issue",
         status: "transferred",
-        transferredAt: Date.UTC(2026, 6, 29, 10, 30),
       }],
-    });
-    mountDelegationComposer(host, controller);
-
-    expect(host.querySelector("[data-queue-section='handed-off'] summary")
-      ?.textContent).toContain("Handed off · 1");
-    expect(host.querySelector("[data-queue-history-item]")?.textContent)
-      .toContain("Issue 42");
-    host.querySelector<HTMLElement>("[data-remove-queue-item]")!.click();
-    expect(controller.removeQueueItem).toHaveBeenCalledWith(
-      "github:issue:acme-corp/core:github:42",
-    );
-  });
-
-  it("shows only actionable exceptions outside the next bundle", () => {
-    const host = document.createElement("div");
-    const controller = controllerWith(false, {
       notInNextBundle: [{
         key: "blocked-key",
         itemId: "github:blocked",
@@ -195,35 +223,21 @@ describe("delegation composer", () => {
         kind: "issue",
         status: "blocked",
         reason: "Target projection failed",
-      }, {
-        key: "resolved-key",
-        itemId: "github:resolved",
-        title: "Resolved issue",
-        repository: "acme-corp/core",
-        kind: "issue",
-        status: "resolved",
-        reason: "No longer present",
       }],
     });
-    mountDelegationComposer(host, controller);
+    mountHandoffComposer(host, controller);
 
-    const section = host.querySelector(
-      "[data-queue-section='not-in-next-bundle']",
-    );
-    expect(section?.querySelector("summary")?.textContent)
-      .toContain("Not in next bundle · 2");
-    expect(section?.textContent).toContain("Blocked");
-    expect(section?.textContent).toContain("No longer found");
-    expect(section?.textContent).not.toContain("Needs attention");
-
-    section?.querySelector<HTMLElement>(
+    expect(host.textContent).toContain("Handed off · 1");
+    expect(host.textContent).toContain("Not in next bundle · 1");
+    host.querySelector<HTMLElement>(
+      "[data-remove-queue-item='handed-off-key']",
+    )!.click();
+    expect(controller.removeQueueItem)
+      .toHaveBeenCalledWith("handed-off-key");
+    host.querySelector<HTMLElement>(
       "[data-remove-target='github:blocked']",
-    )?.click();
+    )!.click();
     expect(controller.removeTarget).toHaveBeenCalledWith("github:blocked");
-    section?.querySelector<HTMLElement>(
-      "[data-remove-queue-item='resolved-key']",
-    )?.click();
-    expect(controller.removeQueueItem).toHaveBeenCalledWith("resolved-key");
   });
 
   it("restores dashboard interaction when the composer closes", () => {
@@ -231,55 +245,30 @@ describe("delegation composer", () => {
     const dashboard = document.createElement("main");
     const host = document.createElement("div");
     document.body.append(dashboard, host);
-    const controller = controllerWith(false);
+    const controller = controllerWith();
 
-    mountDelegationComposer(host, controller);
+    mountHandoffComposer(host, controller);
     expect(dashboard.hasAttribute("inert")).toBe(true);
 
     host.querySelector<HTMLElement>("[data-delegation-close]")!.click();
 
     expect(host.childElementCount).toBe(0);
     expect(dashboard.hasAttribute("inert")).toBe(false);
-    expect(document.querySelector("[data-delegation-scrim]")).toBeNull();
   });
 
-  it("renders one compact review surface with linked package errors", () => {
+  it("keeps transfer, download, revalidation, and confirmation controls", () => {
     const host = document.createElement("div");
-    document.body.append(host);
-    mountDelegationComposer(host, controllerWith());
-    expect(host.querySelector(
-      '[role="dialog"][aria-modal="true"]',
-    )).toBeTruthy();
-    expect(host.querySelector('[aria-live="polite"]')).toBeTruthy();
-    const error = host.querySelector<HTMLAnchorElement>(
-      '[data-package-error="pkg-core-issues"]',
-    )!;
-    expect(error.getAttribute("href"))
-      .toBe("#pkg-core-issues-intent-outcome");
-    const outcome = host.querySelector<HTMLTextAreaElement>(
-      "#pkg-core-issues-intent-outcome",
-    )!;
-    expect(outcome.getAttribute("aria-invalid")).toBe("true");
-    expect(outcome.getAttribute("aria-describedby")).toBe(
-      "pkg-core-issues-error-0",
-    );
-    expect(host.querySelector("[data-copy-all]")?.textContent)
-      .toContain("Copy next bundle");
-  });
+    const controller = controllerWith({
+      pendingConfirmation: { packageCount: 1, targetCount: 1 },
+    });
+    mountHandoffComposer(host, controller);
 
-  it("wires intent edits and package actions to the controller", () => {
-    const host = document.createElement("div");
-    const controller = controllerWith(false);
-    mountDelegationComposer(host, controller);
-    const outcome = host.querySelector<HTMLTextAreaElement>(
-      "#pkg-core-issues-intent-outcome",
-    )!;
-    outcome.value = "Triage selected issues";
-    outcome.dispatchEvent(new Event("change"));
-    expect(controller.updateIntent).toHaveBeenCalledWith(
-      "pkg-core-issues",
-      expect.objectContaining({ outcome: "Triage selected issues" }),
-    );
+    expect(host.querySelector("[data-download-menu]")).toBeTruthy();
+    expect(host.querySelectorAll("[data-download-all]")).toHaveLength(2);
+    expect(host.querySelector("[data-revalidate]")?.textContent)
+      .toBe("Check again");
+    host.querySelector<HTMLElement>("[data-confirm-handoff]")!.click();
+    expect(controller.confirmHandoff).toHaveBeenCalledOnce();
     host.querySelector<HTMLElement>("[data-copy-all]")!.click();
     expect(controller.copyBundle).toHaveBeenCalledOnce();
   });

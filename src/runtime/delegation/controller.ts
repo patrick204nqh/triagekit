@@ -54,10 +54,6 @@ export function createDelegationController(
   const listeners = new Set<
     (snapshot: DelegationControllerSnapshot) => void
   >();
-  const intentEdits = new Map<
-    string,
-    Partial<WorkPackageV1["intent"]>
-  >();
   let isOpen = false;
   let lastError: string | null = null;
   let lastNotice: DelegationControllerSnapshot["notice"] = null;
@@ -105,15 +101,6 @@ export function createDelegationController(
     const projectionErrors: DelegationValidationError[] = [];
     const packages: WorkPackageV1[] = plan.transfer.map(
       (planned, index) => {
-      const edit = intentEdits.get(planned.id);
-      const generatedIntent = {
-        ...planned.generatedIntent,
-        ...edit,
-        constraints: edit?.constraints
-          ?? planned.generatedIntent.constraints,
-        verification: edit?.verification
-          ?? planned.generatedIntent.verification,
-      };
       const targets = planned.targets.flatMap((item) => {
         try {
           const entry = selected.find(
@@ -158,8 +145,8 @@ export function createDelegationController(
           order: index + 1,
           repository: planned.repository,
           kind: planned.kind,
-          generatedIntent,
-          intent: generatedIntent,
+          generatedIntent: planned.generatedIntent,
+          intent: planned.generatedIntent,
           targets,
           selectionReason: planned.selectionReason,
         };
@@ -360,13 +347,6 @@ export function createDelegationController(
       if (entry) {
         deps.queue.setItemNote(queueKey(entry.identity), note);
       }
-    },
-    updateIntent(packageId, intent) {
-      intentEdits.set(packageId, {
-        ...intentEdits.get(packageId),
-        ...intent,
-      });
-      publish();
     },
     removeTarget(itemId) {
       const entry = deps.queue.snapshot().entries.find((candidate) =>

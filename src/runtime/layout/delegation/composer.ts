@@ -7,18 +7,6 @@ import type {
 import { dismissible } from "../../shell/dismissible";
 import { esc } from "../util";
 
-function fieldId(
-  pkg: WorkPackageV1,
-  field: string,
-): string {
-  if (field === "intent.outcome") return `${pkg.id}-intent-outcome`;
-  if (field === "intent.constraints") return `${pkg.id}-intent-constraints`;
-  if (field === "intent.verification") {
-    return `${pkg.id}-intent-verification`;
-  }
-  return `${pkg.id}-heading`;
-}
-
 function packageErrors(
   pkg: WorkPackageV1,
   errors: readonly DelegationValidationError[],
@@ -26,28 +14,17 @@ function packageErrors(
   const matching = errors.filter((error) => error.packageId === pkg.id);
   if (!matching.length) return "";
   return `<ul class="delegation-errors">${matching.map((error) =>
-    `<li id="${esc(pkg.id)}-error-${errors.indexOf(error)}"><a href="#${esc(fieldId(pkg, error.field))}" data-package-error="${esc(pkg.id)}">${esc(error.message)}</a></li>`).join("")}</ul>`;
+    `<li><a href="#${esc(pkg.id)}-heading" data-package-error="${esc(pkg.id)}">${esc(error.message)}</a></li>`).join("")}</ul>`;
 }
 
-function fieldErrorAttributes(
-  pkg: WorkPackageV1,
-  errors: readonly DelegationValidationError[],
-  field: string,
-): string {
-  const ids = errors
-    .map((error, index) => ({ error, index }))
-    .filter(
-      ({ error }) => error.packageId === pkg.id && error.field === field,
-    )
-    .map(({ index }) => `${pkg.id}-error-${index}`);
-  return ids.length
-    ? ` aria-invalid="true" aria-describedby="${esc(ids.join(" "))}"`
-    : "";
+function kindLabel(kind: string): string {
+  if (kind === "dependency-vuln") return "Dependency vulnerabilities";
+  if (kind === "code-scanning") return "Code scanning";
+  if (kind === "change-request") return "Change requests";
+  return kind.charAt(0).toUpperCase() + kind.slice(1).replaceAll("-", " ");
 }
 
-function targetHtml(
-  target: WorkPackageV1["targets"][number],
-): string {
+function targetState(target: WorkPackageV1["targets"][number]): string {
   const freshness = target.details.freshness as
     | { validatedAt?: string; stale?: boolean }
     | undefined;
@@ -61,7 +38,7 @@ function targetHtml(
         changedFields?: readonly string[];
       }
     | undefined;
-  const state = [
+  return [
     queue?.status,
     queue?.changedFields?.length
       ? `changed ${queue.changedFields.join(", ")}`
@@ -74,25 +51,45 @@ function targetHtml(
       ? `${truncation.field} bounded ${truncation.originalLength}`
       : undefined,
   ].filter(Boolean).join(" · ") || "not revalidated";
+}
+
+function targetHtml(
+  target: WorkPackageV1["targets"][number],
+  expandedNotes: ReadonlySet<string>,
+): string {
+  const showNote = Boolean(target.note) || expandedNotes.has(target.id);
   return `<li class="delegation-target" data-target="${esc(target.id)}">
-    <div><strong>${esc(target.title)}</strong><span class="delegation-target-meta">${esc(target.priority.tier)} · ${target.priority.score}</span></div>
-    <div class="delegation-target-state">${esc(state)}</div>
-    <button type="button" class="btn-ghost mini" data-remove-target="${esc(target.id)}" aria-label="Deselect ${esc(target.title)} from package">Deselect</button>
+    <div class="delegation-target-main">
+      <div><strong>${esc(target.title)}</strong><span class="delegation-target-meta">${esc(target.priority.tier)} · ${target.priority.score}</span></div>
+      <div class="delegation-target-state">${esc(targetState(target))}</div>
+    </div>
+    <div class="delegation-target-actions">
+      <button type="button" class="btn-ghost mini" data-add-item-note="${esc(target.id)}">${target.note ? "Edit note" : "Add note"}</button>
+      <button type="button" class="btn-ghost mini" data-remove-target="${esc(target.id)}" aria-label="Deselect ${esc(target.title)} from package">Deselect</button>
+    </div>
+    ${showNote
+      ? `<label class="delegation-item-note">Note for ${esc(target.title)}
+          <textarea rows="2" data-item-note="${esc(target.id)}" placeholder="Only this target">${esc(target.note ?? "")}</textarea>
+        </label>`
+      : ""}
   </li>`;
+}
+
+function generatedInstructionHtml(pkg: WorkPackageV1): string {
+  const intent = pkg.generatedIntent;
+  return `<div class="delegation-generated-instruction">
+    <span>Generated instruction</span>
+    <p>${esc(intent.outcome)}</p>
+    <ul>${intent.constraints.map((value) => `<li>${esc(value)}</li>`).join("")}${intent.verification.map((value) => `<li>${esc(value)}</li>`).join("")}</ul>
+  </div>`;
 }
 
 function packageHtml(
   pkg: WorkPackageV1,
   errors: readonly DelegationValidationError[],
+  expandedNotes: ReadonlySet<string>,
   showPackageActions: boolean,
 ): string {
-  const kindLabel = pkg.kind === "dependency-vuln"
-    ? "Dependency vulnerabilities"
-    : pkg.kind === "code-scanning"
-    ? "Code scanning"
-    : pkg.kind === "change-request"
-    ? "Change requests"
-    : pkg.kind.charAt(0).toUpperCase() + pkg.kind.slice(1).replaceAll("-", " ");
   const packageActions = showPackageActions
     ? `<details class="delegation-action-menu" data-package-menu>
         <summary class="btn-ghost">Package actions</summary>
@@ -107,21 +104,13 @@ function packageHtml(
     <header class="delegation-package-head">
       <div><span class="delegation-order">${pkg.order}</span>
         <h3 id="${esc(pkg.id)}-heading" tabindex="-1">${esc(pkg.repository)}</h3></div>
-      <span class="delegation-package-meta">${esc(kindLabel)} · ${pkg.targets.length} ${pkg.targets.length === 1 ? "target" : "targets"}</span>
+      <span class="delegation-package-meta">${esc(kindLabel(pkg.kind))} · ${pkg.targets.length} ${pkg.targets.length === 1 ? "target" : "targets"}</span>
     </header>
     <p class="delegation-reason">${esc(pkg.selectionReason)}</p>
     ${packageErrors(pkg, errors)}
-    <label for="${esc(pkg.id)}-intent-outcome">Outcome</label>
-    <textarea id="${esc(pkg.id)}-intent-outcome" data-intent-outcome="${esc(pkg.id)}" rows="2"${fieldErrorAttributes(pkg, errors, "intent.outcome")}>${esc(pkg.intent.outcome)}</textarea>
-    <div class="delegation-intent-grid">
-      <label>Constraints <span class="delegation-optional">(optional)</span>
-        <textarea id="${esc(pkg.id)}-intent-constraints" data-intent-constraints="${esc(pkg.id)}" rows="3" placeholder="e.g. Keep public APIs stable"${fieldErrorAttributes(pkg, errors, "intent.constraints")}>${esc(pkg.intent.constraints.join("\n"))}</textarea>
-      </label>
-      <label>Verification <span class="delegation-optional">(optional)</span>
-        <textarea id="${esc(pkg.id)}-intent-verification" data-intent-verification="${esc(pkg.id)}" rows="3" placeholder="e.g. Tests pass and the finding is resolved"${fieldErrorAttributes(pkg, errors, "intent.verification")}>${esc(pkg.intent.verification.join("\n"))}</textarea>
-      </label>
-    </div>
-    <ul class="delegation-targets">${pkg.targets.map(targetHtml).join("")}</ul>
+    ${generatedInstructionHtml(pkg)}
+    <ul class="delegation-targets">${pkg.targets.map((target) =>
+      targetHtml(target, expandedNotes)).join("")}</ul>
     ${packageActions}
   </section>`;
 }
@@ -165,97 +154,32 @@ function notInNextBundleHtml(
   </details>`;
 }
 
-export function mountDelegationComposer(
+function modeHtml(snapshot: DelegationControllerSnapshot): string {
+  return `<fieldset class="delegation-mode">
+    <legend>Handoff mode</legend>
+    <label>
+      <input type="radio" name="handoff-mode" value="investigate"${snapshot.mode === "investigate" ? " checked" : ""}>
+      <span><strong>Investigate</strong><small>Analyze and propose a plan. Make no changes.</small></span>
+    </label>
+    <label>
+      <input type="radio" name="handoff-mode" value="implement"${snapshot.mode === "implement" ? " checked" : ""}>
+      <span><strong>Implement</strong><small>Make scoped changes and verify the result.</small></span>
+    </label>
+  </fieldset>
+  <label class="delegation-mission-note" for="handoff-mission-note">
+    Mission note <span>(optional)</span>
+    <textarea id="handoff-mission-note" data-mission-note rows="3" placeholder="Applies to every selected target">${esc(snapshot.missionNote ?? "")}</textarea>
+  </label>`;
+}
+
+export function mountHandoffComposer(
   host: HTMLElement,
   controller: DelegationController,
 ): () => void {
   let wasOpen = false;
   let activeDismiss: ReturnType<typeof dismissible> | null = null;
   let lastBodyHtml = "";
-
-  const bindBodyActions = () => {
-    const intent = (
-      selector: string,
-      field: "outcome" | "constraints" | "verification",
-    ) => {
-      host.querySelectorAll<HTMLTextAreaElement>(selector).forEach((area) =>
-        area.addEventListener("change", () => {
-          const packageId = area.dataset[
-            field === "outcome"
-              ? "intentOutcome"
-              : field === "constraints"
-                ? "intentConstraints"
-                : "intentVerification"
-          ]!;
-          controller.updateIntent(packageId, {
-            [field]: field === "outcome"
-              ? area.value
-              : area.value.split("\n").map((line) => line.trim())
-                .filter(Boolean),
-          });
-        }));
-    };
-    intent("[data-intent-outcome]", "outcome");
-    intent("[data-intent-constraints]", "constraints");
-    intent("[data-intent-verification]", "verification");
-
-    host.querySelectorAll<HTMLElement>("[data-remove-target]")
-      .forEach((button) => button.addEventListener("click", () => {
-        const targets = [...host.querySelectorAll<HTMLElement>(
-          "[data-remove-target]",
-        )];
-        const index = targets.indexOf(button);
-        const nextId = targets[index + 1]?.dataset.removeTarget
-          ?? targets[index - 1]?.dataset.removeTarget;
-        controller.removeTarget(button.dataset.removeTarget!);
-        queueMicrotask(() => {
-          if (nextId) {
-            [...host.querySelectorAll<HTMLElement>("[data-remove-target]")]
-              .find((candidate) =>
-                candidate.dataset.removeTarget === nextId)?.focus();
-          }
-        });
-      }));
-    host.querySelectorAll<HTMLElement>("[data-remove-queue-item]")
-      .forEach((button) => button.addEventListener("click", () => {
-        controller.removeQueueItem(button.dataset.removeQueueItem!);
-      }));
-    host.querySelectorAll<HTMLElement>("[data-copy-package]")
-      .forEach((button) => button.addEventListener("click", () => {
-        void controller.copyPackage(button.dataset.copyPackage!);
-      }));
-    host.querySelectorAll<HTMLElement>("[data-download-package]")
-      .forEach((button) => button.addEventListener("click", () => {
-        controller.downloadPackage(
-          button.dataset.downloadPackage!,
-          button.dataset.format as "md" | "json",
-        );
-      }));
-  };
-
-  const bindLiveActions = () => {
-    host.querySelector<HTMLElement>("[data-confirm-handoff]")
-      ?.addEventListener("click", () => controller.confirmHandoff());
-    host.querySelector<HTMLElement>("[data-undo-handoff]")
-      ?.addEventListener("click", () => controller.undoHandoff());
-    host.querySelector<HTMLElement>("[data-revalidate]")
-      ?.addEventListener("click", () => {
-        void controller.revalidate();
-      });
-  };
-
-  const bindShellActions = () => {
-    host.querySelector<HTMLElement>("[data-delegation-close]")
-      ?.addEventListener("click", () => controller.close());
-    host.querySelector<HTMLElement>("[data-copy-all]")
-      ?.addEventListener("click", () => {
-        void controller.copyBundle();
-      });
-    host.querySelectorAll<HTMLElement>("[data-download-all]")
-      .forEach((button) => button.addEventListener("click", () => {
-        controller.downloadBundle(button.dataset.format as "md" | "json");
-      }));
-  };
+  const expandedNotes = new Set<string>();
 
   const render = (snapshot: DelegationControllerSnapshot) => {
     if (!snapshot.open) {
@@ -275,9 +199,9 @@ export function mountDelegationComposer(
       host.innerHTML = `<div class="scrim open" data-delegation-scrim></div>
         <aside class="delegation-composer open" role="dialog" aria-modal="true" aria-labelledby="delegation-title">
           <header class="delegation-composer-head">
-            <div><h2 id="delegation-title" tabindex="-1">Delegation queue</h2>
+            <div><h2 id="delegation-title" tabindex="-1">Handoff queue</h2>
               <p data-delegation-summary></p></div>
-            <button type="button" class="drawer-close" data-delegation-close aria-label="Close delegation queue">×</button>
+            <button type="button" class="drawer-close" data-delegation-close aria-label="Close Handoff queue">×</button>
           </header>
           <div class="delegation-live" role="status" aria-live="polite" aria-atomic="true"></div>
           <div class="delegation-composer-body"></div>
@@ -305,7 +229,15 @@ export function mountDelegationComposer(
         onDismiss: () => controller.close(),
       });
       activeDismiss.activate();
-      bindShellActions();
+      scrim.addEventListener("click", () => controller.close());
+      host.querySelector<HTMLElement>("[data-delegation-close]")
+        ?.addEventListener("click", () => controller.close());
+      host.querySelector<HTMLElement>("[data-copy-all]")
+        ?.addEventListener("click", () => void controller.copyBundle());
+      host.querySelectorAll<HTMLElement>("[data-download-all]")
+        .forEach((button) => button.addEventListener("click", () => {
+          controller.downloadBundle(button.dataset.format as "md" | "json");
+        }));
       wasOpen = true;
     }
 
@@ -314,17 +246,14 @@ export function mountDelegationComposer(
       (total, pkg) => total + pkg.targets.length,
       0,
     );
-    const readyLabel =
-      `${targetCount} ${targetCount === 1 ? "target" : "targets"} ready`;
-    const bundleLabel = `${packageCount} ${packageCount === 1 ? "package" : "packages"} in next bundle`;
-    const laterLabel = snapshot.remainingPackages
+    const later = snapshot.remainingPackages
       ? ` · ${snapshot.remainingPackages} later`
       : "";
-    const handedOffLabel = snapshot.handedOff.length
+    const handedOff = snapshot.handedOff.length
       ? ` · ${snapshot.handedOff.length} handed off`
       : "";
     host.querySelector<HTMLElement>("[data-delegation-summary]")!.textContent =
-      `${readyLabel} · ${bundleLabel}${laterLabel}${handedOffLabel}`;
+      `${targetCount} ${targetCount === 1 ? "target" : "targets"} ready · ${packageCount} ${packageCount === 1 ? "package" : "packages"}${later}${handedOff}`;
 
     const notice = snapshot.notice
       ? `<span class="delegation-notice ${snapshot.notice.tone}" data-delegation-notice>${esc(snapshot.notice.message)}</span>`
@@ -337,18 +266,23 @@ export function mountDelegationComposer(
       : "";
     const live = host.querySelector<HTMLElement>(".delegation-live")!;
     live.innerHTML = `${notice}<span class="delegation-live-actions">${confirmation}${undo}<button type="button" class="btn-ghost mini" data-revalidate ${snapshot.busyAction !== null || snapshot.selectedCount === 0 ? "disabled" : ""}>${snapshot.busyAction === "revalidate" ? "Checking…" : "Check again"}</button></span>`;
-    bindLiveActions();
+    live.querySelector<HTMLElement>("[data-confirm-handoff]")
+      ?.addEventListener("click", () => controller.confirmHandoff());
+    live.querySelector<HTMLElement>("[data-undo-handoff]")
+      ?.addEventListener("click", () => controller.undoHandoff());
+    live.querySelector<HTMLElement>("[data-revalidate]")
+      ?.addEventListener("click", () => void controller.revalidate());
 
-    const bodyHtml = `${
-      snapshot.packages.length
+    const bodyHtml = `${modeHtml(snapshot)}
+      ${snapshot.packages.length
         ? snapshot.packages.map((pkg) =>
           packageHtml(
             pkg,
             snapshot.errors,
+            expandedNotes,
             snapshot.packages.length > 1,
           )).join("")
-        : `<div class="delegation-empty"><h3>No targets ready</h3><p>Select rows from the table to prepare the next bundle.</p></div>`
-    }
+        : `<div class="delegation-empty"><h3>No targets ready</h3><p>Select rows from the table to prepare the next Handoff bundle.</p></div>`}
       ${notInNextBundleHtml(snapshot.notInNextBundle)}
       ${handedOffHtml(snapshot.handedOff)}
       ${snapshot.error
@@ -372,7 +306,54 @@ export function mountDelegationComposer(
       body.innerHTML = bodyHtml;
       body.scrollTop = scrollTop;
       lastBodyHtml = bodyHtml;
-      bindBodyActions();
+
+      body.querySelectorAll<HTMLInputElement>("[name='handoff-mode']")
+        .forEach((input) => input.addEventListener("click", () => {
+          if (input.checked) {
+            controller.setMode(input.value as "investigate" | "implement");
+          }
+        }));
+      body.querySelector<HTMLTextAreaElement>("[data-mission-note]")
+        ?.addEventListener("change", (event) => {
+          controller.setMissionNote(
+            (event.currentTarget as HTMLTextAreaElement).value,
+          );
+        });
+      body.querySelectorAll<HTMLElement>("[data-add-item-note]")
+        .forEach((button) => button.addEventListener("click", () => {
+          const itemId = button.dataset.addItemNote!;
+          expandedNotes.add(itemId);
+          lastBodyHtml = "";
+          render(controller.snapshot());
+          queueMicrotask(() => {
+            [...body.querySelectorAll<HTMLTextAreaElement>("[data-item-note]")]
+              .find((field) => field.dataset.itemNote === itemId)?.focus();
+          });
+        }));
+      body.querySelectorAll<HTMLTextAreaElement>("[data-item-note]")
+        .forEach((field) => field.addEventListener("change", () => {
+          controller.setItemNote(field.dataset.itemNote!, field.value);
+        }));
+      body.querySelectorAll<HTMLElement>("[data-remove-target]")
+        .forEach((button) => button.addEventListener("click", () => {
+          controller.removeTarget(button.dataset.removeTarget!);
+        }));
+      body.querySelectorAll<HTMLElement>("[data-remove-queue-item]")
+        .forEach((button) => button.addEventListener("click", () => {
+          controller.removeQueueItem(button.dataset.removeQueueItem!);
+        }));
+      body.querySelectorAll<HTMLElement>("[data-copy-package]")
+        .forEach((button) => button.addEventListener("click", () => {
+          void controller.copyPackage(button.dataset.copyPackage!);
+        }));
+      body.querySelectorAll<HTMLElement>("[data-download-package]")
+        .forEach((button) => button.addEventListener("click", () => {
+          controller.downloadPackage(
+            button.dataset.downloadPackage!,
+            button.dataset.format as "md" | "json",
+          );
+        }));
+
       if (focusedField) {
         const candidate = document.getElementById(focusedField.id);
         const field = candidate instanceof HTMLTextAreaElement
@@ -394,7 +375,9 @@ export function mountDelegationComposer(
       || snapshot.busyAction === "copy";
     copy.textContent = snapshot.busyAction === "copy"
       ? "Copying…"
-      : `Copy next bundle — ${packageCount} ${packageCount === 1 ? "package" : "packages"}, ${targetCount} ${targetCount === 1 ? "target" : "targets"}`;
+      : snapshot.mode === "implement"
+      ? "Copy implementation handoff"
+      : "Copy investigation handoff";
 
     if (opening) {
       host.querySelector<HTMLElement>("#delegation-title")?.focus();
@@ -410,3 +393,6 @@ export function mountDelegationComposer(
     host.innerHTML = "";
   };
 }
+
+/** Transitional export removed in the final Handoff cutover. */
+export const mountDelegationComposer = mountHandoffComposer;
