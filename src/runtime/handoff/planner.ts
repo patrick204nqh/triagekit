@@ -1,9 +1,9 @@
-import { intentForKind } from "../handoff/intent";
+import { generatedIntentFor } from "./intent";
 import type { ScoredItem } from "../layout/table/kind-renderer";
 import type {
-  PlanPackagesInput,
-  PlannedPackage,
-  PlanResult,
+  HandoffPlanPackagesInput,
+  PlannedHandoffPackage,
+  HandoffPlanResult,
 } from "./types";
 
 const TIER_ORDER = { P0: 0, P1: 1, P2: 2, P3: 3 } as const;
@@ -70,7 +70,7 @@ function selectionReason(
   ].filter(Boolean).join(" · ");
 }
 
-export function planPackages(input: PlanPackagesInput): PlanResult {
+export function planHandoffPackages(input: HandoffPlanPackagesInput): HandoffPlanResult {
   const repositoryRanks = new Map(
     input.repositoryOrder.map((repository, index) => [repository, index]),
   );
@@ -105,12 +105,16 @@ export function planPackages(input: PlanPackagesInput): PlanResult {
     },
   );
 
-  const packages: PlannedPackage[] = [];
+  const packages: PlannedHandoffPackage[] = [];
   for (const [, group] of orderedGroups) {
     const targets = [...group].sort(compareTargets);
     for (let start = 0; start < targets.length; start += TARGET_LIMIT) {
       const chunk = targets.slice(start, start + TARGET_LIMIT);
       const first = chunk[0];
+      const generatedIntent = generatedIntentFor(
+        first.kind,
+        input.mode ?? "investigate",
+      );
       packages.push({
         id: packageId(
           first.provider,
@@ -121,7 +125,7 @@ export function planPackages(input: PlanPackagesInput): PlanResult {
         provider: first.provider,
         repository: first.location,
         kind: first.kind,
-        intent: intentForKind(first.kind),
+        generatedIntent,
         targets: chunk,
         selectionReason: selectionReason(
           first.location,

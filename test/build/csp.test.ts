@@ -14,9 +14,9 @@ describe("buildCspMeta", () => {
     expect(out).toMatch(/font-src 'self' data:/);
   });
 
-  it("does not require a new delegation network origin", () => {
+  it("does not require a new handoff network origin", () => {
     const out = buildCspMeta(
-      '<!--CSP-META-PLACEHOLDER--><div id="delegation-host"></div>',
+      '<!--CSP-META-PLACEHOLDER--><div id="handoff-host"></div>',
       ["https://api.github.com"],
     );
 

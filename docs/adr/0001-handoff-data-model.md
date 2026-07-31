@@ -1,7 +1,7 @@
 # ADR-0001: Handoff data model
 
 **Date**: 2026-07-28
-**Status**: accepted
+**Status**: superseded by ADR-0009
 **Deciders**: Patrick
 
 ## Context

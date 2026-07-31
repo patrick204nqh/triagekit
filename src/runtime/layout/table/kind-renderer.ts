@@ -8,9 +8,8 @@ import type {
 import type { Tier } from "../../scoring/tier";
 import type { ScoreExplanation } from "../../scoring/score-model";
 import type { DetailView } from "./detail-view";
-import type { HandoffController } from "../../handoff/controller";
 import { esc } from "../util";
-import type { RowDelegationSelection } from "../delegation/selection-controls";
+import type { HandoffSelection } from "../handoff/selection-controls";
 
 export interface ScoredItem extends TriageItem { score: number; tier: Tier; }
 export interface TriageActionPort {
@@ -26,8 +25,7 @@ export interface DetailCtx {
   actions?: TriageActionPort;
   onChange?: (i: ScoredItem) => void;
   scoreExplain?: (i: ScoredItem) => ScoreExplanation | null;   // null = built-in path (no per-signal breakdown)
-  handoffController?: HandoffController;
-  delegationSelection?: RowDelegationSelection;
+  handoffSelection?: HandoffSelection;
 }
 export interface KindRenderer {
   kind: Kind;

@@ -1,13 +1,19 @@
 import type {
-  DelegationQueue,
-  DelegationQueueStore,
-  QueueEntry,
-  QueueIdentity,
-  QueueSnapshot,
-  QueueTransition,
+  HandoffQueue,
+  HandoffQueueStore,
+  HandoffMode,
+  HandoffQueueEntry,
+  HandoffIdentity,
+  HandoffQueueSnapshot,
+  HandoffQueueTransition,
 } from "./types";
 
-export function queueKey(identity: QueueIdentity): string {
+function normalizedNote(value: string): string | undefined {
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : undefined;
+}
+
+export function queueKey(identity: HandoffIdentity): string {
   return JSON.stringify([
     identity.provider,
     identity.kind,
@@ -16,7 +22,7 @@ export function queueKey(identity: QueueIdentity): string {
   ]);
 }
 
-function freezeEntry(entry: QueueEntry): QueueEntry {
+function freezeEntry(entry: HandoffQueueEntry): HandoffQueueEntry {
   const changedFields = entry.changedFields
     ? Object.freeze([...entry.changedFields])
     : undefined;
@@ -27,7 +33,7 @@ function freezeEntry(entry: QueueEntry): QueueEntry {
   });
 }
 
-function withSelection(entry: QueueEntry, selected: boolean): QueueEntry {
+function withSelection(entry: HandoffQueueEntry, selected: boolean): HandoffQueueEntry {
   if (!selected || entry.status !== "transferred") {
     return { ...entry, selected };
   }
@@ -35,30 +41,39 @@ function withSelection(entry: QueueEntry, selected: boolean): QueueEntry {
   return { ...ready, selected: true, status: "queued" };
 }
 
-export function createDelegationQueue(
-  store?: DelegationQueueStore,
-): DelegationQueue {
-  const entries = new Map<string, QueueEntry>();
-  for (const entry of store?.load() ?? []) {
+export function createHandoffQueue(
+  store?: HandoffQueueStore,
+): HandoffQueue {
+  const restored = store?.load();
+  let mode: HandoffMode = restored?.mode ?? "investigate";
+  let missionNote = restored?.missionNote;
+  const entries = new Map<string, HandoffQueueEntry>();
+  for (const entry of restored?.entries ?? []) {
     entries.set(queueKey(entry.identity), freezeEntry(entry));
   }
-  const listeners = new Set<(snapshot: QueueSnapshot) => void>();
+  const listeners = new Set<(snapshot: HandoffQueueSnapshot) => void>();
 
-  const serialized = (): readonly QueueEntry[] =>
+  const serialized = (): readonly HandoffQueueEntry[] =>
     Object.freeze([...entries.values()].map(freezeEntry));
-  const snapshot = (): QueueSnapshot => {
+  const snapshot = (): HandoffQueueSnapshot => {
     const current = serialized();
     return Object.freeze({
+      mode,
+      missionNote,
       entries: current,
       selectedCount: current.filter((entry) => entry.selected).length,
     });
   };
   const publish = () => {
     const current = snapshot();
-    store?.save(current.entries);
+    store?.save({
+      mode: current.mode,
+      ...(current.missionNote ? { missionNote: current.missionNote } : {}),
+      entries: current.entries,
+    });
     for (const listener of listeners) listener(current);
   };
-  const replace = (key: string, entry: QueueEntry): boolean => {
+  const replace = (key: string, entry: HandoffQueueEntry): boolean => {
     if (!entries.has(key)) return false;
     entries.set(key, freezeEntry(entry));
     publish();
@@ -66,7 +81,7 @@ export function createDelegationQueue(
   };
   const transitioned = (
     key: string,
-    transition: QueueTransition,
+    transition: HandoffQueueTransition,
   ): boolean => {
     const entry = entries.get(key);
     if (!entry) return false;
@@ -95,6 +110,32 @@ export function createDelegationQueue(
   };
 
   return {
+    setMode(nextMode) {
+      if (mode === nextMode) return false;
+      mode = nextMode;
+      publish();
+      return true;
+    },
+    setMissionNote(note) {
+      const nextNote = normalizedNote(note);
+      if (missionNote === nextNote) return false;
+      missionNote = nextNote;
+      publish();
+      return true;
+    },
+    setItemNote(key, note) {
+      const entry = entries.get(key);
+      if (!entry) return false;
+      const nextNote = normalizedNote(note);
+      if (entry.note === nextNote) return false;
+      const { note: _previousNote, ...withoutNote } = entry;
+      entries.set(key, freezeEntry({
+        ...withoutNote,
+        ...(nextNote ? { note: nextNote } : {}),
+      }));
+      publish();
+      return true;
+    },
     add(identity, selectedAt) {
       const key = queueKey(identity);
       if (entries.has(key)) return false;
@@ -159,7 +200,7 @@ export function createDelegationQueue(
       if (!entry || entry.selected === selected) return false;
       return replace(key, withSelection(entry, selected));
     },
-    transition(key, transition: QueueTransition) {
+    transition(key, transition: HandoffQueueTransition) {
       const changed = transitioned(key, transition);
       if (changed) publish();
       return changed;

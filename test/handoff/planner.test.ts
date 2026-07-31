@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  planPackages,
-} from "../../src/runtime/delegation/planner";
+  planHandoffPackages,
+} from "../../src/runtime/handoff/planner";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 
 const scoredItems = (
@@ -33,9 +33,9 @@ const input = (ids: string[]) => ({
   repositoryOrder: ["acme-corp/core"],
 });
 
-describe("delegation package planner", () => {
+describe("handoff package planner", () => {
   it("groups by repository and Kind, chunks at ten, and returns five packages", () => {
-    const result = planPackages({
+    const result = planHandoffPackages({
       items: [
         ...scoredItems("acme-corp/core", "issue", 12),
         ...scoredItems("acme-corp/core", "change-request", 4),
@@ -56,11 +56,13 @@ describe("delegation package planner", () => {
     ]);
     expect(result.remainingPackages).toBe(2);
     expect(result.transfer.flatMap((pkg) => pkg.targets)).toHaveLength(36);
+    expect(result.transfer[0].generatedIntent.constraints)
+      .toContain("Do not modify files.");
   });
 
   it("creates stable IDs independent of input order", () => {
-    const forward = planPackages(input(["a", "b"]));
-    const reversed = planPackages(input(["b", "a"]));
+    const forward = planHandoffPackages(input(["a", "b"]));
+    const reversed = planHandoffPackages(input(["b", "a"]));
     expect(forward.transfer.map((pkg) => pkg.id))
       .toEqual(reversed.transfer.map((pkg) => pkg.id));
   });
@@ -70,10 +72,17 @@ describe("delegation package planner", () => {
     items[0] = { ...items[0], id: "z", tier: "P1", score: 100 };
     items[1] = { ...items[1], id: "b", tier: "P0", score: 80 };
     items[2] = { ...items[2], id: "a", tier: "P0", score: 80 };
-    expect(planPackages({
+    expect(planHandoffPackages({
       items,
       repositoryOrder: ["acme-corp/core"],
+      mode: "implement",
     }).transfer[0].targets.map((target) => target.id))
       .toEqual(["a", "b", "z"]);
+    expect(planHandoffPackages({
+      items,
+      repositoryOrder: ["acme-corp/core"],
+      mode: "implement",
+    }).transfer[0].generatedIntent.outcome)
+      .toBe("Implement the requested changes for the selected issues");
   });
 });

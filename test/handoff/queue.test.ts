@@ -1,20 +1,64 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  createDelegationQueue,
+  createHandoffQueue,
   queueKey,
-} from "../../src/runtime/delegation/queue";
-import type { QueueIdentity } from "../../src/runtime/delegation/types";
+} from "../../src/runtime/handoff/queue";
+import type { HandoffIdentity } from "../../src/runtime/handoff/types";
 
-const identity = (itemId: string): QueueIdentity => ({
+const identity = (itemId: string): HandoffIdentity => ({
   provider: "github",
   itemId,
   kind: "issue",
   repository: "acme-corp/core",
 });
 
-describe("delegation queue", () => {
+describe("handoff queue", () => {
+  it("defaults a new queue to investigate with no notes", () => {
+    const queue = createHandoffQueue();
+
+    expect(queue.snapshot()).toMatchObject({
+      mode: "investigate",
+      missionNote: undefined,
+      selectedCount: 0,
+    });
+  });
+
+  it("changes mode without changing membership or notes", () => {
+    const queue = createHandoffQueue();
+    queue.add(identity("github:42"), 100);
+    const key = queueKey(identity("github:42"));
+    queue.setMissionNote("Keep public APIs stable");
+    queue.setItemNote(key, "The failing snapshot is unrelated");
+
+    expect(queue.setMode("implement")).toBe(true);
+    expect(queue.snapshot()).toMatchObject({
+      mode: "implement",
+      missionNote: "Keep public APIs stable",
+      selectedCount: 1,
+    });
+    expect(queue.snapshot().entries[0].note)
+      .toBe("The failing snapshot is unrelated");
+  });
+
+  it("normalizes empty human notes away", () => {
+    const queue = createHandoffQueue();
+    queue.add(identity("github:42"), 100);
+    const key = queueKey(identity("github:42"));
+
+    queue.setMissionNote("  Verify the regression test  ");
+    queue.setItemNote(key, "  Do not change the public type  ");
+    expect(queue.snapshot().missionNote).toBe("Verify the regression test");
+    expect(queue.snapshot().entries[0].note)
+      .toBe("Do not change the public type");
+
+    queue.setMissionNote("  ");
+    queue.setItemNote(key, "\n");
+    expect(queue.snapshot().missionNote).toBeUndefined();
+    expect(queue.snapshot().entries[0].note).toBeUndefined();
+  });
+
   it("stores identity only and never removes an entry on status change", () => {
-    const queue = createDelegationQueue();
+    const queue = createHandoffQueue();
     const selected = identity("github:42");
     queue.add(selected, 1_753_776_000_000);
     queue.transition(queueKey(selected), {
@@ -34,7 +78,7 @@ describe("delegation queue", () => {
   });
 
   it("adds visible identities idempotently without replacing existing status", () => {
-    const queue = createDelegationQueue();
+    const queue = createHandoffQueue();
     expect(queue.addMany(
       [identity("1"), identity("2"), identity("1")],
       1000,
@@ -50,7 +94,7 @@ describe("delegation queue", () => {
   });
 
   it("publishes immutable snapshots after every mutation", () => {
-    const queue = createDelegationQueue();
+    const queue = createHandoffQueue();
     const listener = vi.fn();
     queue.subscribe(listener);
     queue.add(identity("1"), 1000);
@@ -63,7 +107,7 @@ describe("delegation queue", () => {
   });
 
   it("applies a transition batch with one published snapshot", () => {
-    const queue = createDelegationQueue();
+    const queue = createHandoffQueue();
     queue.addMany([identity("1"), identity("2")], 1000);
     const listener = vi.fn();
     queue.subscribe(listener);
@@ -95,7 +139,7 @@ describe("delegation queue", () => {
   });
 
   it("selects and deselects identity batches with one published snapshot", () => {
-    const queue = createDelegationQueue();
+    const queue = createHandoffQueue();
     const retained = identity("retained");
     queue.add(retained, 1000);
     queue.transition(queueKey(retained), {
@@ -142,7 +186,7 @@ describe("delegation queue", () => {
   });
 
   it("returns a handed-off target to Ready when selected again", () => {
-    const queue = createDelegationQueue();
+    const queue = createHandoffQueue();
     const target = identity("handed-off");
     queue.add(target, 1000);
     queue.markTransferred([queueKey(target)], 2000);

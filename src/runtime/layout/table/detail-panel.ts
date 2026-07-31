@@ -9,9 +9,13 @@ import { dismissible } from "../../shell/dismissible";
 import { esc } from "../util";
 import { detailHeadHtml } from "../atoms/atoms";
 import type { DetailView } from "./detail-view";
-import type { AgentHandoffV1 } from "../../handoff/types";
-import type { HandoffController } from "../../handoff/controller";
-import { renderMarkdown } from "../../handoff/markdown";
+import { queueKey } from "../../handoff/queue";
+import { handoffIdentityForItem } from "../handoff/selection-controls";
+
+export interface TriageDetailState {
+  readonly activeItemId?: string | null;
+  readonly onActiveItemChange?: (itemId: string | null) => void;
+}
 
 // Fallback detail for kinds without a renderer: identity header + a bare link.
 function defaultDetailView(r: ScoredItem): DetailView {
@@ -25,136 +29,6 @@ function defaultDetailView(r: ScoredItem): DetailView {
   };
 }
 
-// Switch the same drawer to show the agent brief instead of the item detail.
-// The drawer head gets a back button to restore the original detail view.
-function showBriefInDrawer(
-  handoff: AgentHandoffV1,
-  ctrl: HandoffController,
-  body: HTMLElement,
-  foot: HTMLElement,
-  ctx: DetailCtx,
-  r: ScoredItem,
-): void {
-  const head = body.parentElement?.querySelector<HTMLElement>("[data-head]");
-  if (!head) return;
-  const origHead = head.innerHTML;
-  const origBody = body.innerHTML;
-  // Strip the Generate Brief button from origFoot so the back handler creates a fresh
-  // one with a working listener (innerHTML doesn't serialize addEventListener).
-  const origFoot = foot.innerHTML.replace(/<button\b[^>]*data-brief-gen[^>]*>.*?<\/button>/i, "");
-  const intent = handoff.intent;
-  const t = handoff.targets[0];
-  const s = handoff.context.session;
-
-  body.innerHTML = "";
-
-  const disclosure = document.createElement("p");
-  disclosure.className = "brief-disclosure";
-  disclosure.textContent = "This brief contains the selected item's repository context and provider link. It does not contain your GitHub token.";
-  body.appendChild(disclosure);
-
-  const og = document.createElement("div");
-  og.className = "brief-item";
-  og.innerHTML = `<label>Outcome</label><p class="brief-outcome">${esc(intent.outcome)}</p>`;
-  body.appendChild(og);
-
-  if (t) {
-    const ig = document.createElement("div");
-    ig.className = "brief-item";
-    let ih = `<label>Target</label><div class="brief-info">`;
-    ih += `<span>Kind</span><span>${esc(t.kind)}</span>`;
-    ih += `<span>Provider</span><span>${esc(t.provider)}</span>`;
-    ih += `<span>Location</span><span>${esc(t.location)}</span>`;
-    ih += `<span>Tier</span><span>${t.priority.tier} (score ${t.priority.score}, signal ${t.priority.signal})</span>`;
-    if (t.url) ih += `<span>URL</span><span><a href="${esc(t.url)}" target="_blank" rel="noreferrer">${esc(t.url)}</a></span>`;
-    ih += `</div>`;
-    ig.innerHTML = ih;
-    body.appendChild(ig);
-
-    if (t.priority.explanation && t.priority.explanation.length > 0) {
-      const eg = document.createElement("div");
-      eg.className = "brief-item";
-      eg.innerHTML = `<label>Evidence</label><ul class="brief-evidence">${t.priority.explanation.map(e =>
-        `<li><strong>${esc(e.label)}</strong> ${esc(String(e.value))}${e.reason ? ` — ${esc(e.reason)}` : ""}</li>`
-      ).join("")}</ul>`;
-      body.appendChild(eg);
-    }
-  }
-
-  if (intent.constraints.length > 0) {
-    const cg = document.createElement("div");
-    cg.className = "brief-item";
-    cg.innerHTML = `<label>Constraints</label><ul>${intent.constraints.map(c => `<li>${esc(c)}</li>`).join("")}</ul>`;
-    body.appendChild(cg);
-  }
-
-  if (intent.verification.length > 0) {
-    const vg = document.createElement("div");
-    vg.className = "brief-item";
-    vg.innerHTML = `<label>Verification</label><ul>${intent.verification.map(v => `<li>${esc(v)}</li>`).join("")}</ul>`;
-    body.appendChild(vg);
-  }
-
-  const cg = document.createElement("div");
-  cg.className = "brief-item";
-  let ch = `<label>Context</label><div class="brief-info">`;
-  ch += `<span>Kind</span><span>${esc(s.kind)}</span>`;
-  ch += `<span>Provider</span><span>${esc(s.provider)}</span>`;
-  if (s.repository) ch += `<span>Repository</span><span>${esc(s.repository)}</span>`;
-  ch += `</div>`;
-  cg.innerHTML = ch;
-  body.appendChild(cg);
-
-  const md = renderMarkdown(handoff);
-  const mg = document.createElement("div");
-  mg.className = "brief-item";
-  mg.innerHTML = `<label>Raw Markdown</label><pre class="brief-raw">${esc(md)}</pre>`;
-  body.appendChild(mg);
-
-  foot.innerHTML = `<span class="drawer-msg" data-brief-msg></span>
-    <button class="act primary" data-brief-copy>Copy Markdown</button>
-    <button class="act" data-brief-dl-md>Download .md</button>
-    <button class="act" data-brief-dl-json>Download .json</button>`;
-  const msg = foot.querySelector<HTMLElement>("[data-brief-msg]")!;
-
-  foot.querySelector("[data-brief-copy]")!.addEventListener("click", async () => {
-    const err = await ctrl.copy(handoff);
-    msg.textContent = err ? err : "Copied to clipboard";
-    setTimeout(() => { if (msg.textContent === "Copied to clipboard" || msg.textContent === err) msg.textContent = ""; }, 2500);
-  });
-  foot.querySelector("[data-brief-dl-md]")!.addEventListener("click", () => {
-    const err = ctrl.downloadMD(handoff);
-    if (err) msg.textContent = err;
-  });
-  foot.querySelector("[data-brief-dl-json]")!.addEventListener("click", () => {
-    const err = ctrl.downloadJSON(handoff);
-    if (err) msg.textContent = err;
-  });
-
-  const back = document.createElement("button");
-  back.className = "drawer-close";
-  back.setAttribute("aria-label", "Back to detail");
-  back.textContent = "‹";
-  back.addEventListener("click", () => {
-    head.innerHTML = origHead;
-    body.innerHTML = origBody;
-    foot.innerHTML = origFoot;
-    back.remove();
-    if (ctx.handoffController && !foot.querySelector("[data-brief-gen]")) {
-      const btn = document.createElement("button");
-      btn.className = "act";
-      btn.setAttribute("data-brief-gen", "");
-      btn.textContent = "Generate brief";
-      btn.addEventListener("click", () => {
-        const h = ctx.handoffController!.generateFor(r);
-        showBriefInDrawer(h, ctx.handoffController!, body, foot, ctx, r);
-      });
-      foot.appendChild(btn);
-    }
-  });
-  head.parentElement?.insertBefore(back, head);
-}
-
 // Pure layout: render pre-scored rows + non-fatal errors; open a shared right-side
 // drawer per row. The drawer is a flex column — non-scrolling header, scrolling
 // body, bottom action footer — so footer actions stay visible on long content.
@@ -165,7 +39,8 @@ export function renderTriageList(
   errors: TriageFailure[],
   ctx: DetailCtx = {},
   catalog: RuntimeCatalog = runtimeCatalog,
-): void {
+  detailState: TriageDetailState = {},
+): () => void {
   const failureKind = errors[0]?.kind;
   const surfaceLabel = failureKind
     ? catalog.kind(failureKind)?.label ?? "Data"
@@ -177,13 +52,16 @@ export function renderTriageList(
       <h3>${errors.length ? "No items loaded" : "No open items for these targets"}</h3>
       <p class="muted">${errors.length ? "The targets above returned nothing loadable." : "Everything in scope is clear. Adjust your scope in Settings or load a different provider."}</p>
     </div>`;
-    return;
+    if (detailState.activeItemId) {
+      detailState.onActiveItemChange?.(null);
+    }
+    return () => {};
   }
   const r0 = catalog.readyKind(rows[0].kind)?.renderer;
   root.innerHTML = warnings + tableHtml(
     rows,
     r0?.columns,
-    ctx.delegationSelection,
+    ctx.handoffSelection,
   )
     + `<div class="scrim" data-drawer-scrim></div>`
     + `<aside class="drawer" hidden role="dialog" aria-modal="true" aria-label="Item detail">
@@ -200,7 +78,12 @@ export function renderTriageList(
   // The drawer overlays the list; a scrim dims it (and closes on click). Escape also
   // closes, returning focus to the row.
   const dismiss = dismissible(drawer, { onDismiss: () => closeDrawer() });
-  function closeDrawer() { drawer.hidden = true; scrim.classList.remove("open"); dismiss.release(); }
+  function closeDrawer() {
+    drawer.hidden = true;
+    scrim.classList.remove("open");
+    dismiss.release();
+    detailState.onActiveItemChange?.(null);
+  }
   drawer.querySelector<HTMLElement>(".drawer-close")!.addEventListener("click", closeDrawer);
   scrim.addEventListener("click", closeDrawer);
 
@@ -208,15 +91,16 @@ export function renderTriageList(
     const toggle = (event: Event) => {
       event.stopPropagation();
       const item = rows[Number(button.dataset.i)];
-      if (item) ctx.delegationSelection?.onToggle(item);
+      if (item) ctx.handoffSelection?.onToggle(item);
     };
     button.addEventListener("click", toggle);
     button.addEventListener("keydown", (event) => event.stopPropagation());
   });
 
+  const openRows = new Map<string, () => void>();
   root.querySelectorAll<HTMLElement>(".alert-row").forEach(tr => {
+    const r = rows[Number(tr.dataset.i)];
     const openRow = () => {
-      const r = rows[Number(tr.dataset.i)];
       const kr = catalog.readyKind(r.kind)?.renderer;
       const view: DetailView = kr?.detail ? kr.detail(r, ctx) : defaultDetailView(r);
       head.innerHTML = detailHeadHtml(view.header);
@@ -225,24 +109,41 @@ export function renderTriageList(
       if (ctx.scoreExplain) renderScoreBreakdown(body, r, ctx.scoreExplain(r));
       foot.innerHTML = "";
       view.actions?.(foot);
-      if (ctx.handoffController) {
+      if (ctx.handoffSelection) {
+        const selected = ctx.handoffSelection.queuedKeys.has(
+          queueKey(handoffIdentityForItem(r)),
+        );
         const btn = document.createElement("button");
         btn.className = "act";
-        btn.setAttribute("data-brief-gen", "");
-        btn.textContent = "Generate brief";
+        btn.setAttribute("data-detail-handoff-toggle", "");
+        btn.textContent = selected
+          ? "Remove from handoff"
+          : "Add to handoff";
         btn.addEventListener("click", () => {
-          const handoff = ctx.handoffController!.generateFor(r);
-          showBriefInDrawer(handoff, ctx.handoffController!, body, foot, ctx, r);
+          ctx.handoffSelection?.onToggle(r);
         });
         foot.appendChild(btn);
       }
       drawer.hidden = false;
       scrim.classList.add("open");
       dismiss.activate();
+      detailState.onActiveItemChange?.(r.id);
     };
+    openRows.set(r.id, openRow);
     tr.addEventListener("click", openRow);
     tr.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openRow(); }
     });
   });
+
+  if (detailState.activeItemId) {
+    const restore = openRows.get(detailState.activeItemId);
+    if (restore) {
+      restore();
+    } else {
+      detailState.onActiveItemChange?.(null);
+    }
+  }
+
+  return () => dismiss.destroy();
 }

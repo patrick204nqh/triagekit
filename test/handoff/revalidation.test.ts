@@ -5,10 +5,10 @@ import type {
   RefreshReport,
 } from "../../src/runtime/cached-dataset/types";
 import type { TriageItem } from "../../src/runtime/dataset/item";
-import type { QueueEntry } from "../../src/runtime/delegation/types";
+import type { HandoffQueueEntry } from "../../src/runtime/handoff/types";
 import {
-  revalidateQueue,
-} from "../../src/runtime/delegation/revalidation";
+  revalidateHandoffQueue,
+} from "../../src/runtime/handoff/revalidation";
 
 const item = (
   id: string,
@@ -44,7 +44,7 @@ const snapshotWith = (
 const queued = (
   itemId: string,
   repository = "acme-corp/core",
-): QueueEntry => ({
+): HandoffQueueEntry => ({
   identity: {
     provider: "github",
     itemId,
@@ -77,7 +77,7 @@ const sessionThatRefreshes = (
   };
 };
 
-describe("delegation queue revalidation", () => {
+describe("handoff queue revalidation", () => {
   it("distinguishes changed, resolved, and unavailable without deleting entries", async () => {
     const before = snapshotWith([
       item("current"),
@@ -106,7 +106,7 @@ describe("delegation queue revalidation", () => {
       }],
     });
 
-    const result = await revalidateQueue({
+    const result = await revalidateHandoffQueue({
       entries: [
         queued("current"),
         queued("changed"),
@@ -143,7 +143,7 @@ describe("delegation queue revalidation", () => {
   it("blocks a target whose projected context contains a secret field", async () => {
     const before = snapshotWith([item("blocked")]);
     const after = snapshotWith([item("blocked")]);
-    const result = await revalidateQueue({
+    const result = await revalidateHandoffQueue({
       entries: [queued("blocked")],
       before,
       session: sessionThatRefreshes(before, after, {

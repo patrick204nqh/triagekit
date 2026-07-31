@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { runtimeCatalog } from "../../src/runtime/catalog/built-in";
-import { createDelegationController } from "../../src/runtime/delegation/controller";
-import { createDelegationQueue, queueKey } from "../../src/runtime/delegation/queue";
+import { createHandoffController } from "../../src/runtime/handoff/controller";
+import { createHandoffQueue, queueKey } from "../../src/runtime/handoff/queue";
 import type {
-  DelegationController,
+  HandoffController,
   RevalidationResult,
-} from "../../src/runtime/delegation/types";
-import { mountDelegationComposer } from "../../src/runtime/layout/delegation/composer";
+} from "../../src/runtime/handoff/types";
+import { mountHandoffComposer } from "../../src/runtime/layout/handoff/composer";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 
 const repositories = [
@@ -101,14 +101,14 @@ function workflowItems(): ScoredItem[] {
 }
 
 interface WorkflowScenario {
-  readonly controller: DelegationController;
+  readonly controller: HandoffController;
   readonly clipboard: { writeText: ReturnType<typeof vi.fn> };
   readonly openComposer: () => Promise<number>;
 }
 
 function mountWorkflowScenario(): WorkflowScenario {
   const items = workflowItems();
-  const queue = createDelegationQueue();
+  const queue = createHandoffQueue();
   queue.addMany(
     items.map((item) => ({
       provider: item.provider,
@@ -155,7 +155,7 @@ function mountWorkflowScenario(): WorkflowScenario {
     }),
   };
 
-  const controller = createDelegationController({
+  const controller = createHandoffController({
     queue,
     items: () => items,
     focusPolicy: () => ({
@@ -180,11 +180,11 @@ function mountWorkflowScenario(): WorkflowScenario {
       text: vi.fn(() => ({ ok: true })),
       json: vi.fn(() => ({ ok: true })),
     },
-    revalidateQueue: vi.fn().mockResolvedValue(revalidation),
+    revalidateHandoffQueue: vi.fn().mockResolvedValue(revalidation),
   });
 
-  mountDelegationComposer(
-    document.getElementById("delegation-host")!,
+  mountHandoffComposer(
+    document.getElementById("handoff-host")!,
     controller,
   );
 
@@ -200,14 +200,19 @@ function mountWorkflowScenario(): WorkflowScenario {
   };
 }
 
-describe("focus and delegation workflow", () => {
+describe("focus and handoff workflow", () => {
   beforeEach(() => {
     document.body.innerHTML =
-      '<button data-queue-badge>Queue</button><div id="delegation-host"></div>';
+      '<button data-queue-badge>Queue</button><div id="handoff-host"></div>';
   });
 
   it("transfers exactly five ordered packages and retains the remainder", async () => {
     const app = mountWorkflowScenario();
+    expect(app.controller.snapshot().mode).toBe("investigate");
+    app.controller.setMissionNote("Keep APIs stable");
+    app.controller.setItemNote("core-issue-2", "Do not update the lockfile");
+    app.controller.setMode("implement");
+
     const elapsed = await app.openComposer();
     const transfer = app.controller.snapshot();
 
@@ -224,6 +229,9 @@ describe("focus and delegation workflow", () => {
     );
     expect(packageRanks).toEqual([...packageRanks].sort((a, b) => a - b));
     expect(transfer.remainingPackages).toBeGreaterThan(0);
+    expect(transfer.previewMarkdown).toContain("## Mode: Implement");
+    expect(transfer.previewMarkdown).toContain("Keep APIs stable");
+    expect(transfer.previewMarkdown).toContain("Do not update the lockfile");
     expect(
       transfer.packages
         .flatMap((pkg) => pkg.targets)

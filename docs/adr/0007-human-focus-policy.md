@@ -6,7 +6,7 @@
 
 ## Context
 
-Item score alone cannot express that one repository is operationally more important than another. Include-only label filters also leave known no-work categories—such as items already carrying a tracking-ticket label—in the operator’s queue. Bulk delegation without first reducing this noise would transfer more context while weakening human judgment.
+Item score alone cannot express that one repository is operationally more important than another. Include-only label filters also leave known no-work categories—such as items already carrying a tracking-ticket label—in the operator’s queue. A Handoff Queue without first reducing this noise would transfer more context while weakening human judgment.
 
 ## Decision
 
@@ -16,7 +16,7 @@ Repository order is absolute and explicitly managed in Settings. Items sort by r
 
 Label rules use separate, visible “Show if labelled” and “Hide if labelled” lanes. Included labels match any selected include value; excluded labels hide any matching item; exclusion wins. Rules persist across repositories for that provider and remain visible in the toolbar.
 
-Focused items enter an explicit Delegation Queue through individual selection or `Add visible`. The queue is session-only, stores identities rather than provider payloads, survives same-session reloads, and never changes silently when filters or scope change.
+Focused items enter an explicit Handoff Queue through individual selection or `Add visible`. The queue is session-only, stores identities rather than provider payloads, survives same-session reloads, and never changes silently when filters or scope change. ADR-0009 defines its bundle and authorization semantics.
 
 ## Alternatives Considered
 
@@ -30,7 +30,7 @@ Focused items enter an explicit Delegation Queue through individual selection or
 - **Cons**: Cannot express common “already handled; skip” policy
 - **Why not**: Forces repeated manual scanning
 
-### Persist a long-lived delegation backlog
+### Persist a long-lived handoff backlog
 - **Pros**: Survives browser restarts
 - **Cons**: Selections become stale and turn triagekit toward project management
 - **Why not**: The queue represents current session intent, not durable work ownership
@@ -41,7 +41,7 @@ Focused items enter an explicit Delegation Queue through individual selection or
 - Core repositories stay focused without obscuring the rule
 - Known no-work labels disappear consistently
 - `Add visible` has deterministic, explainable membership
-- Humans approve what enters delegation
+- Humans approve what enters the Handoff Queue
 
 ### Negative
 - Absolute repository order can place a lower P-level item above a higher P-level item in another repository

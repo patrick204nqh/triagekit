@@ -19,6 +19,7 @@ const row = (id: string, score: number): ScoredItem => ({
     body: "",
     author: { login: "alice", avatarUrl: "", kind: "human" },
     assignees: [],
+    reviewers: [],
     comments: 0,
     labels: [],
     checks: null,
@@ -60,7 +61,7 @@ describe("DOM view adapter", () => {
         kinds: ["issue"],
       } as any,
       scoreExplain: () => null,
-      delegationSelection: {
+      handoffSelection: {
         queuedKeys: new Set(),
         onToggle,
       },
@@ -74,5 +75,41 @@ describe("DOM view adapter", () => {
     });
     host.querySelector<HTMLElement>("[data-queue-select]")!.click();
     expect(onToggle).toHaveBeenCalledWith(item);
+  });
+
+  it("keeps an open item drawer across background rerenders", () => {
+    const host = document.getElementById("root")!;
+    const item = row("a", 9);
+    const view = createDomView(host, {
+      artifact: {
+        id: "issue",
+        label: "Issues",
+        group: "work",
+        kinds: ["issue"],
+      } as any,
+      scoreExplain: () => null,
+    });
+    const vm: ViewModel = {
+      scored: [item],
+      shown: [item],
+      errors: [],
+      stats: {
+        byProvider: { github: 1 },
+        byKind: { issue: 1 },
+      },
+    };
+
+    view.render(vm);
+    host.querySelector<HTMLElement>(".alert-row")!.click();
+    expect(host.querySelector<HTMLElement>(".drawer")!.hidden).toBe(false);
+
+    view.render({
+      ...vm,
+      scored: [{ ...item, score: 10 }],
+      shown: [{ ...item, score: 10 }],
+    });
+
+    expect(host.querySelector<HTMLElement>(".drawer")!.hidden).toBe(false);
+    expect(host.querySelector("[data-head]")?.textContent).toContain("a");
   });
 });

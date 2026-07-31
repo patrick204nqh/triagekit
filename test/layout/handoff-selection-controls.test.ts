@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
 import {
-  queueIdentityForItem,
+  handoffIdentityForItem,
   renderSelectionControls,
-} from "../../src/runtime/layout/delegation/selection-controls";
+} from "../../src/runtime/layout/handoff/selection-controls";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
-import { queueKey } from "../../src/runtime/delegation/queue";
+import { queueKey } from "../../src/runtime/handoff/queue";
 
 const row = (id: string): ScoredItem => ({
   id,
@@ -22,7 +22,7 @@ const row = (id: string): ScoredItem => ({
   tier: "P2",
 });
 
-describe("delegation selection controls", () => {
+describe("Handoff selection controls", () => {
   it("toggles only visible rows through unchecked, mixed, and checked states", () => {
     const host = document.createElement("div");
     document.body.append(host);
@@ -48,7 +48,7 @@ describe("delegation selection controls", () => {
 
     renderSelectionControls(host, {
       visible,
-      queuedKeys: new Set([queueKey(queueIdentityForItem(visible[0]))]),
+      queuedKeys: new Set([queueKey(handoffIdentityForItem(visible[0]))]),
       selectedCount: 1,
       totalCount: 1,
       onSetVisible,
@@ -65,8 +65,8 @@ describe("delegation selection controls", () => {
       visible,
       queuedKeys: new Set([
         ...visible.map((candidate) =>
-          queueKey(queueIdentityForItem(candidate))),
-        queueKey(queueIdentityForItem(hidden)),
+          queueKey(handoffIdentityForItem(candidate))),
+        queueKey(handoffIdentityForItem(hidden)),
       ]),
       selectedCount: 3,
       totalCount: 3,
@@ -108,6 +108,9 @@ describe("delegation selection controls", () => {
     });
     expect(host.querySelector("[data-queue-badge]")?.textContent)
       .toContain("3 selected · 5 retained");
+    expect(host.querySelector("[data-queue-badge]")
+      ?.getAttribute("aria-label"))
+      .toBe("Open Handoff queue: 3 selected, 5 retained");
     host.querySelector<HTMLElement>("[data-queue-badge]")!.click();
     expect(onOpenQueue).toHaveBeenCalledOnce();
   });
