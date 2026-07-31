@@ -30,3 +30,15 @@ describe("native modal surfaces", () => {
     );
   });
 });
+
+describe("desktop app shell", () => {
+  it("keeps navigation in the viewport while the result region scrolls", () => {
+    expect(tokens).toMatch(/body\s*\{[^}]*height:100dvh[^}]*overflow:hidden/s);
+    expect(tokens).toMatch(/grid-template-rows:auto auto minmax\(0,1fr\)/);
+    expect(tokens).toMatch(/\.domains\s*\{[^}]*overflow-y:auto/s);
+    expect(tokens).toMatch(/main\s*\{[^}]*min-height:0[^}]*overflow:auto/s);
+    expect(tokens).toMatch(
+      /@media \(max-width:768px\)[\s\S]*?body\s*\{[^}]*height:auto[^}]*overflow-y:auto/,
+    );
+  });
+});

@@ -29,23 +29,24 @@
 }
 *, *::before, *::after { box-sizing:border-box; }
 h1, h2, h3, h4, h5, h6 { margin:0; font-size:inherit; font-weight:inherit; }
+html { height:100%; }
 html,body { margin:0; overflow-x:hidden; }
 body {
-  min-height:100dvh; background:var(--canvas); color:var(--fg);
+  height:100dvh; min-height:0; overflow:hidden; background:var(--canvas); color:var(--fg);
   font:400 14px/1.5 var(--sans); -webkit-font-smoothing:antialiased;
   letter-spacing:-0.005em;
   display:grid;
   grid-template-columns:var(--rail-w) 1fr;
-  grid-template-rows:auto auto 1fr;
+  grid-template-rows:auto auto minmax(0,1fr);
   grid-template-areas:
     "appbar appbar"
     "rail   view"
     "rail   main";
 }
 #appbar     { grid-area:appbar; }
-.domains    { grid-area:rail; }
+.domains    { grid-area:rail; min-height:0; overflow-y:auto; }
 .viewswitch { grid-area:view; }
-main        { grid-area:main; }
+main        { grid-area:main; min-height:0; overflow:auto; }
 
 /* Fixed grain overlay — breaks flat-dark sterility. Inline fractal-noise SVG
    (CSP: img-src data: allowed). Tiny, non-interactive, adapts via blend mode. */
@@ -772,8 +773,9 @@ input[aria-invalid="true"]:focus { border-color:var(--danger); box-shadow:0 0 0 
 .set-link { color:var(--accent); white-space:nowrap; }
 
 @media (max-width:768px) {
-  body { display:block; }                              /* single-column stack, source order */
-  .domains { flex-direction:row; flex-wrap:nowrap; gap:6px; overflow-x:auto;
+  body { display:block; height:auto; min-height:100dvh; overflow-y:auto; } /* single-column stack, source order */
+  main { overflow:visible; }
+  .domains { flex-direction:row; flex-wrap:nowrap; gap:6px; overflow-x:auto; overflow-y:hidden;
              padding:14px 16px 0; border-right:0; overscroll-behavior-inline:contain; }
   .domains button { width:auto; }
   .rail-group { flex:none; flex-direction:row; align-items:center; }
