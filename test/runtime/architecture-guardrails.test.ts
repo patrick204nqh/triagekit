@@ -106,15 +106,25 @@ describe("runtime architecture guardrails", () => {
     }
   });
 
-  it("keeps delegation browser-local and provider-neutral", () => {
-    const delegation = filesUnder(join(runtime, "delegation"))
+  it("retires delegation terminology in favor of handoff", () => {
+    expect(existsSync(join(runtime, "delegation"))).toBe(false);
+    expect(existsSync(join(runtime, "layout/delegation"))).toBe(false);
+  });
+
+  it("keeps handoff browser-local and provider-neutral", () => {
+    const handoff = filesUnder(join(runtime, "handoff"))
       .filter((path) => path.endsWith(".ts"))
       .map((path) => readFileSync(path, "utf8"))
       .join("\n");
 
-    expect(delegation).not.toMatch(/\b(fetch|WebSocket|EventSource)\s*\(/);
-    expect(delegation).not.toContain("credential:");
-    expect(delegation).not.toContain("rawResponse:");
-    expect(delegation).not.toContain("mcp");
+    expect(handoff).not.toMatch(/\b(fetch|WebSocket|EventSource)\s*\(/);
+    expect(handoff).not.toContain("credential:");
+    expect(handoff).not.toContain("rawResponse:");
+    expect(handoff).not.toContain("mcp");
+    expect(handoff).not.toContain("triagekit.delegation-bundle");
+    expect(handoff).not.toContain("triagekit.delegation.queue.v1");
+    expect(handoff).not.toContain("AgentHandoffV1");
+    expect(handoff).toContain("triagekit.handoff-bundle");
+    expect(handoff).toContain("triagekit.handoff.queue.v1");
   });
 });

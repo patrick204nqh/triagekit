@@ -1,7 +1,7 @@
 # ADR-0008: Bounded Delegation Bundles
 
 **Date**: 2026-07-29
-**Status**: accepted
+**Status**: superseded by ADR-0009
 **Deciders**: Patrick
 
 ## Context

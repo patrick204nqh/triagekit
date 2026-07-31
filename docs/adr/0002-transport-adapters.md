@@ -2,6 +2,10 @@
 
 **Date**: 2026-07-28
 **Status**: accepted
+
+> **Supersession note:** ADR-0009 replaces the `AgentHandoffV1` transport
+> payload with `HandoffBundleV1`. The browser clipboard and download adapter
+> boundary remains in force.
 **Deciders**: Patrick
 
 ## Context

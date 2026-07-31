@@ -2,6 +2,10 @@
 
 **Date**: 2026-07-28
 **Status**: accepted
+
+> **Supersession note:** ADR-0009 completes the previously deferred batch
+> transfer work as one unified Handoff Queue and replaces the single-target
+> phase boundary described here.
 **Deciders**: Patrick
 
 ## Context
