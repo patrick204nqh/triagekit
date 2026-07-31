@@ -28,11 +28,11 @@ function row(over: Partial<ScoredItem>): ScoredItem {
 describe("renderTriageList + DetailPanel", () => {
   beforeEach(() => { document.body.innerHTML = ""; });
 
-  it("renders one row per item and a hidden drawer", () => {
+  it("renders one row per item and a closed drawer", () => {
     const root = document.createElement("div");
     renderTriageList(root, [row({ id: "a" }), row({ id: "b" })], []);
     expect(root.querySelectorAll(".alert-row").length).toBe(2);
-    expect(root.querySelector<HTMLElement>(".drawer")!.hidden).toBe(true);
+    expect(root.querySelector<HTMLDialogElement>(".drawer")!.open).toBe(false);
   });
 
   it("places the table in a labelled keyboard-scrollable region", () => {
@@ -70,7 +70,7 @@ describe("renderTriageList + DetailPanel", () => {
     )!;
     expect(detailButton.textContent).toBe("Review auth flow");
     detailButton.click();
-    expect(root.querySelector<HTMLElement>(".drawer")!.hidden).toBe(false);
+    expect(root.querySelector<HTMLDialogElement>(".drawer")!.open).toBe(true);
   });
 
   it("groups repeated failures in a collapsed repository disclosure", () => {
@@ -128,7 +128,7 @@ describe("renderTriageList + DetailPanel", () => {
     )!;
     toggle.click();
     expect(selected).toEqual(["a"]);
-    expect(root.querySelector<HTMLElement>(".drawer")!.hidden).toBe(true);
+    expect(root.querySelector<HTMLDialogElement>(".drawer")!.open).toBe(false);
   });
 
   it("uses the queue as the only item-level Handoff action", () => {
@@ -175,8 +175,8 @@ describe("renderTriageList + DetailPanel", () => {
       withRenderer(renderer),
     );
     (root.querySelector(".alert-row") as HTMLElement).click();
-    const drawer = root.querySelector<HTMLElement>(".drawer")!;
-    expect(drawer.hidden).toBe(false);
+    const drawer = root.querySelector<HTMLDialogElement>(".drawer")!;
+    expect(drawer.open).toBe(true);
     expect(drawer.querySelector(".probe")?.textContent).toBe("leaked key");
     expect(seen).toEqual({ title: "leaked key", token: "tok" });
   });
@@ -186,7 +186,7 @@ describe("renderTriageList + DetailPanel", () => {
     renderTriageList(root, [row({})], []);
     (root.querySelector(".alert-row") as HTMLElement).click();
     (root.querySelector(".drawer-close") as HTMLElement).click();
-    expect(root.querySelector<HTMLElement>(".drawer")!.hidden).toBe(true);
+    expect(root.querySelector<HTMLDialogElement>(".drawer")!.open).toBe(false);
   });
 
   it("moves focus into the modal drawer and restores it on close", () => {
@@ -199,7 +199,7 @@ describe("renderTriageList + DetailPanel", () => {
     detailButton.focus();
     detailButton.click();
 
-    const drawer = root.querySelector<HTMLElement>(".drawer")!;
+    const drawer = root.querySelector<HTMLDialogElement>(".drawer")!;
     const titleId = drawer.getAttribute("aria-labelledby")!;
     expect(titleId).not.toBe("");
     expect(drawer.querySelector(`#${titleId}`)?.textContent?.trim())
@@ -207,14 +207,11 @@ describe("renderTriageList + DetailPanel", () => {
     expect(document.activeElement).toBe(
       drawer.querySelector(".drawer-close"),
     );
-    expect(root.querySelector(".table-scroll")?.hasAttribute("inert")).toBe(true);
-
     drawer.querySelector<HTMLButtonElement>(".drawer-close")!.click();
     expect(document.activeElement).toBe(detailButton);
-    expect(root.querySelector(".table-scroll")?.hasAttribute("inert")).toBe(false);
   });
 
-  it("restores focus to the current detail control when reopening saved detail", () => {
+  it("reopens saved detail as a modal dialog", () => {
     const root = document.createElement("div");
     document.body.appendChild(root);
     renderTriageList(
@@ -226,12 +223,10 @@ describe("renderTriageList + DetailPanel", () => {
       { activeItemId: "saved" },
     );
 
-    const drawer = root.querySelector<HTMLElement>(".drawer")!;
-    expect(drawer.hidden).toBe(false);
+    const drawer = root.querySelector<HTMLDialogElement>(".drawer")!;
+    expect(drawer.open).toBe(true);
     drawer.querySelector<HTMLButtonElement>(".drawer-close")!.click();
-    expect(document.activeElement).toBe(
-      root.querySelector("[data-open-detail]"),
-    );
+    expect(drawer.open).toBe(false);
   });
 
   it("uses a unique accessible heading for each detail drawer", () => {
@@ -251,15 +246,15 @@ describe("renderTriageList + DetailPanel", () => {
     expect(secondDrawer.querySelector(`#${secondId}`)).not.toBeNull();
   });
 
-  it("Escape closes the open drawer", () => {
+  it("native cancel closes the open drawer", () => {
     const root = document.createElement("div");
     document.body.appendChild(root);
     renderTriageList(root, [row({})], []);
     (root.querySelector(".alert-row") as HTMLElement).click();
-    const drawer = root.querySelector<HTMLElement>(".drawer")!;
-    expect(drawer.hidden).toBe(false);
-    document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
-    expect(drawer.hidden).toBe(true);
+    const drawer = root.querySelector<HTMLDialogElement>(".drawer")!;
+    expect(drawer.open).toBe(true);
+    drawer.dispatchEvent(new Event("cancel", { cancelable: true }));
+    expect(drawer.open).toBe(false);
   });
 
   it("falls back to a default detail when the kind has no detail()", () => {

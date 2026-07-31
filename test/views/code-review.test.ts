@@ -36,7 +36,7 @@ describe("review kind renderer", () => {
     renderTriageList(root, [pr()], [], { token: "t" });
     (root.querySelector(".alert-row") as HTMLElement).click();
     const drawer = root.querySelector<HTMLElement>(".drawer")!;
-    expect(drawer.hidden).toBe(false);
+    expect((drawer as HTMLDialogElement).open).toBe(true);
     expect(drawer.querySelector(".drawer-content .rc-byline")).toBeTruthy();   // body mounted
     expect(drawer.querySelector(".drawer-foot [data-action='open']")).toBeTruthy();   // footer actions
   });
