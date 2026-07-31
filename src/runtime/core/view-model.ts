@@ -1,7 +1,11 @@
 // src/runtime/core/view-model.ts
 import type { ScoredItem } from "../layout/table/kind-renderer";
 import type { TriageFailure } from "../catalog/types";
-import type { StoreStats } from "./store";
+
+export interface StoreStats {
+  byProvider: Record<string, number>;
+  byKind: Record<string, number>;
+}
 
 // What the core hands a ViewPort: pure data, no DOM, no behavior.
 export interface ViewModel {

@@ -1,6 +1,5 @@
-import { NotFoundError } from "../core/errors.js";
 import type { Kind } from "./item";
-import { listDomains, type Class } from "./taxonomy";
+import type { Class } from "./taxonomy";
 
 // What you triage. This is the top-level navigation axis: KIND is a tab, and a
 // PROVIDER is a filter within a tab (github + gitlab both feed the neutral
@@ -22,24 +21,3 @@ export interface Artifact {
 
 export const GROUP_LABEL: Record<ArtifactGroup, string> = { finding: "Findings", work: "Work" };
 export const GROUP_ORDER: ArtifactGroup[] = ["finding", "work"];
-
-// One artifact per kind, derived from the taxonomy. The nav rail groups by class
-// (GROUP_ORDER) -> domain order -> kind. No hand-listed second partition.
-const KIND_LABEL: Partial<Record<Kind, string>> = {
-  "dependency-vuln": "Dependencies", "code-scanning": "Code scanning", "secret-scanning": "Secrets",
-  "cloud-misconfig": "Cloud misconfig", "edge-misconfig": "Edge misconfig", "waf-finding": "WAF",
-  "runtime-threat": "Threats",
-  "change-request": "Change requests",  // neutral display noun for the change-request artifact; GitHub "Pull requests" / GitLab "Merge requests" are per-provider nouns declared in ProviderManifest.labels (not shown in the neutral sidebar)
-  issue: "Issues",
-  email: "Inbox", task: "Tasks",
-};
-
-const ARTIFACTS: Artifact[] = listDomains().flatMap(d =>
-  d.kinds.map<Artifact>(k => ({ id: k, label: KIND_LABEL[k] ?? k, group: d.class, kinds: [k] })));
-
-const byKind = new Map<Kind, Artifact>(ARTIFACTS.map(a => [a.kinds[0], a] as const));
-
-export function listArtifacts(): Artifact[] { return ARTIFACTS; }
-export function artifactOf(kind: Kind): Artifact {
-  const a = byKind.get(kind); if (!a) throw new NotFoundError("artifact", kind); return a;
-}

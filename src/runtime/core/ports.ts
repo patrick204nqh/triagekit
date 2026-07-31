@@ -9,7 +9,3 @@ export interface StoragePort {
   get(key: string): string | null;
   set(key: string, value: string): void;
 }
-
-export interface TimerPort {
-  every(ms: number, fn: () => void): () => void;
-}

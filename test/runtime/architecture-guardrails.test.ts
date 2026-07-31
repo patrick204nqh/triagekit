@@ -24,6 +24,7 @@ describe("runtime architecture guardrails", () => {
       "registerTab(",
       "registerView(",
       "registerFieldCatalog(",
+      "registerDecorator(",
     ];
     const source = filesUnder(runtime)
       .filter((path) => path.endsWith(".ts"))
@@ -32,6 +33,23 @@ describe("runtime architecture guardrails", () => {
 
     for (const marker of forbidden) {
       expect(source, marker).not.toContain(marker);
+    }
+  });
+
+  it("does not retain Ponytail-audit dead modules", () => {
+    const retired = [
+      "adapters/timer.ts",
+      "core/decorators.ts",
+      "core/scope-key.ts",
+      "core/store.ts",
+      "handoff/adapters/clipboard.ts",
+      "handoff/adapters/types.ts",
+      "ingest/github/urls.ts",
+      "insights/capabilities.ts",
+    ];
+
+    for (const relative of retired) {
+      expect(existsSync(join(runtime, relative)), relative).toBe(false);
     }
   });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { actionsFor, isBot, mergeable, reasonNotMergeable } from "../../src/runtime/dataset/shapes/review";
+import { actionsFor, mergeable, reasonNotMergeable } from "../../src/runtime/dataset/shapes/review";
 import type { ReviewDetails } from "../../src/runtime/dataset/shapes/review";
 
 const base: ReviewDetails = {
@@ -13,13 +13,6 @@ describe("actionsFor", () => {
   it("gives change requests a merge action and issues an assign/close action", () => {
     expect(actionsFor("change-request")).toEqual(["merge", "comment", "label", "open"]);
     expect(actionsFor("issue")).toEqual(["comment", "assign", "close", "label", "open"]);
-  });
-});
-
-describe("isBot", () => {
-  it("reads the actor kind", () => {
-    expect(isBot(base.author)).toBe(true);
-    expect(isBot({ login: "marta", avatarUrl: "", kind: "human" })).toBe(false);
   });
 });
 

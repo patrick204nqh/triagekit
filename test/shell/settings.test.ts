@@ -21,14 +21,6 @@ const github = provider({
     enrich: [],
     actions: {},
   },
-  adapter: {
-    refresh: async () => [],
-    discoverScope: async () => [{
-      value: "acme/web",
-      label: "web",
-      group: "acme",
-    }],
-  },
 });
 
 function mount(extra?: Partial<Parameters<typeof mountSettings>[1]>) {

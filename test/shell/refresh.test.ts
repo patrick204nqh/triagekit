@@ -1,18 +1,8 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach } from "vitest";
-import { getRefreshInterval, setRefreshInterval, relativeSince, REFRESH_OPTIONS } from "../../src/runtime/shell/refresh";
+import { describe, it, expect } from "vitest";
+import { relativeSince, REFRESH_OPTIONS } from "../../src/runtime/shell/refresh";
 
 describe("refresh preference", () => {
-  beforeEach(() => localStorage.clear());
-
-  it("defaults to off and only accepts known intervals", () => {
-    expect(getRefreshInterval()).toBe("off");
-    setRefreshInterval(300); expect(getRefreshInterval()).toBe(300);
-    setRefreshInterval("off"); expect(getRefreshInterval()).toBe("off");
-    localStorage.setItem("triagekit.refresh", "999");   // not an offered option
-    expect(getRefreshInterval()).toBe("off");
-  });
-
   it("offers Off / 5m / 10m / 15m", () => {
     expect(REFRESH_OPTIONS.map(o => o.value)).toEqual(["off", 300, 600, 900]);
   });

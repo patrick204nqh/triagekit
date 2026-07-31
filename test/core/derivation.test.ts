@@ -64,6 +64,25 @@ describe("derive", () => {
     expect(out.scored[0].tier).toBe("P0");
   });
 
+  it("applies configured bot policy before scoring", () => {
+    const bot = item("bot", 50);
+    bot.details = {
+      author: { login: "deploy", avatarUrl: "", kind: "human" },
+    };
+    const out = derive({
+      items: [bot],
+      activeKinds: ["issue"],
+      botLogins: ["deploy"],
+      score,
+      repoView: "",
+      filters: emptyListState(),
+      focusPolicy,
+    });
+    expect(
+      (out.scored[0].details as { author: { kind: string } }).author.kind,
+    ).toBe("bot");
+  });
+
   it("shown equals scored when no filters are active", () => {
     const out = derive({
       items: [item("a", 10), item("b", 90)],

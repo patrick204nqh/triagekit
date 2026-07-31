@@ -1,13 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type {
   StoragePort,
-  TimerPort,
   ViewPort,
 } from "../../src/runtime/core/ports";
 import type { ViewModel } from "../../src/runtime/core/view-model";
 
 describe("core ports", () => {
-  it("fakes satisfy view, storage, and timer ports", () => {
+  it("fakes satisfy view and storage ports", () => {
     let rendered: ViewModel | null = null;
     const view: ViewPort = {
       render: (vm) => { rendered = vm; },
@@ -17,10 +16,6 @@ describe("core ports", () => {
       get: (key) => values.get(key) ?? null,
       set: (key, value) => { values.set(key, value); },
     };
-    const timer: TimerPort = {
-      every: () => () => {},
-    };
-
     view.render({
       scored: [],
       shown: [],
@@ -28,8 +23,6 @@ describe("core ports", () => {
       stats: { byProvider: {}, byKind: {} },
     });
     storage.set("k", "v");
-    timer.every(1_000, () => {})();
-
     expect(rendered).not.toBeNull();
     expect(storage.get("k")).toBe("v");
   });

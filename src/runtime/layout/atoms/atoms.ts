@@ -66,11 +66,6 @@ export function checkIndicatorHtml(c: CheckStatus | null): string {
   return `<span class="check ${cls}">${text}</span>${conf}`;
 }
 
-export function permalinkLinkHtml(p: Permalink): string {
-  const text = esc(p.label ?? p.kind);
-  return `<a class="plink plink-${p.kind}" href="${esc(p.href)}" target="_blank" rel="noreferrer">${text} ↗</a>`;
-}
-
 export function relationStripHtml(rels: Relation[], links: Permalink[]): string {
   const fixes = rels.find(r => r.type === "fixes");
   if (!fixes) return "";
