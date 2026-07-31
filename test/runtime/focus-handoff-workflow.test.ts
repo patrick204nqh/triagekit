@@ -208,6 +208,11 @@ describe("focus and handoff workflow", () => {
 
   it("transfers exactly five ordered packages and retains the remainder", async () => {
     const app = mountWorkflowScenario();
+    expect(app.controller.snapshot().mode).toBe("investigate");
+    app.controller.setMissionNote("Keep APIs stable");
+    app.controller.setItemNote("core-issue-2", "Do not update the lockfile");
+    app.controller.setMode("implement");
+
     const elapsed = await app.openComposer();
     const transfer = app.controller.snapshot();
 
@@ -224,6 +229,9 @@ describe("focus and handoff workflow", () => {
     );
     expect(packageRanks).toEqual([...packageRanks].sort((a, b) => a - b));
     expect(transfer.remainingPackages).toBeGreaterThan(0);
+    expect(transfer.previewMarkdown).toContain("## Mode: Implement");
+    expect(transfer.previewMarkdown).toContain("Keep APIs stable");
+    expect(transfer.previewMarkdown).toContain("Do not update the lockfile");
     expect(
       transfer.packages
         .flatMap((pkg) => pkg.targets)

@@ -22,11 +22,6 @@ function controllerWith(overrides: Record<string, unknown> = {}) {
         constraints: ["Do not modify files."],
         verification: ["Outline a concrete action plan."],
       },
-      intent: {
-        outcome: "Investigate the selected issues",
-        constraints: ["Do not modify files."],
-        verification: ["Outline a concrete action plan."],
-      },
       targets: [{
         id: "github:42",
         title: "Issue 42",
@@ -113,7 +108,7 @@ describe("Handoff composer", () => {
       "[data-mission-note]",
     )!;
     note.value = "Keep public APIs stable";
-    note.dispatchEvent(new Event("change"));
+    note.dispatchEvent(new Event("input"));
     expect(controller.setMissionNote)
       .toHaveBeenCalledWith("Keep public APIs stable");
   });

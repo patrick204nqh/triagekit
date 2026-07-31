@@ -38,11 +38,6 @@ const bundle: HandoffBundleV1 = {
       constraints: ["Do not modify files."],
       verification: ["Outline a concrete action plan."],
     },
-    intent: {
-      outcome: "Investigate *carefully*",
-      constraints: ["Do not modify files."],
-      verification: ["Outline a concrete action plan."],
-    },
     targets: [{
       id: "github:42",
       kind: "issue",

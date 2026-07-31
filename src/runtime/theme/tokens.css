@@ -25,7 +25,7 @@
 }
 *, *::before, *::after { box-sizing:border-box; }
 h1, h2, h3, h4, h5, h6 { margin:0; font-size:inherit; font-weight:inherit; }
-html,body { margin:0; }
+html,body { margin:0; overflow-x:hidden; }
 body {
   min-height:100dvh; background:var(--canvas); color:var(--fg);
   font:400 14px/1.5 var(--sans); -webkit-font-smoothing:antialiased;

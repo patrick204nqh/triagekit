@@ -314,7 +314,7 @@ export function mountHandoffComposer(
           }
         }));
       body.querySelector<HTMLTextAreaElement>("[data-mission-note]")
-        ?.addEventListener("change", (event) => {
+        ?.addEventListener("input", (event) => {
           controller.setMissionNote(
             (event.currentTarget as HTMLTextAreaElement).value,
           );

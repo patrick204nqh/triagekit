@@ -38,11 +38,6 @@ const packageOf = (
     constraints: ["Do not modify files."],
     verification: ["Outline a concrete action plan."],
   },
-  intent: {
-    outcome: "Investigate the selected issues",
-    constraints: ["Do not modify files."],
-    verification: ["Outline a concrete action plan."],
-  },
   targets: [target(`${id}-target`, details)],
   selectionReason: "Repository priority 1 · P2 1",
 });
