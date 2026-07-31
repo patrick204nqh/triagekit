@@ -13,6 +13,16 @@ const filesUnder = (directory: string): string[] =>
   });
 
 describe("runtime architecture guardrails", () => {
+  it("delegates persisted-state shapes to Zod", () => {
+    for (const relative of [
+      "focus/browser-store.ts",
+      "handoff/browser-queue-store.ts",
+    ]) {
+      expect(readFileSync(join(runtime, relative), "utf8"), relative)
+        .toContain('from "zod"');
+    }
+  });
+
   it("contains no mutable registration path", () => {
     const forbidden = [
       "registerSource(",
