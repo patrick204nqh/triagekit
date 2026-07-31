@@ -6,6 +6,10 @@ const files = [
   "src/runtime/shell/repository-settings.ts",
   "src/runtime/shell/connection-status.ts",
 ];
+const tokens = readFileSync(
+  resolve(process.cwd(), "src/runtime/theme/tokens.css"),
+  "utf8",
+);
 
 describe("new shell components respect strict CSP", () => {
   it.each(files)(
@@ -17,4 +21,12 @@ describe("new shell components respect strict CSP", () => {
       expect(source).not.toMatch(/\bon[a-z]+\s*=/i);
     },
   );
+});
+
+describe("native modal surfaces", () => {
+  it("set an explicit foreground color instead of using the dialog default", () => {
+    expect(tokens).toMatch(
+      /\.sheet,\s*\.drawer,\s*\.handoff-composer\s*\{[^}]*color:var\(--fg\)/s,
+    );
+  });
 });

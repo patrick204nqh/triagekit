@@ -490,7 +490,7 @@ table.alerts .queue-col { width:42px; padding-inline:8px; text-align:center; }
 /* ── Slide-over base (table drawer + settings panel) ───────────────── */
 .sheet,
 .drawer,
-.handoff-composer { margin:0; padding:0; border:0; }
+.handoff-composer { margin:0; padding:0; border:0; color:var(--fg); }
 .sheet::backdrop,
 .drawer::backdrop,
 .handoff-composer::backdrop { background:var(--scrim); }

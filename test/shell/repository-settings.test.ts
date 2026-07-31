@@ -156,6 +156,27 @@ describe("mountRepositorySettings", () => {
     });
   });
 
+  it("keeps focus and caret in both repository searches while filtering", async () => {
+    const { host, controller } = mount();
+    controller.show("github");
+    await clickAndFlush(host, "[data-discover-repositories]");
+
+    for (const selector of [
+      "[data-selected-search]",
+      "[data-available-search]",
+    ]) {
+      let search = host.querySelector<HTMLInputElement>(selector)!;
+      search.focus();
+      search.value = "a";
+      search.setSelectionRange(1, 1);
+      search.dispatchEvent(new Event("input", { bubbles: true }));
+
+      search = host.querySelector<HTMLInputElement>(selector)!;
+      expect(document.activeElement).toBe(search);
+      expect(search.selectionStart).toBe(1);
+    }
+  });
+
   it("keeps selected rows visible across a discovery error and clears it on retry", async () => {
     const discover = vi.fn()
       .mockRejectedValueOnce(new Error("rate limited"))

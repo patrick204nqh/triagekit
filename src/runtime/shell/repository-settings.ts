@@ -83,7 +83,11 @@ export function mountRepositorySettings(
     focusRepository(repository);
   }
 
-  function render(): void {
+  function render(focus?: {
+    selector: string;
+    start: number | null;
+    end: number | null;
+  }): void {
     const snapshot = options.snapshot(activeProvider);
     const ordered = reconcileRepositoryOrder(
       snapshot.repositoryOrder,
@@ -161,7 +165,11 @@ export function mountRepositorySettings(
     selectedFilter.value = selectedSearch;
     selectedFilter.addEventListener("input", () => {
       selectedSearch = selectedFilter.value;
-      render();
+      render({
+        selector: "[data-selected-search]",
+        start: selectedFilter.selectionStart,
+        end: selectedFilter.selectionEnd,
+      });
     });
     const selectedList = document.createElement("div");
     selectedList.className = "repository-list";
@@ -256,7 +264,11 @@ export function mountRepositorySettings(
     availableFilter.value = availableSearch;
     availableFilter.addEventListener("input", () => {
       availableSearch = availableFilter.value;
-      render();
+      render({
+        selector: "[data-available-search]",
+        start: availableFilter.selectionStart,
+        end: availableFilter.selectionEnd,
+      });
     });
     const availableList = document.createElement("div");
     availableList.className = "repository-list";
@@ -365,6 +377,13 @@ export function mountRepositorySettings(
           render();
         });
       });
+    if (focus) {
+      const input = host.querySelector<HTMLInputElement>(focus.selector);
+      input?.focus({ preventScroll: true });
+      if (input && focus.start !== null && focus.end !== null) {
+        input.setSelectionRange(focus.start, focus.end);
+      }
+    }
   }
 
   return {
