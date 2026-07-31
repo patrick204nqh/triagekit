@@ -23,7 +23,10 @@ const kind = (
     score: item.signal,
     factors: [],
   }),
-  renderer: { kind: id },
+  renderer: {
+    kind: id,
+    columns: [{ header: "Title", cell: (item) => item.title }],
+  },
   filters: [],
   sorts: [],
   charts: [],

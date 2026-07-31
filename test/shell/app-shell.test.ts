@@ -524,7 +524,7 @@ describe("mountShell artifact navigation", () => {
       )!.click();
       await vi.waitFor(() =>
         expect(document.querySelector("[data-queue-badge]")?.textContent)
-          .toContain("2 selected · 2 retained"));
+          .toContain("Handoff · 2 ready"));
 
       document.querySelector<HTMLElement>("[data-repo='']")!.click();
       await vi.waitFor(() =>
@@ -537,7 +537,7 @@ describe("mountShell artifact navigation", () => {
       bulk.click();
       await vi.waitFor(() =>
         expect(document.querySelector("[data-queue-badge]")?.textContent)
-          .toContain("3 selected · 3 retained"));
+          .toContain("Handoff · 3 ready"));
 
       document.querySelector<HTMLElement>(
         "[data-repo='acme-corp/web']",
@@ -547,7 +547,7 @@ describe("mountShell artifact navigation", () => {
       bulk.click();
       await vi.waitFor(() =>
         expect(document.querySelector("[data-queue-badge]")?.textContent)
-          .toContain("1 selected · 3 retained"));
+          .toContain("Handoff · 1 ready"));
 
       document.querySelector<HTMLElement>("[data-repo='']")!.click();
       await vi.waitFor(() =>
