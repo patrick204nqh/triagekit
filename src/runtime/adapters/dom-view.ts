@@ -23,11 +23,15 @@ export interface DomViewDeps {
 // (mounted in the shell's nav) via onFilterChange; this adapter just paints the
 // already-derived rows.
 export function createDomView(host: HTMLElement, deps: DomViewDeps): ViewPort {
+  let activeDetailItemId: string | null = null;
+  let teardownList = () => {};
+
   return {
     render(vm: ViewModel) {
+      teardownList();
       host.innerHTML = `<div class="surface-body"></div>`;
       const body = host.querySelector<HTMLElement>(".surface-body")!;
-      renderTriageList(
+      teardownList = renderTriageList(
         body,
         vm.shown,
         vm.errors,
@@ -37,6 +41,12 @@ export function createDomView(host: HTMLElement, deps: DomViewDeps): ViewPort {
           handoffSelection: deps.handoffSelection,
         },
         deps.catalog,
+        {
+          activeItemId: activeDetailItemId,
+          onActiveItemChange: (itemId) => {
+            activeDetailItemId = itemId;
+          },
+        },
       );
     },
   };
