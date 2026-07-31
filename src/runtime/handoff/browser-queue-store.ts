@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { StoragePort } from "../core/ports";
+import { KINDS } from "../dataset/item";
 import type {
   HandoffQueueStore,
   HandoffQueueState,
@@ -10,19 +11,7 @@ const EMPTY_STATE: HandoffQueueState = {
   mode: "investigate",
   entries: [],
 };
-const kindSchema = z.enum([
-  "dependency-vuln",
-  "code-scanning",
-  "secret-scanning",
-  "cloud-misconfig",
-  "edge-misconfig",
-  "waf-finding",
-  "runtime-threat",
-  "change-request",
-  "issue",
-  "email",
-  "task",
-]);
+const kindSchema = z.enum(KINDS);
 const identitySchema = z.strictObject({
   provider: z.string().min(1),
   itemId: z.string().min(1),

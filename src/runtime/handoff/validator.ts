@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { KINDS } from "../dataset/item";
 import type {
   HandoffBundleV1,
   HandoffValueV1,
@@ -6,19 +7,7 @@ import type {
   HandoffValidationResult,
 } from "./types";
 
-const kindSchema = z.enum([
-  "dependency-vuln",
-  "code-scanning",
-  "secret-scanning",
-  "cloud-misconfig",
-  "edge-misconfig",
-  "waf-finding",
-  "runtime-threat",
-  "change-request",
-  "issue",
-  "email",
-  "task",
-]);
+const kindSchema = z.enum(KINDS);
 const scalarSchema = z.union([z.string(), z.number(), z.boolean()]);
 const valueSchema: z.ZodType<HandoffValueV1> = z.lazy(() => z.union([
   ...scalarSchema.options,

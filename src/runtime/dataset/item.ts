@@ -7,18 +7,21 @@
 //   scope     - provider-owned fetch configuration (for example, repositories).
 //   repoView  - the repo display filter you are currently viewing (NOT scope).
 
-export type Kind =
-  | "dependency-vuln"   // code-security
-  | "code-scanning"     // code-security
-  | "secret-scanning"   // code-security (roadmap)
-  | "cloud-misconfig"   // cloud-posture (roadmap)
-  | "edge-misconfig"    // edge-security (roadmap)
-  | "waf-finding"       // edge-security (roadmap)
-  | "runtime-threat"    // threat-detection (roadmap)
-  | "change-request"    // work / code-review
-  | "issue"             // work / tracking
-  | "email"             // work / inbox (roadmap)
-  | "task";             // work / tasks (roadmap)
+export const KINDS = [
+  "dependency-vuln", // code-security
+  "code-scanning", // code-security
+  "secret-scanning", // code-security (roadmap)
+  "cloud-misconfig", // cloud-posture (roadmap)
+  "edge-misconfig", // edge-security (roadmap)
+  "waf-finding", // edge-security (roadmap)
+  "runtime-threat", // threat-detection (roadmap)
+  "change-request", // work / code-review
+  "issue", // work / tracking
+  "email", // work / inbox (roadmap)
+  "task", // work / tasks (roadmap)
+] as const;
+
+export type Kind = (typeof KINDS)[number];
 
 export interface TriageItem<D = unknown> {
   id: string;          // `${provider}:${native id}`
