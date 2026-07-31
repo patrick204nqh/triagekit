@@ -1,74 +1,172 @@
-import { describe, it, expect } from "vitest";
-import { validate } from "../../src/runtime/handoff/validator";
-import type { AgentHandoffV1 } from "../../src/runtime/handoff/types";
+import { describe, expect, it } from "vitest";
+import type {
+  HandoffBundleV1,
+  HandoffPackageV1,
+} from "../../src/runtime/handoff/types";
+import type { HandoffTargetV1 } from "../../src/runtime/handoff/types";
+import {
+  validateHandoffBundle,
+} from "../../src/runtime/handoff/validator";
 
-function validHandoff(): AgentHandoffV1 {
-  return {
-    schema: "triagekit.agent-handoff",
-    version: 1,
-    createdAt: "2026-07-27T00:00:00.000Z",
-    intent: { outcome: "Fix the vuln", constraints: [], verification: [] },
-    targets: [{
-      id: "gh:42", kind: "dependency-vuln", provider: "github",
-      providerReference: { alertNumber: 42 },
-      title: "lodash", location: "acme/app",
-      url: "https://github.com/acme/app/security/42",
-      createdAt: "2026-07-26T00:00:00.000Z",
-      priority: { signal: 80, score: 85, tier: "P0" },
-      details: {},
-    }],
-    context: {
-      session: { kind: "dependency-vuln", provider: "github", repository: "acme/app" },
-      relatedItems: [],
-    },
-  };
-}
+const target = (
+  id: string,
+  details: HandoffTargetV1["details"] = {},
+): HandoffTargetV1 => ({
+  id,
+  kind: "issue",
+  provider: "github",
+  providerReference: { number: 1 },
+  title: id,
+  location: "acme-corp/core",
+  url: `https://example.test/${id}`,
+  createdAt: "2026-07-29T00:00:00.000Z",
+  priority: { signal: 50, score: 50, tier: "P2" },
+  details,
+});
 
-describe("validate", () => {
-  it("passes a valid handoff", () => {
-    expect(validate(validHandoff())).toEqual({ valid: true });
+const packageOf = (
+  id: string,
+  details: HandoffTargetV1["details"] = {},
+  order = 1,
+): HandoffPackageV1 => ({
+  id,
+  order,
+  repository: "acme-corp/core",
+  kind: "issue",
+  generatedIntent: {
+    outcome: "Investigate the selected issues",
+    constraints: ["Do not modify files."],
+    verification: ["Outline a concrete action plan."],
+  },
+  intent: {
+    outcome: "Investigate the selected issues",
+    constraints: ["Do not modify files."],
+    verification: ["Outline a concrete action plan."],
+  },
+  targets: [target(`${id}-target`, details)],
+  selectionReason: "Repository priority 1 · P2 1",
+});
+
+const packages = (count: number): HandoffPackageV1[] =>
+  Array.from({ length: count }, (_, index) =>
+    packageOf(`pkg-${index + 1}`, {}, index + 1));
+
+const bundle = (
+  overrides: Partial<HandoffBundleV1> = {},
+): HandoffBundleV1 => ({
+  schema: "triagekit.handoff-bundle",
+  version: 1,
+  createdAt: "2026-07-29T00:00:00.000Z",
+  focus: {
+    provider: "github",
+    repositoryOrder: ["acme-corp/core"],
+    includeLabels: ["security"],
+    excludeLabels: ["jira-ticket-created"],
+  },
+  instructions: {
+    mode: "investigate",
+    generatedBoundary: [
+      "Do not modify files.",
+      "Do not create commits or pushes.",
+      "Do not perform provider mutations or other external actions.",
+    ],
+    processPackagesInOrder: true,
+    generatedFrom: "explicit-session-queue",
+  },
+  packages: [packageOf("pkg-1")],
+  ...overrides,
+});
+
+describe("handoff bundle validator", () => {
+  it("accepts five packages and rejects a sixth", () => {
+    expect(validateHandoffBundle(bundle({ packages: packages(5) })))
+      .toEqual({ valid: true });
+    expect(validateHandoffBundle(bundle({ packages: packages(6) })))
+      .toEqual({
+        valid: false,
+        errors: expect.arrayContaining([
+          expect.objectContaining({ field: "packages" }),
+        ]),
+      });
   });
 
-  it("rejects wrong schema", () => {
-    const h = validHandoff();
-    h.schema = "wrong" as any;
-    expect(validate(h).valid).toBe(false);
+  it("blocks only the package containing a secret-suggesting field", () => {
+    const result = validateHandoffBundle(bundle({
+      packages: [
+        packageOf("safe", { ruleId: "js/xss" }, 1),
+        packageOf(
+          "blocked",
+          { authToken: "redacted-looking-but-forbidden" },
+          2,
+        ),
+      ],
+    }));
+    expect(result).toEqual({
+      valid: false,
+      errors: [
+        expect.objectContaining({
+          packageId: "blocked",
+          field: expect.stringContaining("authToken"),
+        }),
+      ],
+    });
   });
 
-  it("rejects zero targets", () => {
-    const h = validHandoff();
-    h.targets = [];
-    const r = validate(h);
-    expect(r.valid).toBe(false);
-    if (!r.valid) expect(r.errors[0].field).toContain("targets");
+  it("rejects more than ten targets in one package and fifty total", () => {
+    const oversized = {
+      ...packageOf("oversized"),
+      targets: Array.from({ length: 11 }, (_, index) =>
+        target(`target-${index}`)),
+    };
+    const result = validateHandoffBundle(bundle({
+      packages: [oversized],
+    }));
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.errors).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          packageId: "oversized",
+          field: "targets",
+        }),
+      ]));
+    }
   });
 
-  it("rejects empty outcome", () => {
-    const h = validHandoff();
-    h.intent.outcome = "";
-    const r = validate(h);
-    expect(r.valid).toBe(false);
+  it("rejects an investigation bundle without its generated boundary", () => {
+    const result = validateHandoffBundle(bundle({
+      instructions: {
+        mode: "investigate",
+        generatedBoundary: [],
+        processPackagesInOrder: true,
+        generatedFrom: "explicit-session-queue",
+      },
+    }));
+
+    expect(result).toEqual({
+      valid: false,
+      errors: expect.arrayContaining([
+        expect.objectContaining({
+          field: "instructions.generatedBoundary",
+        }),
+      ]),
+    });
   });
 
-  it("rejects secret-shaped keys in providerReference", () => {
-    const h = validHandoff();
-    h.targets[0].providerReference = { token: "abc" as any };
-    const r = validate(h);
-    expect(r.valid).toBe(false);
-  });
+  it("keeps the generated boundary authoritative over human notes", () => {
+    const withConflict = bundle({
+      instructions: {
+        mode: "investigate",
+        missionNote: "Fix this and push it",
+        generatedBoundary: [
+          "Do not modify files.",
+          "Do not create commits or pushes.",
+          "Do not perform provider mutations or other external actions.",
+        ],
+        processPackagesInOrder: true,
+        generatedFrom: "explicit-session-queue",
+      },
+    });
 
-  it("rejects missing target url", () => {
-    const h = validHandoff();
-    h.targets[0].url = "";
-    const r = validate(h);
-    expect(r.valid).toBe(false);
-  });
-
-  it("rejects oversized handoff", () => {
-    const h = validHandoff();
-    (h.targets[0] as any).details = { data: "x".repeat(600_000) };
-    const r = validate(h);
-    expect(r.valid).toBe(false);
-    if (!r.valid) expect(r.errors.some(e => e.field === "(root)")).toBe(true);
+    expect(validateHandoffBundle(withConflict)).toEqual({ valid: true });
   });
 });

@@ -1,81 +1,97 @@
-import { describe, it, expect } from "vitest";
-import { renderMarkdown } from "../../src/runtime/handoff/markdown";
-import type { AgentHandoffV1 } from "../../src/runtime/handoff/types";
+import { describe, expect, it } from "vitest";
+import type {
+  HandoffBundleV1,
+} from "../../src/runtime/handoff/types";
+import {
+  renderHandoffBundleMarkdown,
+  renderHandoffPackageMarkdown,
+} from "../../src/runtime/handoff/markdown";
 
-function sample(): AgentHandoffV1 {
-  return {
-    schema: "triagekit.agent-handoff",
-    version: 1,
-    createdAt: "2026-07-27T00:00:00.000Z",
-    intent: { outcome: "Fix the vuln", constraints: ["Don't force-push"], verification: ["Tests pass"] },
+const bundle: HandoffBundleV1 = {
+  schema: "triagekit.handoff-bundle",
+  version: 1,
+  createdAt: "2026-07-29T00:00:00.000Z",
+  focus: {
+    provider: "github",
+    repositoryOrder: ["acme-corp/core"],
+    includeLabels: ["security"],
+    excludeLabels: ["done"],
+  },
+  instructions: {
+    mode: "investigate",
+    missionNote: "Keep public APIs stable",
+    generatedBoundary: [
+      "Do not modify files.",
+      "Do not create commits or pushes.",
+      "Do not perform provider mutations or other external actions.",
+    ],
+    processPackagesInOrder: true,
+    generatedFrom: "explicit-session-queue",
+  },
+  packages: [{
+    id: "pkg-core",
+    order: 1,
+    repository: "acme-corp/core",
+    kind: "issue",
+    generatedIntent: {
+      outcome: "Investigate *carefully*",
+      constraints: ["Do not modify files."],
+      verification: ["Outline a concrete action plan."],
+    },
+    intent: {
+      outcome: "Investigate *carefully*",
+      constraints: ["Do not modify files."],
+      verification: ["Outline a concrete action plan."],
+    },
     targets: [{
-      id: "gh:42", kind: "dependency-vuln", provider: "github",
-      providerReference: { alertNumber: 42 },
-      title: "lodash", location: "acme/app",
-      url: "https://github.com/acme/app/security/42",
-      createdAt: "2026-07-26T00:00:00.000Z",
-      priority: { signal: 80, score: 85, tier: "P0", explanation: [{ label: "severity", value: "critical", reason: "CVSS 9.8" }] },
-      details: {},
+      id: "github:42",
+      kind: "issue",
+      provider: "github",
+      providerReference: { number: 42 },
+      title: "Fix [security]",
+      location: "acme-corp/core",
+      url: "https://example.test/issues/42?view=full",
+      createdAt: "2026-07-28T00:00:00.000Z",
+      priority: { signal: 80, score: 90, tier: "P1" },
+      note: "Do not update beyond v4",
+      details: {
+        freshness: {
+          validatedAt: "2026-07-29T00:00:00.000Z",
+          stale: true,
+        },
+        truncation: { field: "body", originalLength: 5000 },
+      },
     }],
-    context: { session: { kind: "dependency-vuln", provider: "github", repository: "acme/app" }, relatedItems: [] },
-  };
-}
+    selectionReason: "Repository priority 1",
+  }],
+};
 
-describe("renderMarkdown", () => {
-  it("produces deterministic output (same input same output)", () => {
-    const a = renderMarkdown(sample());
-    const b = renderMarkdown(sample());
-    expect(a).toBe(b);
+describe("handoff Markdown", () => {
+  it("renders ordered packages, escaped human text, and preserved URLs", () => {
+    const markdown = renderHandoffBundleMarkdown(bundle);
+    expect(markdown).toContain("# Handoff bundle");
+    expect(markdown).toContain("## Mode: Investigate");
+    expect(markdown).toContain("Do not modify files.");
+    expect(markdown).toContain(
+      "## Mission note\n\nKeep public APIs stable",
+    );
+    expect(markdown).toContain(
+      "#### Item note\n\nDo not update beyond v4",
+    );
+    expect(markdown).toContain("## Package 1");
+    expect(markdown).toContain("Investigate \\*carefully\\*");
+    expect(markdown).toContain(
+      "https://example.test/issues/42?view=full",
+    );
+    expect(markdown).toContain("stale");
+    expect(markdown).toContain("original length: 5000");
   });
 
-  it("includes outcome section", () => {
-    expect(renderMarkdown(sample())).toContain("## Outcome");
-  });
-
-  it("includes target section", () => {
-    expect(renderMarkdown(sample())).toContain("## Target");
-  });
-
-  it("includes evidence section when present", () => {
-    expect(renderMarkdown(sample())).toContain("## Evidence");
-  });
-
-  it("includes constraints and verification sections", () => {
-    const md = renderMarkdown(sample());
-    expect(md).toContain("## Constraints");
-    expect(md).toContain("## Verification");
-  });
-
-  it("includes context section", () => {
-    expect(renderMarkdown(sample())).toContain("## Context");
-  });
-
-  it("escapes markdown control characters in values", () => {
-    const h = sample();
-    h.intent.outcome = "Fix [the] (vuln) *now*";
-    const md = renderMarkdown(h);
-    expect(md).not.toContain("[the]");
-    expect(md).toContain("\\[the\\]");
-  });
-
-  it("omits evidence section when explanation is empty", () => {
-    const h = sample();
-    h.targets[0].priority.explanation = [];
-    const md = renderMarkdown(h);
-    expect(md).not.toContain("## Evidence");
-  });
-
-  it("omits constraints section when empty", () => {
-    const h = sample();
-    h.intent.constraints = [];
-    const md = renderMarkdown(h);
-    expect(md).not.toContain("## Constraints");
-  });
-
-  it("omits verification section when empty", () => {
-    const h = sample();
-    h.intent.verification = [];
-    const md = renderMarkdown(h);
-    expect(md).not.toContain("## Verification");
+  it("renders one package as a standalone transferable brief", () => {
+    const markdown = renderHandoffPackageMarkdown(bundle, bundle.packages[0]);
+    expect(markdown).toContain("# Handoff package");
+    expect(markdown).toContain("## Mode: Investigate");
+    expect(markdown).toContain("Do not modify files.");
+    expect(markdown.match(/^## Package /gm)).toHaveLength(1);
   });
 });

@@ -1,11 +1,11 @@
 import type {
-  DelegationQueue,
-  DelegationQueueStore,
+  HandoffQueue,
+  HandoffQueueStore,
   HandoffMode,
-  QueueEntry,
-  QueueIdentity,
-  QueueSnapshot,
-  QueueTransition,
+  HandoffQueueEntry,
+  HandoffIdentity,
+  HandoffQueueSnapshot,
+  HandoffQueueTransition,
 } from "./types";
 
 function normalizedNote(value: string): string | undefined {
@@ -13,7 +13,7 @@ function normalizedNote(value: string): string | undefined {
   return trimmed.length ? trimmed : undefined;
 }
 
-export function queueKey(identity: QueueIdentity): string {
+export function queueKey(identity: HandoffIdentity): string {
   return JSON.stringify([
     identity.provider,
     identity.kind,
@@ -22,7 +22,7 @@ export function queueKey(identity: QueueIdentity): string {
   ]);
 }
 
-function freezeEntry(entry: QueueEntry): QueueEntry {
+function freezeEntry(entry: HandoffQueueEntry): HandoffQueueEntry {
   const changedFields = entry.changedFields
     ? Object.freeze([...entry.changedFields])
     : undefined;
@@ -33,7 +33,7 @@ function freezeEntry(entry: QueueEntry): QueueEntry {
   });
 }
 
-function withSelection(entry: QueueEntry, selected: boolean): QueueEntry {
+function withSelection(entry: HandoffQueueEntry, selected: boolean): HandoffQueueEntry {
   if (!selected || entry.status !== "transferred") {
     return { ...entry, selected };
   }
@@ -41,21 +41,21 @@ function withSelection(entry: QueueEntry, selected: boolean): QueueEntry {
   return { ...ready, selected: true, status: "queued" };
 }
 
-export function createDelegationQueue(
-  store?: DelegationQueueStore,
-): DelegationQueue {
+export function createHandoffQueue(
+  store?: HandoffQueueStore,
+): HandoffQueue {
   const restored = store?.load();
   let mode: HandoffMode = restored?.mode ?? "investigate";
   let missionNote = restored?.missionNote;
-  const entries = new Map<string, QueueEntry>();
+  const entries = new Map<string, HandoffQueueEntry>();
   for (const entry of restored?.entries ?? []) {
     entries.set(queueKey(entry.identity), freezeEntry(entry));
   }
-  const listeners = new Set<(snapshot: QueueSnapshot) => void>();
+  const listeners = new Set<(snapshot: HandoffQueueSnapshot) => void>();
 
-  const serialized = (): readonly QueueEntry[] =>
+  const serialized = (): readonly HandoffQueueEntry[] =>
     Object.freeze([...entries.values()].map(freezeEntry));
-  const snapshot = (): QueueSnapshot => {
+  const snapshot = (): HandoffQueueSnapshot => {
     const current = serialized();
     return Object.freeze({
       mode,
@@ -73,7 +73,7 @@ export function createDelegationQueue(
     });
     for (const listener of listeners) listener(current);
   };
-  const replace = (key: string, entry: QueueEntry): boolean => {
+  const replace = (key: string, entry: HandoffQueueEntry): boolean => {
     if (!entries.has(key)) return false;
     entries.set(key, freezeEntry(entry));
     publish();
@@ -81,7 +81,7 @@ export function createDelegationQueue(
   };
   const transitioned = (
     key: string,
-    transition: QueueTransition,
+    transition: HandoffQueueTransition,
   ): boolean => {
     const entry = entries.get(key);
     if (!entry) return false;
@@ -200,7 +200,7 @@ export function createDelegationQueue(
       if (!entry || entry.selected === selected) return false;
       return replace(key, withSelection(entry, selected));
     },
-    transition(key, transition: QueueTransition) {
+    transition(key, transition: HandoffQueueTransition) {
       const changed = transitioned(key, transition);
       if (changed) publish();
       return changed;

@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  createDelegationController,
-} from "../../src/runtime/delegation/controller";
+  createHandoffController,
+} from "../../src/runtime/handoff/controller";
 import {
-  createDelegationQueue,
+  createHandoffQueue,
   queueKey,
-} from "../../src/runtime/delegation/queue";
+} from "../../src/runtime/handoff/queue";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 import { runtimeCatalog } from "../../src/runtime/catalog/built-in";
 
@@ -45,7 +45,7 @@ function fixture(input: {
   revalidateError?: string;
 } = {}) {
   const rows = items(input.count ?? 2);
-  const queue = createDelegationQueue();
+  const queue = createHandoffQueue();
   queue.addMany(rows.map((item) => ({
     provider: item.provider,
     itemId: item.id,
@@ -63,7 +63,7 @@ function fixture(input: {
     text: vi.fn(() => ({ ok: true as const })),
     json: vi.fn(() => ({ ok: true as const })),
   };
-  const controller = createDelegationController({
+  const controller = createHandoffController({
     queue,
     items: () => rows,
     focusPolicy: () => ({
@@ -78,7 +78,7 @@ function fixture(input: {
     downloads,
     ...(input.revalidate || input.revalidateError
       ? {
-          revalidateQueue: input.revalidateError
+          revalidateHandoffQueue: input.revalidateError
             ? vi.fn().mockRejectedValue(new Error(input.revalidateError))
             : vi.fn().mockResolvedValue({
                 transitions: rows.map((item) => ({
@@ -99,7 +99,7 @@ function fixture(input: {
   return { controller, clipboard, downloads, queue };
 }
 
-describe("delegation controller", () => {
+describe("handoff controller", () => {
   it("defaults to an investigation bundle with no human prompt", () => {
     const { controller } = fixture();
     const snapshot = controller.snapshot();

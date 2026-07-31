@@ -1,19 +1,19 @@
 import type {
-  DelegationController,
-  DelegationControllerSnapshot,
-  DelegationValidationError,
-  WorkPackageV1,
-} from "../../delegation/types";
+  HandoffController,
+  HandoffControllerSnapshot,
+  HandoffValidationError,
+  HandoffPackageV1,
+} from "../../handoff/types";
 import { dismissible } from "../../shell/dismissible";
 import { esc } from "../util";
 
 function packageErrors(
-  pkg: WorkPackageV1,
-  errors: readonly DelegationValidationError[],
+  pkg: HandoffPackageV1,
+  errors: readonly HandoffValidationError[],
 ): string {
   const matching = errors.filter((error) => error.packageId === pkg.id);
   if (!matching.length) return "";
-  return `<ul class="delegation-errors">${matching.map((error) =>
+  return `<ul class="handoff-errors">${matching.map((error) =>
     `<li><a href="#${esc(pkg.id)}-heading" data-package-error="${esc(pkg.id)}">${esc(error.message)}</a></li>`).join("")}</ul>`;
 }
 
@@ -24,7 +24,7 @@ function kindLabel(kind: string): string {
   return kind.charAt(0).toUpperCase() + kind.slice(1).replaceAll("-", " ");
 }
 
-function targetState(target: WorkPackageV1["targets"][number]): string {
+function targetState(target: HandoffPackageV1["targets"][number]): string {
   const freshness = target.details.freshness as
     | { validatedAt?: string; stale?: boolean }
     | undefined;
@@ -54,30 +54,30 @@ function targetState(target: WorkPackageV1["targets"][number]): string {
 }
 
 function targetHtml(
-  target: WorkPackageV1["targets"][number],
+  target: HandoffPackageV1["targets"][number],
   expandedNotes: ReadonlySet<string>,
 ): string {
   const showNote = Boolean(target.note) || expandedNotes.has(target.id);
-  return `<li class="delegation-target" data-target="${esc(target.id)}">
-    <div class="delegation-target-main">
-      <div><strong>${esc(target.title)}</strong><span class="delegation-target-meta">${esc(target.priority.tier)} · ${target.priority.score}</span></div>
-      <div class="delegation-target-state">${esc(targetState(target))}</div>
+  return `<li class="handoff-target" data-target="${esc(target.id)}">
+    <div class="handoff-target-main">
+      <div><strong>${esc(target.title)}</strong><span class="handoff-target-meta">${esc(target.priority.tier)} · ${target.priority.score}</span></div>
+      <div class="handoff-target-state">${esc(targetState(target))}</div>
     </div>
-    <div class="delegation-target-actions">
+    <div class="handoff-target-actions">
       <button type="button" class="btn-ghost mini" data-add-item-note="${esc(target.id)}">${target.note ? "Edit note" : "Add note"}</button>
       <button type="button" class="btn-ghost mini" data-remove-target="${esc(target.id)}" aria-label="Deselect ${esc(target.title)} from package">Deselect</button>
     </div>
     ${showNote
-      ? `<label class="delegation-item-note">Note for ${esc(target.title)}
+      ? `<label class="handoff-item-note">Note for ${esc(target.title)}
           <textarea rows="2" data-item-note="${esc(target.id)}" placeholder="Only this target">${esc(target.note ?? "")}</textarea>
         </label>`
       : ""}
   </li>`;
 }
 
-function generatedInstructionHtml(pkg: WorkPackageV1): string {
+function generatedInstructionHtml(pkg: HandoffPackageV1): string {
   const intent = pkg.generatedIntent;
-  return `<div class="delegation-generated-instruction">
+  return `<div class="handoff-generated-instruction">
     <span>Generated instruction</span>
     <p>${esc(intent.outcome)}</p>
     <ul>${intent.constraints.map((value) => `<li>${esc(value)}</li>`).join("")}${intent.verification.map((value) => `<li>${esc(value)}</li>`).join("")}</ul>
@@ -85,41 +85,41 @@ function generatedInstructionHtml(pkg: WorkPackageV1): string {
 }
 
 function packageHtml(
-  pkg: WorkPackageV1,
-  errors: readonly DelegationValidationError[],
+  pkg: HandoffPackageV1,
+  errors: readonly HandoffValidationError[],
   expandedNotes: ReadonlySet<string>,
   showPackageActions: boolean,
 ): string {
   const packageActions = showPackageActions
-    ? `<details class="delegation-action-menu" data-package-menu>
+    ? `<details class="handoff-action-menu" data-package-menu>
         <summary class="btn-ghost">Package actions</summary>
-        <div class="delegation-action-menu-pop">
+        <div class="handoff-action-menu-pop">
           <button type="button" class="btn-ghost" data-copy-package="${esc(pkg.id)}">Copy package</button>
           <button type="button" class="btn-ghost" data-download-package="${esc(pkg.id)}" data-format="md">Download Markdown</button>
           <button type="button" class="btn-ghost" data-download-package="${esc(pkg.id)}" data-format="json">Download JSON</button>
         </div>
       </details>`
     : "";
-  return `<section class="delegation-package" id="${esc(pkg.id)}">
-    <header class="delegation-package-head">
-      <div><span class="delegation-order">${pkg.order}</span>
+  return `<section class="handoff-package" id="${esc(pkg.id)}">
+    <header class="handoff-package-head">
+      <div><span class="handoff-order">${pkg.order}</span>
         <h3 id="${esc(pkg.id)}-heading" tabindex="-1">${esc(pkg.repository)}</h3></div>
-      <span class="delegation-package-meta">${esc(kindLabel(pkg.kind))} · ${pkg.targets.length} ${pkg.targets.length === 1 ? "target" : "targets"}</span>
+      <span class="handoff-package-meta">${esc(kindLabel(pkg.kind))} · ${pkg.targets.length} ${pkg.targets.length === 1 ? "target" : "targets"}</span>
     </header>
-    <p class="delegation-reason">${esc(pkg.selectionReason)}</p>
+    <p class="handoff-reason">${esc(pkg.selectionReason)}</p>
     ${packageErrors(pkg, errors)}
     ${generatedInstructionHtml(pkg)}
-    <ul class="delegation-targets">${pkg.targets.map((target) =>
+    <ul class="handoff-targets">${pkg.targets.map((target) =>
       targetHtml(target, expandedNotes)).join("")}</ul>
     ${packageActions}
   </section>`;
 }
 
 function handedOffHtml(
-  items: DelegationControllerSnapshot["handedOff"],
+  items: HandoffControllerSnapshot["handedOff"],
 ): string {
   if (!items.length) return "";
-  return `<details class="delegation-queue-section" data-queue-section="handed-off">
+  return `<details class="handoff-queue-section" data-queue-section="handed-off">
     <summary>Handed off · ${items.length}</summary>
     <ul>${items.map((item) =>
       `<li data-queue-history-item>
@@ -130,7 +130,7 @@ function handedOffHtml(
 }
 
 function notInNextBundleHtml(
-  items: DelegationControllerSnapshot["notInNextBundle"],
+  items: HandoffControllerSnapshot["notInNextBundle"],
 ): string {
   if (!items.length) return "";
   const statusLabel = (status: string) =>
@@ -139,9 +139,9 @@ function notInNextBundleHtml(
       : status === "unavailable"
       ? "Could not verify"
       : "Blocked";
-  return `<details class="delegation-queue-section" data-queue-section="not-in-next-bundle" open>
+  return `<details class="handoff-queue-section" data-queue-section="not-in-next-bundle" open>
     <summary>Not in next bundle · ${items.length}</summary>
-    <p class="delegation-queue-helper">These targets need review or no longer exist.</p>
+    <p class="handoff-queue-helper">These targets need review or no longer exist.</p>
     <ul>${items.map((item) => {
       const action = item.status === "resolved"
         ? `<button type="button" class="btn-ghost mini" data-remove-queue-item="${esc(item.key)}">Remove</button>`
@@ -154,8 +154,8 @@ function notInNextBundleHtml(
   </details>`;
 }
 
-function modeHtml(snapshot: DelegationControllerSnapshot): string {
-  return `<fieldset class="delegation-mode">
+function modeHtml(snapshot: HandoffControllerSnapshot): string {
+  return `<fieldset class="handoff-mode">
     <legend>Handoff mode</legend>
     <label>
       <input type="radio" name="handoff-mode" value="investigate"${snapshot.mode === "investigate" ? " checked" : ""}>
@@ -166,7 +166,7 @@ function modeHtml(snapshot: DelegationControllerSnapshot): string {
       <span><strong>Implement</strong><small>Make scoped changes and verify the result.</small></span>
     </label>
   </fieldset>
-  <label class="delegation-mission-note" for="handoff-mission-note">
+  <label class="handoff-mission-note" for="handoff-mission-note">
     Mission note <span>(optional)</span>
     <textarea id="handoff-mission-note" data-mission-note rows="3" placeholder="Applies to every selected target">${esc(snapshot.missionNote ?? "")}</textarea>
   </label>`;
@@ -174,14 +174,14 @@ function modeHtml(snapshot: DelegationControllerSnapshot): string {
 
 export function mountHandoffComposer(
   host: HTMLElement,
-  controller: DelegationController,
+  controller: HandoffController,
 ): () => void {
   let wasOpen = false;
   let activeDismiss: ReturnType<typeof dismissible> | null = null;
   let lastBodyHtml = "";
   const expandedNotes = new Set<string>();
 
-  const render = (snapshot: DelegationControllerSnapshot) => {
+  const render = (snapshot: HandoffControllerSnapshot) => {
     if (!snapshot.open) {
       activeDismiss?.destroy();
       activeDismiss = null;
@@ -196,19 +196,19 @@ export function mountHandoffComposer(
 
     const opening = !wasOpen;
     if (opening) {
-      host.innerHTML = `<div class="scrim open" data-delegation-scrim></div>
-        <aside class="delegation-composer open" role="dialog" aria-modal="true" aria-labelledby="delegation-title">
-          <header class="delegation-composer-head">
-            <div><h2 id="delegation-title" tabindex="-1">Handoff queue</h2>
-              <p data-delegation-summary></p></div>
-            <button type="button" class="drawer-close" data-delegation-close aria-label="Close Handoff queue">×</button>
+      host.innerHTML = `<div class="scrim open" data-handoff-scrim></div>
+        <aside class="handoff-composer open" role="dialog" aria-modal="true" aria-labelledby="handoff-title">
+          <header class="handoff-composer-head">
+            <div><h2 id="handoff-title" tabindex="-1">Handoff queue</h2>
+              <p data-handoff-summary></p></div>
+            <button type="button" class="drawer-close" data-handoff-close aria-label="Close Handoff queue">×</button>
           </header>
-          <div class="delegation-live" role="status" aria-live="polite" aria-atomic="true"></div>
-          <div class="delegation-composer-body"></div>
-          <footer class="delegation-composer-foot">
-            <details class="delegation-action-menu" data-download-menu>
+          <div class="handoff-live" role="status" aria-live="polite" aria-atomic="true"></div>
+          <div class="handoff-composer-body"></div>
+          <footer class="handoff-composer-foot">
+            <details class="handoff-action-menu" data-download-menu>
               <summary class="btn-ghost">Download…</summary>
-              <div class="delegation-action-menu-pop">
+              <div class="handoff-action-menu-pop">
                 <button type="button" class="btn-ghost" data-download-all data-format="md">Download Markdown</button>
                 <button type="button" class="btn-ghost" data-download-all data-format="json">Download JSON</button>
               </div>
@@ -217,10 +217,10 @@ export function mountHandoffComposer(
           </footer>
         </aside>`;
       const composer = host.querySelector<HTMLElement>(
-        ".delegation-composer",
+        ".handoff-composer",
       )!;
       const scrim = host.querySelector<HTMLElement>(
-        "[data-delegation-scrim]",
+        "[data-handoff-scrim]",
       )!;
       activeDismiss = dismissible(composer, {
         scrim,
@@ -230,7 +230,7 @@ export function mountHandoffComposer(
       });
       activeDismiss.activate();
       scrim.addEventListener("click", () => controller.close());
-      host.querySelector<HTMLElement>("[data-delegation-close]")
+      host.querySelector<HTMLElement>("[data-handoff-close]")
         ?.addEventListener("click", () => controller.close());
       host.querySelector<HTMLElement>("[data-copy-all]")
         ?.addEventListener("click", () => void controller.copyBundle());
@@ -252,11 +252,11 @@ export function mountHandoffComposer(
     const handedOff = snapshot.handedOff.length
       ? ` · ${snapshot.handedOff.length} handed off`
       : "";
-    host.querySelector<HTMLElement>("[data-delegation-summary]")!.textContent =
+    host.querySelector<HTMLElement>("[data-handoff-summary]")!.textContent =
       `${targetCount} ${targetCount === 1 ? "target" : "targets"} ready · ${packageCount} ${packageCount === 1 ? "package" : "packages"}${later}${handedOff}`;
 
     const notice = snapshot.notice
-      ? `<span class="delegation-notice ${snapshot.notice.tone}" data-delegation-notice>${esc(snapshot.notice.message)}</span>`
+      ? `<span class="handoff-notice ${snapshot.notice.tone}" data-handoff-notice>${esc(snapshot.notice.message)}</span>`
       : `<span>${packageCount} ${packageCount === 1 ? "package" : "packages"} ready</span>`;
     const confirmation = snapshot.pendingConfirmation
       ? `<button type="button" class="btn-ghost" data-confirm-handoff>Confirm handed off</button>`
@@ -264,8 +264,8 @@ export function mountHandoffComposer(
     const undo = snapshot.canUndoHandoff
       ? `<button type="button" class="btn-ghost" data-undo-handoff>Undo handoff</button>`
       : "";
-    const live = host.querySelector<HTMLElement>(".delegation-live")!;
-    live.innerHTML = `${notice}<span class="delegation-live-actions">${confirmation}${undo}<button type="button" class="btn-ghost mini" data-revalidate ${snapshot.busyAction !== null || snapshot.selectedCount === 0 ? "disabled" : ""}>${snapshot.busyAction === "revalidate" ? "Checking…" : "Check again"}</button></span>`;
+    const live = host.querySelector<HTMLElement>(".handoff-live")!;
+    live.innerHTML = `${notice}<span class="handoff-live-actions">${confirmation}${undo}<button type="button" class="btn-ghost mini" data-revalidate ${snapshot.busyAction !== null || snapshot.selectedCount === 0 ? "disabled" : ""}>${snapshot.busyAction === "revalidate" ? "Checking…" : "Check again"}</button></span>`;
     live.querySelector<HTMLElement>("[data-confirm-handoff]")
       ?.addEventListener("click", () => controller.confirmHandoff());
     live.querySelector<HTMLElement>("[data-undo-handoff]")
@@ -282,14 +282,14 @@ export function mountHandoffComposer(
             expandedNotes,
             snapshot.packages.length > 1,
           )).join("")
-        : `<div class="delegation-empty"><h3>No targets ready</h3><p>Select rows from the table to prepare the next Handoff bundle.</p></div>`}
+        : `<div class="handoff-empty"><h3>No targets ready</h3><p>Select rows from the table to prepare the next Handoff bundle.</p></div>`}
       ${notInNextBundleHtml(snapshot.notInNextBundle)}
       ${handedOffHtml(snapshot.handedOff)}
       ${snapshot.error
-        ? `<label class="delegation-preview-label">Markdown preview<textarea class="delegation-preview" readonly>${esc(snapshot.previewMarkdown)}</textarea></label>`
+        ? `<label class="handoff-preview-label">Markdown preview<textarea class="handoff-preview" readonly>${esc(snapshot.previewMarkdown)}</textarea></label>`
         : ""}`;
     const body = host.querySelector<HTMLElement>(
-      ".delegation-composer-body",
+      ".handoff-composer-body",
     )!;
     if (bodyHtml !== lastBodyHtml) {
       const activeElement = document.activeElement;
@@ -380,7 +380,7 @@ export function mountHandoffComposer(
       : "Copy investigation handoff";
 
     if (opening) {
-      host.querySelector<HTMLElement>("#delegation-title")?.focus();
+      host.querySelector<HTMLElement>("#handoff-title")?.focus();
     }
   };
 
@@ -393,6 +393,3 @@ export function mountHandoffComposer(
     host.innerHTML = "";
   };
 }
-
-/** Transitional export removed in the final Handoff cutover. */
-export const mountDelegationComposer = mountHandoffComposer;

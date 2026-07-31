@@ -9,7 +9,7 @@ import type { TriageActionPort } from "../layout/table/kind-renderer";
 import { renderTriageList } from "../layout/table/detail-panel";
 import type {
   HandoffSelection,
-} from "../layout/delegation/selection-controls";
+} from "../layout/handoff/selection-controls";
 
 export interface DomViewDeps {
   artifact: Artifact;

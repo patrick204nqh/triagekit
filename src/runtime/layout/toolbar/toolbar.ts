@@ -13,7 +13,7 @@ import type { FocusPolicySnapshot, LabelRules } from "../../focus/types";
 import {
   renderSelectionControls,
   type SelectionControlsProps,
-} from "../delegation/selection-controls";
+} from "../handoff/selection-controls";
 
 export interface ToolbarViewMode { id: string; label: string; }
 // The toolbar's provider rows ARE the provider-switch's inputs — one shape, one source of truth.
@@ -177,7 +177,7 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
   <div class="fbar">
     <div class="fbar-focus"><div data-repo-tabs></div>${labelSummary}</div>
     <div class="fbar-controls">
-      <div data-delegation-selection></div>
+      <div data-handoff-selection></div>
       <div class="tb-ctl"><button class="tb-btn" data-tb-filter aria-haspopup="true" aria-controls="tb-pop-filter">≡ Filter${fcount ? ` · ${fcount}` : ""}</button>${filterPop}</div>
       <div class="tb-ctl"><button class="tb-btn" data-tb-sort aria-haspopup="true" aria-controls="tb-pop-sort">↕ ${esc(curSort)}</button>${sortPop}</div>
     </div>
@@ -190,7 +190,7 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
   const repoHost = host.querySelector<HTMLElement>("[data-repo-tabs]")!;
   renderRepoTabs(repoHost, { repos: p.repos, active: p.activeRepo, onSelect: p.onRepoSelect });
   const selectionHost = host.querySelector<HTMLElement>(
-    "[data-delegation-selection]",
+    "[data-handoff-selection]",
   )!;
   if (p.handoffSelection) {
     renderSelectionControls(selectionHost, p.handoffSelection);

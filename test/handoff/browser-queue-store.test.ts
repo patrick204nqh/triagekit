@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { StoragePort } from "../../src/runtime/core/ports";
 import {
-  createBrowserQueueStore,
-} from "../../src/runtime/delegation/browser-queue-store";
+  createBrowserHandoffQueueStore,
+} from "../../src/runtime/handoff/browser-queue-store";
 import {
-  createDelegationQueue,
+  createHandoffQueue,
   queueKey,
-} from "../../src/runtime/delegation/queue";
-import type { QueueIdentity } from "../../src/runtime/delegation/types";
+} from "../../src/runtime/handoff/queue";
+import type { HandoffIdentity } from "../../src/runtime/handoff/types";
 
 class MapStorage implements StoragePort {
   readonly values = new Map<string, string>();
@@ -21,18 +21,18 @@ class MapStorage implements StoragePort {
   }
 }
 
-const identity = (itemId: string): QueueIdentity => ({
+const identity = (itemId: string): HandoffIdentity => ({
   provider: "github",
   itemId,
   kind: "issue",
   repository: "acme-corp/core",
 });
 
-describe("browser delegation queue store", () => {
+describe("browser handoff queue store", () => {
   it("round-trips mode, mission note, item note, and entries", () => {
     const storage = new MapStorage();
-    const store = createBrowserQueueStore(storage);
-    const queue = createDelegationQueue(store);
+    const store = createBrowserHandoffQueueStore(storage);
+    const queue = createHandoffQueue(store);
     const target = identity("github:42");
     queue.add(target, 1000);
     queue.setMode("implement");
@@ -42,7 +42,7 @@ describe("browser delegation queue store", () => {
     const raw = storage.values.get("triagekit.handoff.queue.v1")!;
     expect(raw).toContain("github:42");
     expect(raw).not.toContain("details");
-    const restored = createDelegationQueue(store).snapshot();
+    const restored = createHandoffQueue(store).snapshot();
     expect(restored.mode).toBe("implement");
     expect(restored.missionNote).toBe("Keep the API compatible");
     expect(restored.entries[0].note).toBe("Do not update the lockfile");
@@ -78,7 +78,7 @@ describe("browser delegation queue store", () => {
       ],
     }));
 
-    expect(createBrowserQueueStore(storage).load()).toEqual({
+    expect(createBrowserHandoffQueueStore(storage).load()).toEqual({
       mode: "investigate",
       entries: [
         expect.objectContaining({
@@ -88,14 +88,14 @@ describe("browser delegation queue store", () => {
     });
   });
 
-  it("ignores the obsolete delegation storage key", () => {
+  it("ignores the obsolete handoff storage key", () => {
     const storage = new MapStorage();
     storage.set(
-      "triagekit.delegation.queue.v1",
+      "triagekit.handoff.queue.v1",
       JSON.stringify([{ identity: identity("legacy"), selectedAt: 1 }]),
     );
 
-    expect(createDelegationQueue(createBrowserQueueStore(storage)).snapshot())
+    expect(createHandoffQueue(createBrowserHandoffQueueStore(storage)).snapshot())
       .toMatchObject({ mode: "investigate", entries: [] });
   });
 
@@ -107,14 +107,14 @@ describe("browser delegation queue store", () => {
       entries: "not-an-array",
     }));
 
-    expect(createDelegationQueue(createBrowserQueueStore(storage)).snapshot())
+    expect(createHandoffQueue(createBrowserHandoffQueueStore(storage)).snapshot())
       .toMatchObject({ mode: "investigate", entries: [] });
   });
 
   it("recovers from corrupt session JSON", () => {
     const storage = new MapStorage();
     storage.set("triagekit.handoff.queue.v1", "{bad");
-    expect(createBrowserQueueStore(storage).load()).toEqual({
+    expect(createBrowserHandoffQueueStore(storage).load()).toEqual({
       mode: "investigate",
       entries: [],
     });

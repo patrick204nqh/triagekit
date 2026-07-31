@@ -1,11 +1,11 @@
 import type { StoragePort } from "../core/ports";
 import type { Kind } from "../dataset/item";
 import type {
-  DelegationQueueStore,
+  HandoffQueueStore,
   HandoffMode,
   HandoffQueueState,
-  QueueEntry,
-  QueueStatus,
+  HandoffQueueEntry,
+  HandoffQueueStatus,
 } from "./types";
 
 const QUEUE_KEY = "triagekit.handoff.queue.v1";
@@ -27,7 +27,7 @@ const KINDS = new Set<Kind>([
   "email",
   "task",
 ]);
-const STATUSES = new Set<QueueStatus>([
+const STATUSES = new Set<HandoffQueueStatus>([
   "queued",
   "checking",
   "current",
@@ -48,7 +48,7 @@ const ENTRY_KEYS = new Set([
   "transferredAt",
 ]);
 
-function parseEntry(value: unknown): QueueEntry | null {
+function parseEntry(value: unknown): HandoffQueueEntry | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const entry = value as Record<string, unknown>;
   if (Object.keys(entry).some((key) => !ENTRY_KEYS.has(key))) return null;
@@ -69,7 +69,7 @@ function parseEntry(value: unknown): QueueEntry | null {
     || !Number.isFinite(entry.selectedAt)
     || typeof entry.selected !== "boolean"
     || typeof entry.status !== "string"
-    || !STATUSES.has(entry.status as QueueStatus)
+    || !STATUSES.has(entry.status as HandoffQueueStatus)
     || (entry.note !== undefined && typeof entry.note !== "string")
     || (entry.reason !== undefined && typeof entry.reason !== "string")
     || (
@@ -96,7 +96,7 @@ function parseEntry(value: unknown): QueueEntry | null {
     },
     selectedAt: entry.selectedAt,
     selected: entry.selected,
-    status: entry.status as QueueStatus,
+    status: entry.status as HandoffQueueStatus,
     ...(typeof entry.note === "string" && entry.note.trim()
       ? { note: entry.note.trim() }
       : {}),
@@ -110,9 +110,9 @@ function parseEntry(value: unknown): QueueEntry | null {
   };
 }
 
-export function createBrowserQueueStore(
+export function createBrowserHandoffQueueStore(
   storage: StoragePort,
-): DelegationQueueStore {
+): HandoffQueueStore {
   return {
     load() {
       try {

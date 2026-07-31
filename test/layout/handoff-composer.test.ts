@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   mountHandoffComposer,
-} from "../../src/runtime/layout/delegation/composer";
+} from "../../src/runtime/layout/handoff/composer";
 
 function controllerWith(overrides: Record<string, unknown> = {}) {
   let snapshot = {
@@ -159,7 +159,7 @@ describe("Handoff composer", () => {
     const controller = controllerWith();
     mountHandoffComposer(host, controller);
     const dialog = host.querySelector("[role='dialog']");
-    const body = host.querySelector(".delegation-composer-body");
+    const body = host.querySelector(".handoff-composer-body");
 
     controller.emit({
       busyAction: "copy",
@@ -174,8 +174,8 @@ describe("Handoff composer", () => {
     });
 
     expect(host.querySelector("[role='dialog']")).toBe(dialog);
-    expect(host.querySelector(".delegation-composer-body")).toBe(body);
-    expect(host.querySelector("[data-delegation-notice]")?.textContent)
+    expect(host.querySelector(".handoff-composer-body")).toBe(body);
+    expect(host.querySelector("[data-handoff-notice]")?.textContent)
       .toContain("queue unchanged");
   });
 
@@ -250,7 +250,7 @@ describe("Handoff composer", () => {
     mountHandoffComposer(host, controller);
     expect(dashboard.hasAttribute("inert")).toBe(true);
 
-    host.querySelector<HTMLElement>("[data-delegation-close]")!.click();
+    host.querySelector<HTMLElement>("[data-handoff-close]")!.click();
 
     expect(host.childElementCount).toBe(0);
     expect(dashboard.hasAttribute("inert")).toBe(false);

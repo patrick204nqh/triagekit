@@ -1,5 +1,5 @@
-import type { QueueIdentity } from "../../delegation/types";
-import { queueKey } from "../../delegation/queue";
+import type { HandoffIdentity } from "../../handoff/types";
+import { queueKey } from "../../handoff/queue";
 import type { ScoredItem } from "../table/kind-renderer";
 
 export interface SelectionControlsProps {
@@ -19,7 +19,7 @@ export interface HandoffSelection {
   readonly onToggle: (item: ScoredItem) => void;
 }
 
-export function handoffIdentityForItem(item: ScoredItem): QueueIdentity {
+export function handoffIdentityForItem(item: ScoredItem): HandoffIdentity {
   return {
     provider: item.provider,
     itemId: item.id,

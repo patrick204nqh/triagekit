@@ -3,9 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handoffIdentityForItem,
   renderSelectionControls,
-} from "../../src/runtime/layout/delegation/selection-controls";
+} from "../../src/runtime/layout/handoff/selection-controls";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
-import { queueKey } from "../../src/runtime/delegation/queue";
+import { queueKey } from "../../src/runtime/handoff/queue";
 
 const row = (id: string): ScoredItem => ({
   id,

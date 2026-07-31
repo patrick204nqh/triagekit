@@ -57,12 +57,3 @@ export function generatedIntentFor(
     ],
   };
 }
-
-// Transitional single-target helpers are removed in the final Handoff cutover.
-export function defaultIntent(kind: Kind): HandoffIntent {
-  return generatedIntentFor(kind, "investigate");
-}
-
-export function intentForKind(kind: Kind): HandoffIntent {
-  return generatedIntentFor(kind, "investigate");
-}

@@ -1,9 +1,9 @@
-import { checkSafeValue } from "../handoff/validator";
+import { checkSafeValue } from "./validator";
 import { queueKey } from "./queue";
 import type {
-  QueueEntry,
-  QueueRevalidationTransition,
-  RevalidateQueueInput,
+  HandoffQueueEntry,
+  HandoffQueueRevalidationTransition,
+  RevalidateHandoffQueueInput,
   RevalidationResult,
 } from "./types";
 
@@ -45,9 +45,9 @@ function sliceKey(target: string, kind: string): string {
 }
 
 function unavailable(
-  entry: QueueEntry,
+  entry: HandoffQueueEntry,
   reason: string,
-): QueueRevalidationTransition {
+): HandoffQueueRevalidationTransition {
   return {
     key: queueKey(entry.identity),
     itemId: entry.identity.itemId,
@@ -57,8 +57,8 @@ function unavailable(
   };
 }
 
-export async function revalidateQueue(
-  input: RevalidateQueueInput,
+export async function revalidateHandoffQueue(
+  input: RevalidateHandoffQueueInput,
 ): Promise<RevalidationResult> {
   const selected = input.entries.filter((entry) => entry.selected);
   input.onChecking?.(selected);
@@ -93,7 +93,7 @@ export async function revalidateQueue(
       .filter((failure) => failure.target && failure.kind)
       .map((failure) => sliceKey(failure.target!, failure.kind!)),
   );
-  const transitions: QueueRevalidationTransition[] = [];
+  const transitions: HandoffQueueRevalidationTransition[] = [];
 
   for (const entry of selected) {
     const key = queueKey(entry.identity);

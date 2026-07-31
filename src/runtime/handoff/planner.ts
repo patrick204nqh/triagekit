@@ -1,9 +1,9 @@
-import { generatedIntentFor } from "../handoff/intent";
+import { generatedIntentFor } from "./intent";
 import type { ScoredItem } from "../layout/table/kind-renderer";
 import type {
-  PlanPackagesInput,
-  PlannedPackage,
-  PlanResult,
+  HandoffPlanPackagesInput,
+  PlannedHandoffPackage,
+  HandoffPlanResult,
 } from "./types";
 
 const TIER_ORDER = { P0: 0, P1: 1, P2: 2, P3: 3 } as const;
@@ -70,7 +70,7 @@ function selectionReason(
   ].filter(Boolean).join(" · ");
 }
 
-export function planPackages(input: PlanPackagesInput): PlanResult {
+export function planHandoffPackages(input: HandoffPlanPackagesInput): HandoffPlanResult {
   const repositoryRanks = new Map(
     input.repositoryOrder.map((repository, index) => [repository, index]),
   );
@@ -105,7 +105,7 @@ export function planPackages(input: PlanPackagesInput): PlanResult {
     },
   );
 
-  const packages: PlannedPackage[] = [];
+  const packages: PlannedHandoffPackage[] = [];
   for (const [, group] of orderedGroups) {
     const targets = [...group].sort(compareTargets);
     for (let start = 0; start < targets.length; start += TARGET_LIMIT) {
@@ -126,7 +126,6 @@ export function planPackages(input: PlanPackagesInput): PlanResult {
         repository: first.location,
         kind: first.kind,
         generatedIntent,
-        intent: generatedIntent,
         targets: chunk,
         selectionReason: selectionReason(
           first.location,

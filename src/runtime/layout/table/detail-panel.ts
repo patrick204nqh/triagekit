@@ -9,8 +9,8 @@ import { dismissible } from "../../shell/dismissible";
 import { esc } from "../util";
 import { detailHeadHtml } from "../atoms/atoms";
 import type { DetailView } from "./detail-view";
-import { queueKey } from "../../delegation/queue";
-import { handoffIdentityForItem } from "../delegation/selection-controls";
+import { queueKey } from "../../handoff/queue";
+import { handoffIdentityForItem } from "../handoff/selection-controls";
 
 // Fallback detail for kinds without a renderer: identity header + a bare link.
 function defaultDetailView(r: ScoredItem): DetailView {

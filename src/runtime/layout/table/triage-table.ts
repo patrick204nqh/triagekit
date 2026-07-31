@@ -3,8 +3,8 @@ import { esc } from "../util";
 import {
   handoffIdentityForItem,
   type HandoffSelection,
-} from "../delegation/selection-controls";
-import { queueKey } from "../../delegation/queue";
+} from "../handoff/selection-controls";
+import { queueKey } from "../../handoff/queue";
 
 export function tableHtml(
   rows: ScoredItem[],
