@@ -896,7 +896,10 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
       return;
     }
     if (!silent && activeDatasetSnapshot()?.phase === "hydrating") {
-      renderTableSkeleton(root);
+      renderTableSkeleton(
+        root,
+        catalog.readyKind(active.kinds[0])?.renderer.columns,
+      );
     }
     core.rerender();
   };

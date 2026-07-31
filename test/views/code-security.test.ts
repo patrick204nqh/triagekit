@@ -3,12 +3,18 @@ import { describe, it, expect } from "vitest";
 import { renderTriageList } from "../../src/runtime/layout/table/detail-panel";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 import { dependencyVulnKind } from "../../src/runtime/kinds/dependency-vuln";
+import { dependencyVulnRenderer } from "../../src/runtime/views/code-security/view";
 
 it("declares vuln severity and fix-available axes and a severity sort", () => {
   expect(dependencyVulnKind.filters.map((axis) => axis.id))
     .toEqual(expect.arrayContaining(["severity", "fix-available"]));
   expect(dependencyVulnKind.sorts.map((sort) => sort.id))
     .toContain("severity");
+});
+
+it("declares dependency decision columns without duplicate title data", () => {
+  expect(dependencyVulnRenderer.columns.map((column) => column.header))
+    .toEqual(["Repository", "Dependency", "Severity", "Fix", "Priority"]);
 });
 
 describe("vuln detail in shared panel", () => {

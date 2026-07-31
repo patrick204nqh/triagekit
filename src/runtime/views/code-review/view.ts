@@ -7,11 +7,19 @@ import { type FilterAxis } from "../../layout/toolbar/axis-registry";
 import { detailsAs } from "../../dataset/details";
 import { uniqueValues } from "../../layout/toolbar/axis-utils";
 import type { ViewModule } from "../registry";
+import {
+  priorityColumn,
+  repositoryColumn,
+  titleColumn,
+} from "../../layout/table/columns";
 
 const det = (r: ScoredItem) => detailsAs<ReviewDetails>(r)!;
 const reviewColumns = [
+  repositoryColumn(),
+  titleColumn("Title"),
   { header: "#", cell: (r: ScoredItem) => `#${det(r).number}` },
   { header: "Author", cell: (r: ScoredItem) => esc(det(r).author.login) },
+  priorityColumn(),
 ];
 
 // Detail = the interactive review DetailView mounted by the DetailFrame. CI loads

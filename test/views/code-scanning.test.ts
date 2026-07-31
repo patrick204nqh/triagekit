@@ -16,6 +16,18 @@ const row = (d: Partial<CodeScanningDetails>): ScoredItem => ({
 } as ScoredItem);
 
 describe("code-scanning renderer", () => {
+  it("declares code-scanning decision columns", () => {
+    expect(codeScanningRenderer.columns.map((column) => column.header))
+      .toEqual([
+        "Repository",
+        "Finding",
+        "Rule",
+        "Severity",
+        "State",
+        "Priority",
+      ]);
+  });
+
   it("renders rule + severity columns", () => {
     const cells = codeScanningRenderer.columns.map(c => c.cell(row({})));
     expect(cells.join(" ")).toContain("SQL injection");

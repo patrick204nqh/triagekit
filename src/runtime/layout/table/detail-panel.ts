@@ -62,7 +62,7 @@ export function renderTriageList(
   const detailTitleId = `item-detail-title-${++detailPanelSequence}`;
   root.innerHTML = warnings + tableHtml(
     rows,
-    r0?.columns,
+    r0?.columns ?? [],
     ctx.handoffSelection,
   )
     + `<dialog class="drawer" aria-labelledby="${detailTitleId}">

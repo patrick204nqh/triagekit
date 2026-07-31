@@ -46,6 +46,29 @@ describe("renderTriageList + DetailPanel", () => {
     expect(region.querySelector("table.alerts")).not.toBeNull();
   });
 
+  it("renders only Kind-owned headers with matching body cells", () => {
+    const root = document.createElement("div");
+    renderTriageList(root, [row({ id: "a" })], []);
+
+    const headers = [...root.querySelectorAll("thead th")]
+      .map((header) => header.textContent?.trim());
+    expect(headers).toEqual([
+      "Repository",
+      "Dependency",
+      "Severity",
+      "Fix",
+      "Priority",
+    ]);
+    expect(headers).not.toEqual(expect.arrayContaining([
+      "Signal",
+      "Score",
+      "Tier",
+    ]));
+    expect(root.querySelectorAll("thead th")).toHaveLength(
+      root.querySelectorAll("tbody tr:first-child td").length,
+    );
+  });
+
   it("places the loading skeleton in a labelled keyboard-scrollable region", () => {
     const root = document.createElement("div");
     renderTableSkeleton(root);

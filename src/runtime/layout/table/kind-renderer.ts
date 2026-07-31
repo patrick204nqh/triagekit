@@ -12,6 +12,11 @@ import { esc } from "../util";
 import type { HandoffSelection } from "../handoff/selection-controls";
 
 export interface ScoredItem extends TriageItem { score: number; tier: Tier; }
+export interface TableColumn {
+  readonly header: string;
+  readonly className?: string;
+  readonly cell: (item: ScoredItem) => string;
+}
 export interface TriageActionPort {
   available(item: TriageItem): readonly ActionAvailability[];
   perform(action: TriageAction): Promise<ActionResult>;
@@ -29,7 +34,7 @@ export interface DetailCtx {
 }
 export interface KindRenderer {
   kind: Kind;
-  columns?: { header: string; cell: (i: ScoredItem) => string }[];
+  columns: readonly TableColumn[];
   detail?: (i: ScoredItem, ctx: DetailCtx) => DetailView;
 }
 export function warningsHtml(

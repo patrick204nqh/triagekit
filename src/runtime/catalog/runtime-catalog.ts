@@ -98,6 +98,12 @@ function validateReadyKind(kind: ReadyKindDeclaration): void {
       `kind "${kind.kind}": renderer declares "${kind.renderer.kind}"`,
     );
   }
+  if (!Array.isArray(kind.renderer.columns)
+    || kind.renderer.columns.length === 0) {
+    throw new CatalogError(
+      `kind "${kind.kind}": renderer must declare at least one column`,
+    );
+  }
 
   const views = new Set<string>();
   for (const view of kind.views) {
