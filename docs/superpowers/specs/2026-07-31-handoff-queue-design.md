@@ -1,7 +1,7 @@
 # Handoff Queue Design
 
 **Date:** 2026-07-31  
-**Status:** Design approved; written spec awaiting review  
+**Status:** Approved  
 **Supersedes:** The product-facing single-item Agent Handoff flow and Delegation Queue/Bundle model described by ADR-0001 and ADR-0008
 
 ## Summary
