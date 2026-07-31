@@ -62,6 +62,7 @@ describe("runtime architecture guardrails", () => {
       "core/decorators.ts",
       "core/scope-key.ts",
       "core/store.ts",
+      "shell/dismissible.ts",
       "handoff/adapters/clipboard.ts",
       "handoff/adapters/types.ts",
       "ingest/github/urls.ts",

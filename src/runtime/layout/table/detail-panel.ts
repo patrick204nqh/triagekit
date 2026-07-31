@@ -5,7 +5,6 @@ import type { ScoredItem, DetailCtx } from "./kind-renderer";
 import { warningsHtml } from "./kind-renderer";
 import { tableHtml } from "./triage-table";
 import { renderScoreBreakdown } from "./score-breakdown";
-import { dismissible } from "../../shell/dismissible";
 import { esc } from "../util";
 import { detailHeadHtml } from "../atoms/atoms";
 import type { DetailView } from "./detail-view";
@@ -66,33 +65,28 @@ export function renderTriageList(
     r0?.columns,
     ctx.handoffSelection,
   )
-    + `<div class="scrim" data-drawer-scrim></div>`
-    + `<aside class="drawer" hidden role="dialog" aria-modal="true" aria-labelledby="${detailTitleId}">
-         <div class="drawer-head"><div data-head></div><button class="drawer-close" aria-label="Close">×</button></div>
+    + `<dialog class="drawer" aria-labelledby="${detailTitleId}">
+         <div class="drawer-head"><div data-head></div><button class="drawer-close" aria-label="Close" autofocus>×</button></div>
          <div class="drawer-content" data-body></div>
          <div class="drawer-foot" data-foot></div>
-       </aside>`;
-  const drawer = root.querySelector<HTMLElement>(".drawer")!;
-  const scrim = root.querySelector<HTMLElement>("[data-drawer-scrim]")!;
+       </dialog>`;
+  const drawer = root.querySelector<HTMLDialogElement>(".drawer")!;
   const head = drawer.querySelector<HTMLElement>("[data-head]")!;
   const body = drawer.querySelector<HTMLElement>("[data-body]")!;
   const foot = drawer.querySelector<HTMLElement>("[data-foot]")!;
 
-  // The drawer overlays the list; a scrim dims it (and closes on click). Escape also
-  // closes, returning focus to the row.
-  const dismiss = dismissible(drawer, {
-    onDismiss: () => closeDrawer(),
-    scrim,
-    modal: true,
-    initialFocus: () => drawer.querySelector(".drawer-close"),
-  });
   function closeDrawer() {
-    drawer.hidden = true;
-    scrim.classList.remove("open");
-    dismiss.release();
+    if (drawer.open) drawer.close();
     detailState.onActiveItemChange?.(null);
   }
   drawer.querySelector<HTMLElement>(".drawer-close")!.addEventListener("click", closeDrawer);
+  drawer.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closeDrawer();
+  });
+  drawer.addEventListener("click", (event) => {
+    if (event.target === drawer) closeDrawer();
+  });
 
   root.querySelectorAll<HTMLElement>("[data-queue-select]").forEach((button) => {
     const toggle = (event: Event) => {
@@ -132,10 +126,7 @@ export function renderTriageList(
         });
         foot.appendChild(btn);
       }
-      drawer.hidden = false;
-      scrim.classList.add("open");
-      detailControl.focus();
-      dismiss.activate();
+      if (!drawer.open) drawer.showModal();
       detailState.onActiveItemChange?.(r.id);
     };
     openRows.set(r.id, openRow);
@@ -151,5 +142,7 @@ export function renderTriageList(
     }
   }
 
-  return () => dismiss.destroy();
+  return () => {
+    if (drawer.open) drawer.close();
+  };
 }

@@ -469,19 +469,22 @@ table.alerts .queue-col { width:42px; padding-inline:8px; text-align:center; }
 }
 
 /* ── Slide-over base (table drawer + settings panel) ───────────────── */
-.scrim { position:fixed; inset:0; background:var(--scrim); opacity:0; pointer-events:none; transition:opacity .25s; z-index:10; }
-.scrim.open { opacity:1; pointer-events:auto; }
+.sheet,
+.drawer,
+.handoff-composer { margin:0; padding:0; border:0; }
+.sheet::backdrop,
+.drawer::backdrop,
+.handoff-composer::backdrop { background:var(--scrim); }
 .sheet { position:fixed; top:0; right:0; height:100dvh; background:var(--carbon); border-left:1px solid var(--line); box-shadow:-8px 0 32px var(--drawer-shadow), -1px 0 0 color-mix(in srgb,var(--accent) 22%,transparent); overflow-y:auto; transform:translateX(100%); transition:transform .32s var(--spring); z-index:11; }
-.sheet.open { transform:none; }
+.sheet[open] { transform:none; }
 
-/* table drawer — overlay slide-over toggled by [hidden]; a scrim (.scrim.open) dims
-   the list behind it. Flex column: non-scrolling head, scrolling body, bottom
+/* table drawer — modal slide-over. Flex column: non-scrolling head, scrolling body, bottom
    footer — so footer actions stay visible on long PR/issue bodies. */
-.drawer { position:fixed; top:0; right:0; height:100dvh; width:min(520px,92vw);
-  display:flex; flex-direction:column;
+.drawer { position:fixed; inset:0 0 0 auto; height:100dvh; width:min(520px,92vw);
+  flex-direction:column;
   background:var(--carbon); border-left:1px solid var(--line);
   box-shadow:-8px 0 32px var(--drawer-shadow), -1px 0 0 color-mix(in srgb,var(--accent) 22%,transparent); z-index:12; }
-.drawer[hidden] { display:none; }
+.drawer[open] { display:flex; }
 
 /* Header — shared identity row built by detailHeadHtml(): title + tier + provider ref
    in a single flex line. Close sits inline. */
@@ -523,7 +526,8 @@ table.breakdown td.num { text-align:right; font-family:var(--mono); font-variant
 .bd-total strong { color:var(--fg); }
 
 /* settings panel — full-screen surface with a centered content column */
-.sheet.panel { inset:0; width:100%; max-width:none; height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
+.sheet.panel { inset:0; width:100%; max-width:none; height:100dvh; flex-direction:column; overflow:hidden; }
+.sheet.panel[open] { display:flex; }
 .panel-head { display:flex; align-items:center; justify-content:space-between; padding:22px 24px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--carbon); }
 .panel-head h3 { margin:0; font-size:1.125rem; font-weight:600; }
 /* Two-column body: fixed sidebar (left) + flexible content (right), capped to a centered
@@ -935,7 +939,6 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
   position:fixed;
   inset:0 0 0 auto;
   z-index:42;
-  display:flex;
   width:min(760px,96vw);
   height:100dvh;
   flex-direction:column;
@@ -945,12 +948,7 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
   box-shadow:-18px 0 48px var(--drawer-shadow);
   animation:handoff-enter 180ms var(--spring);
 }
-[data-handoff-scrim] {
-  position:fixed;
-  inset:0;
-  z-index:41;
-  background:var(--scrim);
-}
+.handoff-composer[open] { display:flex; }
 .handoff-composer-head,
 .handoff-composer-foot {
   flex:none;

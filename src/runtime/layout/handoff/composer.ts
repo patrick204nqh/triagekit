@@ -4,7 +4,6 @@ import type {
   HandoffValidationError,
   HandoffPackageV1,
 } from "../../handoff/types";
-import { dismissible } from "../../shell/dismissible";
 import { esc } from "../util";
 
 function packageErrors(
@@ -177,14 +176,15 @@ export function mountHandoffComposer(
   controller: HandoffController,
 ): () => void {
   let wasOpen = false;
-  let activeDismiss: ReturnType<typeof dismissible> | null = null;
   let lastBodyHtml = "";
   const expandedNotes = new Set<string>();
 
   const render = (snapshot: HandoffControllerSnapshot) => {
     if (!snapshot.open) {
-      activeDismiss?.destroy();
-      activeDismiss = null;
+      const dialog = host.querySelector<HTMLDialogElement>(
+        ".handoff-composer",
+      );
+      if (dialog?.open) dialog.close();
       host.innerHTML = "";
       lastBodyHtml = "";
       if (wasOpen) {
@@ -196,8 +196,7 @@ export function mountHandoffComposer(
 
     const opening = !wasOpen;
     if (opening) {
-      host.innerHTML = `<div class="scrim open" data-handoff-scrim></div>
-        <aside class="handoff-composer open" role="dialog" aria-modal="true" aria-labelledby="handoff-title">
+      host.innerHTML = `<dialog class="handoff-composer" aria-labelledby="handoff-title">
           <header class="handoff-composer-head">
             <div><h2 id="handoff-title" tabindex="-1">Handoff queue</h2>
               <p data-handoff-summary></p></div>
@@ -215,21 +214,17 @@ export function mountHandoffComposer(
             </details>
             <button type="button" class="btn-primary" data-copy-all></button>
           </footer>
-        </aside>`;
-      const composer = host.querySelector<HTMLElement>(
+        </dialog>`;
+      const composer = host.querySelector<HTMLDialogElement>(
         ".handoff-composer",
       )!;
-      const scrim = host.querySelector<HTMLElement>(
-        "[data-handoff-scrim]",
-      )!;
-      activeDismiss = dismissible(composer, {
-        scrim,
-        modal: true,
-        restoreFocus: false,
-        onDismiss: () => controller.close(),
+      composer.addEventListener("cancel", (event) => {
+        event.preventDefault();
+        controller.close();
       });
-      activeDismiss.activate();
-      scrim.addEventListener("click", () => controller.close());
+      composer.addEventListener("click", (event) => {
+        if (event.target === composer) controller.close();
+      });
       host.querySelector<HTMLElement>("[data-handoff-close]")
         ?.addEventListener("click", () => controller.close());
       host.querySelector<HTMLElement>("[data-copy-all]")
@@ -238,6 +233,7 @@ export function mountHandoffComposer(
         .forEach((button) => button.addEventListener("click", () => {
           controller.downloadBundle(button.dataset.format as "md" | "json");
         }));
+      composer.showModal();
       wasOpen = true;
     }
 
@@ -388,8 +384,10 @@ export function mountHandoffComposer(
   render(controller.snapshot());
   return () => {
     unsubscribe();
-    activeDismiss?.destroy();
-    activeDismiss = null;
+    const dialog = host.querySelector<HTMLDialogElement>(
+      ".handoff-composer",
+    );
+    if (dialog?.open) dialog.close();
     host.innerHTML = "";
   };
 }
