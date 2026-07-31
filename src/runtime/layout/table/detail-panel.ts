@@ -12,6 +12,8 @@ import type { DetailView } from "./detail-view";
 import { queueKey } from "../../handoff/queue";
 import { handoffIdentityForItem } from "../handoff/selection-controls";
 
+let detailPanelSequence = 0;
+
 export interface TriageDetailState {
   readonly activeItemId?: string | null;
   readonly onActiveItemChange?: (itemId: string | null) => void;
@@ -58,13 +60,14 @@ export function renderTriageList(
     return () => {};
   }
   const r0 = catalog.readyKind(rows[0].kind)?.renderer;
+  const detailTitleId = `item-detail-title-${++detailPanelSequence}`;
   root.innerHTML = warnings + tableHtml(
     rows,
     r0?.columns,
     ctx.handoffSelection,
   )
     + `<div class="scrim" data-drawer-scrim></div>`
-    + `<aside class="drawer" hidden role="dialog" aria-modal="true" aria-label="Item detail">
+    + `<aside class="drawer" hidden role="dialog" aria-modal="true" aria-labelledby="${detailTitleId}">
          <div class="drawer-head"><div data-head></div><button class="drawer-close" aria-label="Close">×</button></div>
          <div class="drawer-content" data-body></div>
          <div class="drawer-foot" data-foot></div>
@@ -77,7 +80,12 @@ export function renderTriageList(
 
   // The drawer overlays the list; a scrim dims it (and closes on click). Escape also
   // closes, returning focus to the row.
-  const dismiss = dismissible(drawer, { onDismiss: () => closeDrawer() });
+  const dismiss = dismissible(drawer, {
+    onDismiss: () => closeDrawer(),
+    scrim,
+    modal: true,
+    initialFocus: () => drawer.querySelector(".drawer-close"),
+  });
   function closeDrawer() {
     drawer.hidden = true;
     scrim.classList.remove("open");
@@ -85,7 +93,6 @@ export function renderTriageList(
     detailState.onActiveItemChange?.(null);
   }
   drawer.querySelector<HTMLElement>(".drawer-close")!.addEventListener("click", closeDrawer);
-  scrim.addEventListener("click", closeDrawer);
 
   root.querySelectorAll<HTMLElement>("[data-queue-select]").forEach((button) => {
     const toggle = (event: Event) => {
@@ -100,10 +107,11 @@ export function renderTriageList(
   const openRows = new Map<string, () => void>();
   root.querySelectorAll<HTMLElement>(".alert-row").forEach(tr => {
     const r = rows[Number(tr.dataset.i)];
+    const detailControl = tr.querySelector<HTMLElement>("[data-open-detail]")!;
     const openRow = () => {
       const kr = catalog.readyKind(r.kind)?.renderer;
       const view: DetailView = kr?.detail ? kr.detail(r, ctx) : defaultDetailView(r);
-      head.innerHTML = detailHeadHtml(view.header);
+      head.innerHTML = detailHeadHtml(view.header, detailTitleId);
       body.innerHTML = "";
       view.body(body);
       if (ctx.scoreExplain) renderScoreBreakdown(body, r, ctx.scoreExplain(r));
@@ -126,14 +134,12 @@ export function renderTriageList(
       }
       drawer.hidden = false;
       scrim.classList.add("open");
+      detailControl.focus();
       dismiss.activate();
       detailState.onActiveItemChange?.(r.id);
     };
     openRows.set(r.id, openRow);
     tr.addEventListener("click", openRow);
-    tr.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openRow(); }
-    });
   });
 
   if (detailState.activeItemId) {

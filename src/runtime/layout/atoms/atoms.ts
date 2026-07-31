@@ -13,13 +13,17 @@ export function tierBadgeHtml(tier: Tier): string {
 // The single detail-drawer header used by every kind: title + tier inline, then
 // a sub-row with the provider mark and an optional linked ref (e.g. "#482").
 // Replaces per-kind headers and the literal provider text. Escapes title/ref.
-export function detailHeadHtml(header: DetailView["header"]): string {
+export function detailHeadHtml(
+  header: DetailView["header"],
+  headingId?: string,
+): string {
   const ref = header.ref
     ? (header.ref.href
         ? `<a class="dh-ref-link" href="${esc(header.ref.href)}" target="_blank" rel="noreferrer">${esc(header.ref.text)} ↗</a>`
         : `<span>${esc(header.ref.text)}</span>`)
     : "";
-  return `<div class="dh-line"><h3>${esc(header.title)} ${tierBadgeHtml(header.tier)}</h3>`
+  const id = headingId ? ` id="${esc(headingId)}"` : "";
+  return `<div class="dh-line"><h3${id}>${esc(header.title)} ${tierBadgeHtml(header.tier)}</h3>`
     + `<span class="dh-ref">${providerIcon(header.provider)}${ref}</span></div>`;
 }
 

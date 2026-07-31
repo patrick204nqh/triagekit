@@ -59,6 +59,7 @@ export function dismissible(panel: HTMLElement, opts: DismissibleOptions): Dismi
   const modal = opts.modal ?? false;
   let active = false;
   let trigger: HTMLElement | null = null;
+  const inerted = new Set<HTMLElement>();
 
   const dismiss = () => opts.onDismiss();
   const entry: StackEntry = { dismiss };
@@ -88,10 +89,30 @@ export function dismissible(panel: HTMLElement, opts: DismissibleOptions): Dismi
   }
 
   function setBackgroundInert(on: boolean): void {
-    for (const el of Array.from(document.body.children)) {
-      if (el === panel || el.contains(panel)) continue;
-      if (on) el.setAttribute("inert", "");
-      else el.removeAttribute("inert");
+    if (!on) {
+      for (const el of inerted) el.removeAttribute("inert");
+      inerted.clear();
+      return;
+    }
+
+    let branch: HTMLElement = panel;
+    let parent = panel.parentElement;
+    while (parent) {
+      for (const sibling of Array.from(parent.children)) {
+        if (
+          !(sibling instanceof HTMLElement)
+          || sibling === branch
+          || sibling === opts.scrim
+          || sibling.hasAttribute("inert")
+        ) {
+          continue;
+        }
+        sibling.setAttribute("inert", "");
+        inerted.add(sibling);
+      }
+      if (parent === document.body) break;
+      branch = parent;
+      parent = parent.parentElement;
     }
   }
 

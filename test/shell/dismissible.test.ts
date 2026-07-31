@@ -94,6 +94,27 @@ describe("dismissible", () => {
     expect(bg.hasAttribute("inert")).toBe(false);
   });
 
+  it("modal inerts nested siblings but keeps its scrim interactive", () => {
+    const host = document.createElement("div");
+    const content = document.createElement("main");
+    const scrim = document.createElement("div");
+    const panel = document.createElement("aside");
+    host.append(content, scrim, panel);
+    document.body.append(host);
+    const h = dismissible(panel, {
+      onDismiss: () => {},
+      modal: true,
+      scrim,
+    });
+
+    h.activate();
+    expect(content.hasAttribute("inert")).toBe(true);
+    expect(scrim.hasAttribute("inert")).toBe(false);
+
+    h.release();
+    expect(content.hasAttribute("inert")).toBe(false);
+  });
+
   it("modal traps Tab from the last focusable back to the first", () => {
     const panel = document.createElement("div");
     const a = document.createElement("button");
