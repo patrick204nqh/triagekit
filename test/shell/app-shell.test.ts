@@ -89,6 +89,47 @@ describe("mountShell artifact navigation", () => {
       expect(urls.some((url) => url.includes("/issues"))).toBe(true);
       expect(document.querySelector("#root")?.textContent).toContain("Operator briefing");
       expect(document.querySelector("#root")?.getAttribute("role")).toBe("tabpanel");
+      expect(document.querySelector("[data-insight-scope]")?.textContent)
+        .toContain("GitHub · 1 repository · all supported surfaces");
+      expect(document.querySelector("[data-tb-filter]")).toBeNull();
+      expect(document.querySelector("[data-tb-sort]")).toBeNull();
+      expect(document.querySelector("[data-handoff-selection]")).toBeNull();
+      expect(document.querySelector(".tb-count")?.textContent?.trim())
+        .toBe("1");
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("restores hidden List scope after leaving Insights", async () => {
+    sessionStorage.setItem("triagekit.cred.github", "token");
+    localStorage.setItem(
+      "triagekit.scope.github",
+      JSON.stringify({ repos: ["acme-corp/web"] }),
+    );
+    history.replaceState(
+      null,
+      "",
+      "/?artifact=dependency-vuln&repo=acme-corp%2Fweb&severity=critical",
+    );
+    const fetchSpy = mockGithubItems([
+      dependencyItem("demo-package", "acme-corp/web"),
+    ]);
+    try {
+      bootstrap(configWithoutInsights);
+      await flush();
+      await flush();
+      clickView("Insights");
+      await flush();
+      clickView("List");
+      await flush();
+
+      expect(parseSessionQuery(location.search)).toMatchObject({
+        kind: "dependency-vuln",
+        view: "list",
+        repository: "acme-corp/web",
+        axes: { severity: ["critical"] },
+      });
     } finally {
       fetchSpy.mockRestore();
     }

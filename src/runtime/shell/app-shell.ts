@@ -13,7 +13,11 @@ import { esc } from "../layout/util";
 import type { ScoredItem } from "../layout/table/kind-renderer";
 import { renderInsights } from "../layout/insights";
 import type { ListState } from "../layout/toolbar/filter-state";
-import { renderToolbar, type ToolbarProps } from "../layout/toolbar/toolbar";
+import {
+  renderToolbar,
+  type InsightScopeSummary,
+  type ToolbarProps,
+} from "../layout/toolbar/toolbar";
 import { PolicyStore } from "./policy-store";
 import { scopeSummary } from "./health";
 import { mountSettings } from "./settings";
@@ -241,6 +245,15 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
   const activeDatasetSession = () => datasetSessions.get(currentProvider());
   const activeDatasetSnapshot = () => datasetSnapshots.get(currentProvider());
   const activeItems = () => activeDatasetSnapshot()?.items ?? [];
+  const currentInsightScope = (): InsightScopeSummary => {
+    const items = activeItems();
+    const provider = catalog.provider(currentProvider());
+    return {
+      providerLabel: provider?.label ?? currentProvider(),
+      repositoryCount: new Set(items.map((item) => item.location)).size,
+      openItemCount: items.length,
+    };
+  };
   const activeArtifactFailures = () =>
     failuresForKinds(activeDatasetSnapshot(), active.kinds);
   const activeProviderFailures = () =>
@@ -813,6 +826,9 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
     });
     renderToolbar(nav, {
       ...base,
+      ...(currentView() === "insights"
+        ? { insightScope: currentInsightScope() }
+        : {}),
       catalog: catalog,
       onFilterChange,
       onLabelRulesChange: (labels) => {

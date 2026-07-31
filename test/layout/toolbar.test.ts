@@ -29,12 +29,42 @@ function props(over: Partial<ToolbarProps> = {}): ToolbarProps {
   };
 }
 
+const insightScope = {
+  providerLabel: "GitHub",
+  repositoryCount: 3,
+  openItemCount: 12,
+};
+
 const labelledRows = (...labels: { name: string; color: string }[]): ScoredItem[] => [{
   ...rows[0], id: "L",
   details: { author: { login: "x", avatarUrl: "", kind: "human" }, labels } as any,
 } as ScoredItem];
 
 describe("renderToolbar", () => {
+  it("renders global Insights scope and count without list controls", () => {
+    const host = document.createElement("div");
+    renderToolbar(host, props({ activeView: "insights", insightScope }));
+
+    expect(host.querySelector(".tb-count")?.textContent?.trim()).toBe("12");
+    expect(host.querySelector("[data-insight-scope]")?.textContent)
+      .toContain("GitHub · 3 repositories · all supported surfaces");
+    expect(host.querySelector("[data-repo-tabs]")).toBeNull();
+    expect(host.querySelector("[data-tb-filter]")).toBeNull();
+    expect(host.querySelector("[data-tb-sort]")).toBeNull();
+    expect(host.querySelector("[data-handoff-selection]")).toBeNull();
+  });
+
+  it("uses singular repository copy in Insights", () => {
+    const host = document.createElement("div");
+    renderToolbar(host, props({
+      activeView: "insights",
+      insightScope: { ...insightScope, repositoryCount: 1 },
+    }));
+
+    expect(host.querySelector("[data-insight-scope]")?.textContent)
+      .toContain("1 repository · all supported surfaces");
+  });
+
   it("omits label focus controls for kinds without labels", () => {
     const host = document.createElement("div");
     renderToolbar(host, props({
