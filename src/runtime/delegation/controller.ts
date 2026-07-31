@@ -105,23 +105,26 @@ export function createDelegationController(
     const projectionErrors: DelegationValidationError[] = [];
     const packages: WorkPackageV1[] = plan.transfer.map(
       (planned, index) => {
-        const edit = intentEdits.get(planned.id);
-        const intent = {
-          ...planned.intent,
-          ...edit,
-          constraints: edit?.constraints ?? planned.intent.constraints,
-          verification: edit?.verification ?? planned.intent.verification,
-        };
+      const edit = intentEdits.get(planned.id);
+      const generatedIntent = {
+        ...planned.generatedIntent,
+        ...edit,
+        constraints: edit?.constraints
+          ?? planned.generatedIntent.constraints,
+        verification: edit?.verification
+          ?? planned.generatedIntent.verification,
+      };
       const targets = planned.targets.flatMap((item) => {
         try {
+          const entry = selected.find(
+            (candidate) => candidate.identity.itemId === item.id,
+          );
           const projected = projectDelegationTarget({
             item,
             explanation: deps.scoreExplain(item),
             catalog: deps.catalog,
+            ...(entry?.note ? { note: entry.note } : {}),
           });
-          const entry = selected.find(
-            (candidate) => candidate.identity.itemId === item.id,
-          );
           const queueDetails: Record<string, HandoffValueV1> | undefined =
             entry
               ? {
@@ -155,8 +158,8 @@ export function createDelegationController(
           order: index + 1,
           repository: planned.repository,
           kind: planned.kind,
-          generatedIntent: intent,
-          intent,
+          generatedIntent,
+          intent: generatedIntent,
           targets,
           selectionReason: planned.selectionReason,
         };
@@ -218,6 +221,8 @@ export function createDelegationController(
       : "";
     return Object.freeze({
       open: isOpen,
+      mode: queue.mode,
+      ...(queue.missionNote ? { missionNote: queue.missionNote } : {}),
       selectedCount: queue.selectedCount,
       retainedCount: queue.entries.length,
       remainingPackages: built.remainingPackages,
@@ -342,6 +347,19 @@ export function createDelegationController(
     close() {
       isOpen = false;
       publish();
+    },
+    setMode(mode) {
+      deps.queue.setMode(mode);
+    },
+    setMissionNote(note) {
+      deps.queue.setMissionNote(note);
+    },
+    setItemNote(itemId, note) {
+      const entry = deps.queue.snapshot().entries.find((candidate) =>
+        candidate.identity.itemId === itemId);
+      if (entry) {
+        deps.queue.setItemNote(queueKey(entry.identity), note);
+      }
     },
     updateIntent(packageId, intent) {
       intentEdits.set(packageId, {

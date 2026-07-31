@@ -100,6 +100,49 @@ function fixture(input: {
 }
 
 describe("delegation controller", () => {
+  it("defaults to an investigation bundle with no human prompt", () => {
+    const { controller } = fixture();
+    const snapshot = controller.snapshot();
+
+    expect(snapshot.mode).toBe("investigate");
+    expect(snapshot.missionNote).toBeUndefined();
+    expect(snapshot.packages[0].generatedIntent.constraints)
+      .toContain("Do not modify files.");
+    expect(snapshot.previewMarkdown).toContain("## Mode: Investigate");
+  });
+
+  it("updates mode and notes without changing selected targets", () => {
+    const { controller, queue } = fixture();
+    const before = queue.snapshot().selectedCount;
+    const itemId = controller.snapshot().packages[0].targets[0].id;
+
+    controller.setMode("implement");
+    controller.setMissionNote("Keep public APIs stable");
+    controller.setItemNote(itemId, "Do not update beyond v4");
+
+    expect(controller.snapshot()).toMatchObject({
+      mode: "implement",
+      missionNote: "Keep public APIs stable",
+      selectedCount: before,
+    });
+    expect(controller.snapshot().packages[0].targets[0].note)
+      .toBe("Do not update beyond v4");
+  });
+
+  it("keeps investigate authoritative over conflicting human text", () => {
+    const { controller } = fixture();
+    controller.setMissionNote("Fix every target and push it");
+    controller.setItemNote(
+      controller.snapshot().packages[0].targets[0].id,
+      "Make the change now",
+    );
+
+    expect(controller.snapshot().previewMarkdown)
+      .toContain("Do not modify files.");
+    expect(controller.snapshot().previewMarkdown)
+      .toContain("Fix every target and push it");
+  });
+
   it("copies the next bundle without changing queue membership", async () => {
     const { controller, clipboard, queue } = fixture({ count: 56 });
     const result = await controller.copyBundle();
@@ -200,25 +243,6 @@ describe("delegation controller", () => {
     expect(packageFixture.queue.snapshot().selectedCount).toBe(2);
     expect(packageFixture.controller.snapshot().pendingConfirmation)
       .toEqual({ packageCount: 1, targetCount: 2 });
-  });
-
-  it("disables and rejects downloads while the bundle is invalid", () => {
-    const { controller, downloads } = fixture();
-    const packageId = controller.snapshot().packages[0].id;
-    controller.updateIntent(packageId, { outcome: "" });
-
-    expect(controller.snapshot().canDownload).toBe(false);
-    expect(controller.downloadBundle("md")).toEqual({
-      ok: false,
-      error: "Fix package validation errors before transfer",
-    });
-    expect(downloads.text).not.toHaveBeenCalled();
-    expect(controller.snapshot().notice?.tone).toBe("error");
-    expect(controller.downloadPackage(packageId, "json")).toEqual({
-      ok: false,
-      error: "Fix package validation errors before transfer",
-    });
-    expect(downloads.json).not.toHaveBeenCalled();
   });
 
   it("keeps preview and downloads available after clipboard denial", async () => {

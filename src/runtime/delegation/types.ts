@@ -210,6 +210,8 @@ export interface RevalidateQueueInput {
 
 export interface DelegationControllerSnapshot {
   readonly open: boolean;
+  readonly mode: HandoffMode;
+  readonly missionNote?: string;
   readonly selectedCount: number;
   readonly retainedCount: number;
   readonly remainingPackages: number;
@@ -237,6 +239,10 @@ export interface DelegationController {
   subscribe(listener: (snapshot: DelegationControllerSnapshot) => void): () => void;
   open(): void;
   close(): void;
+  setMode(mode: HandoffMode): void;
+  setMissionNote(note: string): void;
+  setItemNote(itemId: string, note: string): void;
+  /** Transitional until package prompt fields are removed from the composer. */
   updateIntent(packageId: string, intent: Partial<HandoffIntent>): void;
   removeTarget(itemId: string): void;
   removeQueueItem(key: string): boolean;
