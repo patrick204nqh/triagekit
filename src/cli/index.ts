@@ -1,12 +1,22 @@
 #!/usr/bin/env node
-import { Command } from "commander";
+import { parseArgs } from "node:util";
 import { runBuild } from "./build.js";
 
-const program = new Command();
-program
-  .name("triagekit")
-  .command("build")
-  .option("-c, --config <path>", "config file", "triage.config.yml")
-  .option("--generic", "build a generic dashboard (enter org/repos at runtime; nothing baked in)")
-  .action(async (opts) => { await runBuild(opts.config, { generic: !!opts.generic }); });
-program.parse();
+const usage = "Usage: triagekit build [-c <path> | --config <path>] [--generic]";
+const [command, ...args] = process.argv.slice(2);
+
+try {
+  if (command !== "build") throw new Error(usage);
+  const { values } = parseArgs({
+    args,
+    options: {
+      config: { type: "string", short: "c", default: "triage.config.yml" },
+      generic: { type: "boolean", default: false },
+    },
+    strict: true,
+  });
+  await runBuild(values.config, { generic: values.generic });
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
+}
