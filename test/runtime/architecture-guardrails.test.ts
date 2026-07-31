@@ -13,6 +13,16 @@ const filesUnder = (directory: string): string[] =>
   });
 
 describe("runtime architecture guardrails", () => {
+  it("delegates IndexedDB request and transaction mechanics to idb", () => {
+    const source = readFileSync(
+      join(runtime, "cached-dataset/indexed-db-persistence.ts"),
+      "utf8",
+    );
+    expect(source).toContain('from "idb"');
+    expect(source).not.toContain("IDBRequest<");
+    expect(source).not.toContain("transactionCompleted");
+  });
+
   it("delegates persisted-state shapes to Zod", () => {
     for (const relative of [
       "focus/browser-store.ts",

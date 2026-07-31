@@ -1,3 +1,4 @@
+import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type {
   DatasetPersistence,
   PersistedSlice,
@@ -20,6 +21,22 @@ interface StoredGeneration {
   readonly generation: number;
 }
 
+interface TriageDatabase extends DBSchema {
+  slices: {
+    key: string;
+    value: StoredSlice;
+    indexes: {
+      connectionKey: string;
+      validatedAt: number;
+      lastAccessedAt: number;
+    };
+  };
+  generations: {
+    key: string;
+    value: StoredGeneration;
+  };
+}
+
 const encoded = (key: SliceKey) =>
   JSON.stringify([key.connectionKey, key.target, key.kind]);
 
@@ -36,39 +53,18 @@ const frozenCopy = <T>(value: T): T => {
   return copy;
 };
 
-const request = <T>(value: IDBRequest<T>): Promise<T> => new Promise((resolve, reject) => {
-  value.addEventListener("success", () => resolve(value.result), { once: true });
-  value.addEventListener("error", () => reject(value.error ?? new Error("IndexedDB request failed")), { once: true });
-});
-
-const transactionCompleted = (transaction: IDBTransaction): Promise<void> => new Promise((resolve, reject) => {
-  transaction.addEventListener("complete", () => resolve(), { once: true });
-  transaction.addEventListener("abort", () => reject(transaction.error ?? new Error("IndexedDB transaction aborted")), { once: true });
-  transaction.addEventListener("error", () => reject(transaction.error ?? new Error("IndexedDB transaction failed")), { once: true });
-});
-
-const openDatabase = (name: string): Promise<IDBDatabase> => new Promise((resolve, reject) => {
-  if (typeof indexedDB === "undefined") {
-    reject(new Error("IndexedDB is not available"));
-    return;
-  }
-
-  const opening = indexedDB.open(name, DATABASE_VERSION);
-  opening.addEventListener("upgradeneeded", () => {
-    const database = opening.result;
-    if (!database.objectStoreNames.contains(SLICES_STORE)) {
+const openDatabase = (name: string): Promise<IDBPDatabase<TriageDatabase>> =>
+  openDB<TriageDatabase>(name, DATABASE_VERSION, {
+    upgrade(database) {
       const slices = database.createObjectStore(SLICES_STORE, { keyPath: "id" });
-      slices.createIndex("connectionKey", "connectionKey", { unique: false });
-      slices.createIndex("validatedAt", "validatedAt", { unique: false });
-      slices.createIndex("lastAccessedAt", "lastAccessedAt", { unique: false });
-    }
-    if (!database.objectStoreNames.contains(GENERATIONS_STORE)) {
-      database.createObjectStore(GENERATIONS_STORE, { keyPath: "connectionKey" });
-    }
-  }, { once: true });
-  opening.addEventListener("success", () => resolve(opening.result), { once: true });
-  opening.addEventListener("error", () => reject(opening.error ?? new Error("IndexedDB could not open")), { once: true });
-});
+      slices.createIndex("connectionKey", "connectionKey");
+      slices.createIndex("validatedAt", "validatedAt");
+      slices.createIndex("lastAccessedAt", "lastAccessedAt");
+      database.createObjectStore(GENERATIONS_STORE, {
+        keyPath: "connectionKey",
+      });
+    },
+  });
 
 const toStoredSlice = (slice: PersistedSlice): StoredSlice => ({
   ...structuredClone(slice),
@@ -97,59 +93,60 @@ export const createIndexedDbDatasetPersistence = async (
   return {
     async activateGeneration(connectionKey, generation): Promise<void> {
       const transaction = database.transaction(GENERATIONS_STORE, "readwrite");
-      transaction.objectStore(GENERATIONS_STORE).put({ connectionKey, generation } satisfies StoredGeneration);
-      await transactionCompleted(transaction);
+      await transaction.store.put({ connectionKey, generation });
+      await transaction.done;
     },
 
     async hydrate(connectionKey): Promise<readonly PersistedSlice[]> {
-      const transaction = database.transaction(SLICES_STORE, "readonly");
-      const index = transaction.objectStore(SLICES_STORE).index("connectionKey");
-      const stored = await request(index.getAll(IDBKeyRange.only(connectionKey)) as IDBRequest<StoredSlice[]>);
-      await transactionCompleted(transaction);
+      const stored = await database.getAllFromIndex(
+        SLICES_STORE,
+        "connectionKey",
+        connectionKey,
+      );
       return Object.freeze(stored.map(toPersistedSlice));
     },
 
     async commit(slice, generation): Promise<"committed" | "superseded"> {
       const transaction = database.transaction([SLICES_STORE, GENERATIONS_STORE], "readwrite");
       const generations = transaction.objectStore(GENERATIONS_STORE);
-      const active = await request(generations.get(slice.key.connectionKey) as IDBRequest<StoredGeneration | undefined>);
+      const active = await generations.get(slice.key.connectionKey);
       if (active?.generation !== generation) {
-        await transactionCompleted(transaction);
+        await transaction.done;
         return "superseded";
       }
-      transaction.objectStore(SLICES_STORE).put(toStoredSlice(slice));
-      await transactionCompleted(transaction);
+      await transaction.objectStore(SLICES_STORE).put(toStoredSlice(slice));
+      await transaction.done;
       return "committed";
     },
 
     async touch(key, validatedAt, validator): Promise<void> {
       const transaction = database.transaction(SLICES_STORE, "readwrite");
-      const slices = transaction.objectStore(SLICES_STORE);
-      const stored = await request(slices.get(encoded(key)) as IDBRequest<StoredSlice | undefined>);
+      const slices = transaction.store;
+      const stored = await slices.get(encoded(key));
       if (stored) {
-        slices.put({
+        await slices.put({
           ...stored,
           validatedAt,
           lastAccessedAt: validatedAt,
           ...(validator === undefined ? {} : { validator }),
         });
       }
-      await transactionCompleted(transaction);
+      await transaction.done;
     },
 
     async removeConnection(connectionKey): Promise<void> {
       const transaction = database.transaction([SLICES_STORE, GENERATIONS_STORE], "readwrite");
       const slices = transaction.objectStore(SLICES_STORE);
-      const keys = await request(slices.index("connectionKey").getAllKeys(IDBKeyRange.only(connectionKey)));
-      for (const key of keys) slices.delete(key);
-      transaction.objectStore(GENERATIONS_STORE).delete(connectionKey);
-      await transactionCompleted(transaction);
+      const keys = await slices.index("connectionKey").getAllKeys(connectionKey);
+      for (const key of keys) await slices.delete(key);
+      await transaction.objectStore(GENERATIONS_STORE).delete(connectionKey);
+      await transaction.done;
     },
 
     async prune(policy: PrunePolicy): Promise<PruneReport> {
       const transaction = database.transaction(SLICES_STORE, "readwrite");
-      const slices = transaction.objectStore(SLICES_STORE);
-      const stored = await request(slices.getAll() as IDBRequest<StoredSlice[]>);
+      const slices = transaction.store;
+      const stored = await slices.getAll();
       const evicted: SliceKey[] = [];
       const retained = new Map(stored.map((slice) => [slice.id, slice]));
       const evict = (slice: StoredSlice): void => {
@@ -172,7 +169,7 @@ export const createIndexedDbDatasetPersistence = async (
         evict(slice);
       }
 
-      await transactionCompleted(transaction);
+      await transaction.done;
       return Object.freeze({ evicted: Object.freeze(evicted) });
     },
   };

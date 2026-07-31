@@ -33,10 +33,15 @@ const seedConnections = async (
 describe("IndexedDB dataset persistence", () => {
   it("rejects a stale generation in the same transaction as the write", async () => {
     const persistence = await createPersistence();
+    await persistence.activateGeneration("connection-a", 1);
+    await persistence.commit(slice({
+      key: { connectionKey: "connection-a", target: "committed", kind: "issue" },
+    }), 1);
     await persistence.activateGeneration("connection-a", 3);
 
     expect(await persistence.commit(slice(), 2)).toBe("superseded");
-    expect(await persistence.hydrate("connection-a")).toEqual([]);
+    expect((await persistence.hydrate("connection-a")).map(({ key }) => key.target))
+      .toEqual(["committed"]);
   });
 
   it("removes only one Provider Connection", async () => {
