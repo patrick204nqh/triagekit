@@ -146,8 +146,8 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
   const filterFoot = fcount
     ? `<div class="pop-foot"><span class="count">${fcount} active</span><button class="clear" data-clear-all>Clear all</button></div>`
     : "";
-  const filterPop = `<div class="tb-pop" id="tb-pop-filter" data-pop="filter" hidden><div class="pop-scroll">${filterBody}</div>${filterFoot}</div>`;
-  const sortPop = `<div class="tb-pop" id="tb-pop-sort" data-pop="sort" hidden>`
+  const filterPop = `<div class="tb-pop" id="tb-pop-filter" data-pop="filter"><div class="pop-scroll">${filterBody}</div>${filterFoot}</div>`;
+  const sortPop = `<div class="tb-pop" id="tb-pop-sort" data-pop="sort">`
     + sorts.map(s => `<button class="pop-sort${s.id === p.filters.sort ? " on" : ""}" data-sort="${esc(s.id)}">${esc(s.label)}</button>`).join("")
     + `</div>`;
 

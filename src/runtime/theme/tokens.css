@@ -845,10 +845,9 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 .tb-ctl { position: relative; }
 .tb-btn { padding: 4px 12px; border: 1px solid var(--line-strong); border-radius: 6px; background: none; color: var(--fg); cursor: pointer; }
 .tb-btn:hover { border-color: var(--accent); }
-.tb-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 220px;
+.tb-pop { position: fixed; position-area: bottom span-left; inset: auto; margin: 6px 0 0; z-index: 20; min-width: 220px;
   background: var(--carbon); border: 1px solid var(--line-strong); border-radius: 10px;
   box-shadow: var(--drawer-shadow); padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-.tb-pop[hidden] { display: none; }   /* author display:flex above beats the UA [hidden] rule — re-assert it */
 .pop-sort { text-align: left; background: none; border: 0; color: var(--fg); padding: 4px 6px; border-radius: 6px; cursor: pointer; }
 .pop-sort.on, .pop-sort:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
 
@@ -913,8 +912,7 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 .repo-ctl { position: relative; display: inline-flex; }
 .repo-more { padding: 4px 8px; border-radius: 6px; background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 13px; }
 .repo-more:hover { color: var(--fg); }
-.repo-pop { position: absolute; top: calc(100% + 4px); left: 0; z-index: 20; display: flex; flex-direction: column; gap: 2px; padding: 4px; background: var(--slate); border: 1px solid var(--line); border-radius: 8px; min-width: 160px; }
-.repo-pop[hidden] { display: none; }
+.repo-pop { position: fixed; position-area: bottom span-right; inset: auto; margin: 4px 0 0; z-index: 20; display: flex; flex-direction: column; gap: 2px; padding: 4px; background: var(--slate); border: 1px solid var(--line); border-radius: 8px; min-width: 160px; }
 .repo-pop .repo-tab { text-align: left; }
 
 /* Provider scope selector — top-right of row 1 (.tb-right) */

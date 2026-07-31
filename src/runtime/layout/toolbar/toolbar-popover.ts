@@ -1,33 +1,15 @@
-import { dismissible } from "../../shell/dismissible";
-
-// Wires the Filter/Sort popovers' open/close + dismiss (Esc / outside-click).
-// A single active handle is hoisted so switching filter<->sort releases whichever
-// popover is currently open (the double-Esc fix).
 export function wirePopovers(host: HTMLElement): void {
-  let activeHandle: ReturnType<typeof dismissible> | null = null;
-  let activePop: HTMLElement | null = null;
-  function syncAria(btn: HTMLElement, pop: HTMLElement): void {
-    btn.setAttribute("aria-expanded", String(!pop.hidden));
-  }
   for (const which of ["filter", "sort"] as const) {
-    const btn = host.querySelector<HTMLElement>(`[data-tb-${which}]`)!;
-    const pop = host.querySelector<HTMLElement>(`[data-pop="${which}"]`)!;
-    syncAria(btn, pop);
-    btn.addEventListener("click", () => {
-      const opening = pop.hidden;
-      if (activePop) activePop.hidden = true;
-      if (activeHandle) { activeHandle.release(); activeHandle = null; activePop = null; }
-      if (opening) {
-        pop.hidden = false;
-        activeHandle = dismissible(pop, {
-          onDismiss: () => { pop.hidden = true; activeHandle = null; activePop = null; syncAria(btn, pop); },
-          closeOnOutsideClick: true,
-          outsideClickIgnore: btn,
-        });
-        activeHandle.activate();
-        activePop = pop;
-      }
-      syncAria(btn, pop);
+    const button = host.querySelector<HTMLButtonElement>(`[data-tb-${which}]`)!;
+    const popover = host.querySelector<HTMLElement>(`[data-pop="${which}"]`)!;
+    popover.setAttribute("popover", "auto");
+    button.popoverTargetElement = popover;
+    button.setAttribute("aria-expanded", "false");
+    popover.addEventListener("toggle", (event) => {
+      button.setAttribute(
+        "aria-expanded",
+        String((event as ToggleEvent).newState === "open"),
+      );
     });
   }
 }
