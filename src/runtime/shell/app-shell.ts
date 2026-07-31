@@ -7,13 +7,17 @@ import type {
   Scope,
 } from "../catalog/types";
 import { GROUP_LABEL, GROUP_ORDER, type Artifact } from "../dataset/artifact";
-import { explainScoreModel, validateModel, type ScoreExplanation } from "../scoring/score-model";
+import type { ScoreExplanation } from "../scoring/score-model";
 import { renderTableSkeleton } from "../layout/table/triage-table";
 import { esc } from "../layout/util";
 import type { ScoredItem } from "../layout/table/kind-renderer";
 import { renderInsights } from "../layout/insights";
 import type { ListState } from "../layout/toolbar/filter-state";
-import { renderToolbar, type ToolbarProps } from "../layout/toolbar/toolbar";
+import {
+  renderToolbar,
+  type InsightScopeSummary,
+  type ToolbarProps,
+} from "../layout/toolbar/toolbar";
 import { PolicyStore } from "./policy-store";
 import { scopeSummary } from "./health";
 import { mountSettings } from "./settings";
@@ -53,6 +57,7 @@ import {
 import { createBrowserHandoffQueueStore } from "../handoff/browser-queue-store";
 import {
   createHandoffQueue,
+  isReadyForHandoff,
   queueKey,
 } from "../handoff/queue";
 import {
@@ -241,6 +246,15 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
   const activeDatasetSession = () => datasetSessions.get(currentProvider());
   const activeDatasetSnapshot = () => datasetSnapshots.get(currentProvider());
   const activeItems = () => activeDatasetSnapshot()?.items ?? [];
+  const currentInsightScope = (): InsightScopeSummary => {
+    const items = activeItems();
+    const provider = catalog.provider(currentProvider());
+    return {
+      providerLabel: provider?.label ?? currentProvider(),
+      repositoryCount: new Set(items.map((item) => item.location)).size,
+      openItemCount: items.length,
+    };
+  };
   const activeArtifactFailures = () =>
     failuresForKinds(activeDatasetSnapshot(), active.kinds);
   const activeProviderFailures = () =>
@@ -283,8 +297,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
     return {
       visible: lastShownRows,
       queuedKeys: selectedQueueKeys(),
-      selectedCount: snapshot.selectedCount,
-      totalCount: snapshot.entries.length,
+      readyCount: snapshot.entries.filter(isReadyForHandoff).length,
       onSetVisible: (rows, selected) => {
         handoffQueue.setSelectedMany(
           rows.map(handoffIdentityForItem),
@@ -313,11 +326,8 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
   let lastNavRowSig = "";
 
   // Per-item score breakdown for the list drawer (lifted from renderListWithFilters).
-  const scoreExplain = (i: ScoredItem): ScoreExplanation | null => {
-    const m = policy.getScoreModel(i.kind);
-    if (!m || validateModel(m, catalog.fieldsFor(i.kind)).length !== 0) return null;
-    try { return explainScoreModel(m, i); } catch { return null; }
-  };
+  const scoreExplain = (i: ScoredItem): ScoreExplanation | null =>
+    i.explanation ?? null;
 
   // Filter change: update state, re-derive from the store (no refetch).
   const onFilterChange = (next: ListState) => {
@@ -450,12 +460,14 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
         entries,
         before,
         session,
-        project: (item) =>
-          projectHandoffTarget({
-            item: scoreQueuedItem(item),
-            explanation: scoreExplain(scoreQueuedItem(item)),
+        project: (item) => {
+          const scored = scoreQueuedItem(item);
+          return projectHandoffTarget({
+            item: scored,
+            explanation: scoreExplain(scored),
             catalog,
-          }),
+          });
+        },
       });
       transitions.push(...result.transitions);
     }
@@ -813,6 +825,9 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
     });
     renderToolbar(nav, {
       ...base,
+      ...(currentView() === "insights"
+        ? { insightScope: currentInsightScope() }
+        : {}),
       catalog: catalog,
       onFilterChange,
       onLabelRulesChange: (labels) => {
@@ -880,7 +895,10 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
       return;
     }
     if (!silent && activeDatasetSnapshot()?.phase === "hydrating") {
-      renderTableSkeleton(root);
+      renderTableSkeleton(
+        root,
+        catalog.readyKind(active.kinds[0])?.renderer.columns,
+      );
     }
     core.rerender();
   };

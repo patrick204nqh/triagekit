@@ -1,5 +1,6 @@
 import type { TriageItem } from "../dataset/item";
 import { type ReviewDetails, CHANGE_REQUEST } from "../dataset/shapes/review";
+import type { BuiltInScoreFactor, ScoreExplanation } from "./score-model";
 
 // Heuristic review priority, from list-available data only (CI is loaded lazily on
 // expand and never feeds the score). Transparent, tunable constants:
@@ -23,19 +24,41 @@ function labelWeight(d: ReviewDetails): number {
   return w;
 }
 
-function ageWeight(createdAt: string): number {
-  const days = (Date.now() - +new Date(createdAt)) / 86400000;
-  return Math.min(Math.max(days, 0), 30);
-}
-
-export function reviewScore(item: TriageItem<ReviewDetails>): number {
+function calculate(item: TriageItem<ReviewDetails>, now: number) {
   const d = item.details;
   const vulnLinked = d.relations.some(r => r.type === "fixes");
-  let score = 30;
-  score += labelWeight(d);
-  score += ageWeight(item.createdAt);
-  if (vulnLinked) score += 80;
-  if (item.kind === CHANGE_REQUEST && (d.assignees.length || d.reviewers.length)) score += 10;
-  if (d.author.kind === "bot" && !vulnLinked) score -= 35;
-  return Math.round(score);
+  const hasReviewActivity = item.kind === CHANGE_REQUEST
+    && Boolean(d.assignees.length || d.reviewers.length);
+  const botDampened = d.author.kind === "bot" && !vulnLinked;
+  const factors: BuiltInScoreFactor[] = [
+    { label: "Base", raw: null, contribution: 30, reason: "open work" },
+    { label: "Labels", raw: d.labels.map((label) => label.name).join(", "), contribution: labelWeight(d), reason: "priority labels" },
+    { label: "Vulnerability", raw: vulnLinked, contribution: vulnLinked ? 80 : 0, reason: vulnLinked ? "fixes a vulnerability" : "no vulnerability link" },
+    { label: "Review activity", raw: hasReviewActivity, contribution: hasReviewActivity ? 10 : 0, reason: hasReviewActivity ? "review underway" : "no review activity" },
+    { label: "Author", raw: d.author.kind, contribution: botDampened ? -35 : 0, reason: botDampened ? "bot dampening" : "no bot dampening" },
+  ];
+  const subtotal = factors.reduce((total, factor) => total + factor.contribution, 0);
+  const ageDays = Math.min(Math.max((now - +new Date(item.createdAt)) / 86400000, 0), 30);
+  const score = Math.round(subtotal + ageDays);
+  factors.push({
+    label: "Age",
+    raw: Math.round(ageDays),
+    contribution: score - subtotal,
+    reason: `${Math.round(ageDays)} days open`,
+  });
+  return { score, factors };
+}
+
+export function reviewScore(
+  item: TriageItem<ReviewDetails>,
+  now = Date.now(),
+): number {
+  return calculate(item, now).score;
+}
+
+export function explainReviewScore(
+  item: TriageItem<ReviewDetails>,
+  now: number,
+): Extract<ScoreExplanation, { source: "built-in" }> {
+  return { source: "built-in", ...calculate(item, now) };
 }

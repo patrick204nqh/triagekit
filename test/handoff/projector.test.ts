@@ -84,4 +84,45 @@ describe("handoff target projector", () => {
     expect(projected.note).toBe("Do not update beyond v4");
     expect(projected.details).not.toHaveProperty("note");
   });
+
+  it("projects configured score signals as Handoff evidence", () => {
+    const projected = projectHandoffTarget({
+      item: issue("Investigate this issue"),
+      explanation: {
+        source: "configured",
+        score: 80,
+        signals: {
+          severity: { from: "severity", raw: "critical", value: 1 },
+        },
+      },
+      catalog: runtimeCatalog,
+    });
+    expect(projected.priority.explanation).toEqual([{
+      label: "severity",
+      value: 1,
+      reason: "severity: critical",
+    }]);
+  });
+
+  it("projects built-in factors as Handoff evidence", () => {
+    const projected = projectHandoffTarget({
+      item: issue("Investigate this issue"),
+      explanation: {
+        source: "built-in",
+        score: 80,
+        factors: [{
+          label: "Severity",
+          raw: "critical",
+          contribution: 70,
+          reason: "critical severity",
+        }],
+      },
+      catalog: runtimeCatalog,
+    });
+    expect(projected.priority.explanation).toEqual([{
+      label: "Severity",
+      value: "critical",
+      reason: "critical severity",
+    }]);
+  });
 });

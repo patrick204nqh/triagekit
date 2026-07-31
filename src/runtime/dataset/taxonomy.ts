@@ -51,3 +51,4 @@ export function getDomain(id: DomainId): Domain {
 export function domainOf(kind: Kind): Domain {
   const d = byKind.get(kind); if (!d) throw new NotFoundError("domain for kind", kind); return d;
 }
+

@@ -9,7 +9,7 @@ const item = { id: "x", provider: "github", providerRef: {}, kind: "dependency-v
 
 describe("renderScoreBreakdown", () => {
   it("renders a per-signal table and the score → tier line when given an explanation", () => {
-    const ex: ScoreExplanation = { score: 142, signals: { severity: { from: "severity", raw: "critical", value: 1 } } };
+    const ex: ScoreExplanation = { source: "configured", score: 142, signals: { severity: { from: "severity", raw: "critical", value: 1 } } };
     const host = document.createElement("div");
     renderScoreBreakdown(host, item, ex);
     expect(host.querySelector(".breakdown")).not.toBeNull();
@@ -18,11 +18,28 @@ describe("renderScoreBreakdown", () => {
     expect(host.textContent).toContain("142");
     expect(host.querySelector(".tier-P0")).not.toBeNull();
   });
-  it("renders the built-in note (no table) when explanation is null", () => {
+  it("renders built-in factors without configuration guidance", () => {
+    const host = document.createElement("div");
+    renderScoreBreakdown(host, item, {
+      source: "built-in",
+      score: 142,
+      factors: [{
+        label: "Severity",
+        raw: "critical",
+        contribution: 100,
+        reason: "critical severity",
+      }],
+    });
+    expect(host.textContent).toContain("Built-in priority");
+    expect(host.textContent).toContain("critical severity");
+    expect(host.textContent).not.toContain("Configure scoring");
+  });
+  it("renders a compact built-in fallback when explanation is null", () => {
     const host = document.createElement("div");
     renderScoreBreakdown(host, item, null);
     expect(host.querySelector(".breakdown")).toBeNull();
-    expect(host.textContent).toContain("Built-in scorer");
+    expect(host.textContent).toContain("Built-in score");
     expect(host.textContent).toContain("142");
+    expect(host.textContent).not.toContain("Configure scoring");
   });
 });

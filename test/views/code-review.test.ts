@@ -5,6 +5,10 @@ import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
 import { changeRequestKind } from "../../src/runtime/kinds/change-request";
 import { issueKind } from "../../src/runtime/kinds/issue";
 import { runtimeDefaults } from "../../src/runtime/catalog/defaults";
+import {
+  changeRequestRenderer,
+  issueRenderer,
+} from "../../src/runtime/views/code-review/view";
 
 it("declares the assignee axis and exactly one generic labels axis", () => {
   const axisIds = runtimeDefaults.filters.map((axis) => axis.id);
@@ -24,6 +28,14 @@ function pr(over: Partial<ScoredItem> = {}): ScoredItem {
 }
 
 describe("review kind renderer", () => {
+  it("declares review decision columns", () => {
+    const expected = ["Repository", "Title", "#", "Author", "Priority"];
+    expect(changeRequestRenderer.columns.map((column) => column.header))
+      .toEqual(expected);
+    expect(issueRenderer.columns.map((column) => column.header))
+      .toEqual(expected);
+  });
+
   it("renders review rows in the shared list with a # column", () => {
     const root = document.createElement("div");
     renderTriageList(root, [pr(), pr({ id: "github:acme/web:2" })], [], { token: "t" });

@@ -1,9 +1,27 @@
 import type { RuntimeCatalog } from "../catalog/types";
-import type { HandoffTargetV1, HandoffValueV1 } from "./types";
+import type { HandoffEvidenceV1, HandoffTargetV1, HandoffValueV1 } from "./types";
 import type { ScoredItem } from "../layout/table/kind-renderer";
 import type { ScoreExplanation } from "../scoring/score-model";
 
 const BODY_LIMIT = 4_000;
+
+const explanationEvidence = (
+  explanation: ScoreExplanation | null,
+): HandoffEvidenceV1[] | undefined => {
+  if (!explanation) return undefined;
+  if (explanation.source === "configured") {
+    return Object.entries(explanation.signals).map(([name, signal]) => ({
+      label: name,
+      value: signal.value,
+      reason: `${signal.from}: ${String(signal.raw)}`,
+    }));
+  }
+  return explanation.factors.map((factor) => ({
+    label: factor.label,
+    value: factor.raw ?? "n/a",
+    reason: factor.reason,
+  }));
+};
 
 function projectTarget(input: {
   readonly item: ScoredItem;
@@ -28,13 +46,7 @@ function projectTarget(input: {
       tier: item.tier,
       explanation:
         kindProjection?.priority.explanation ??
-        (explanation
-          ? Object.entries(explanation.signals).map(([name, signal]) => ({
-              label: name,
-              value: signal.value,
-              reason: `${signal.from}: ${signal.raw}`,
-            }))
-          : undefined),
+        explanationEvidence(explanation),
     },
     details: kindProjection?.details ?? {},
   };

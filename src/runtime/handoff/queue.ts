@@ -6,7 +6,17 @@ import type {
   HandoffIdentity,
   HandoffQueueSnapshot,
   HandoffQueueTransition,
+  HandoffQueueStatus,
 } from "./types";
+
+const READY_STATUSES = new Set<HandoffQueueStatus>([
+  "queued",
+  "current",
+  "changed",
+]);
+
+export const isReadyForHandoff = (entry: HandoffQueueEntry): boolean =>
+  entry.selected && READY_STATUSES.has(entry.status);
 
 function normalizedNote(value: string): string | undefined {
   const trimmed = value.trim();

@@ -885,6 +885,7 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 
 /* Row 2: repo tabs (left) + Filter/Sort controls (right) directly above the table */
 .fbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; }
+.insight-scope { padding:8px 0; border-bottom:1px solid var(--line); color:var(--muted); font-family:var(--mono); font-size:12px; }
 .fbar-focus { display:flex; align-items:center; min-width:0; gap:10px; }
 .fbar-controls { display: flex; align-items:center; gap: 8px; }
 [data-handoff-selection] { display:flex; align-items:center; gap:6px; }

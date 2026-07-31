@@ -17,6 +17,7 @@ describe("ready Kind declarations", () => {
       expect(declaration.kind).toBeTruthy();
       expect(declaration.fields.length).toBeGreaterThan(0);
       expect(typeof declaration.builtInScorer).toBe("function");
+      expect(typeof declaration.explainBuiltInScore).toBe("function");
       expect(declaration.renderer.kind).toBe(declaration.kind);
     }
   });

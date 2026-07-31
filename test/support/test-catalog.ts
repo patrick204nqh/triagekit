@@ -18,7 +18,15 @@ const kind = (
   status: "ready",
   fields: [],
   builtInScorer: (item) => item.signal,
-  renderer: { kind: id },
+  explainBuiltInScore: (item) => ({
+    source: "built-in",
+    score: item.signal,
+    factors: [],
+  }),
+  renderer: {
+    kind: id,
+    columns: [{ header: "Title", cell: (item) => item.title }],
+  },
   filters: [],
   sorts: [],
   charts: [],

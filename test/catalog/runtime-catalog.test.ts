@@ -13,7 +13,15 @@ const issueKind = (): KindDeclaration => ({
   status: "ready",
   fields: [],
   builtInScorer: (item) => item.signal,
-  renderer: { kind: "issue" },
+  explainBuiltInScore: (item) => ({
+    source: "built-in",
+    score: item.signal,
+    factors: [],
+  }),
+  renderer: {
+    kind: "issue",
+    columns: [{ header: "Title", cell: (item) => item.title }],
+  },
   filters: [],
   sorts: [],
   charts: [],
@@ -96,6 +104,33 @@ describe("createRuntimeCatalog", () => {
       kinds: [withoutScorer as KindDeclaration],
       providers: [],
     })).toThrow(/issue.*builtInScorer/i);
+  });
+
+  it("rejects a ready Kind without a built-in score explainer", () => {
+    const { explainBuiltInScore: _, ...withoutExplainer } = issueKind() as Extract<
+      KindDeclaration,
+      { status: "ready" }
+    >;
+
+    expect(() => createRuntimeCatalog({
+      kinds: [withoutExplainer as KindDeclaration],
+      providers: [],
+    })).toThrow(/issue.*explainBuiltInScore/i);
+  });
+
+  it("rejects a ready Kind without decision columns", () => {
+    const kind = issueKind() as Extract<
+      KindDeclaration,
+      { status: "ready" }
+    >;
+
+    expect(() => createRuntimeCatalog({
+      kinds: [{
+        ...kind,
+        renderer: { ...kind.renderer, columns: [] },
+      }],
+      providers: [],
+    })).toThrow(/at least one column/i);
   });
 
   it("rejects a ready Kind without its field catalog", () => {

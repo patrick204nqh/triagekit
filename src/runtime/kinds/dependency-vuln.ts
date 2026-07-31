@@ -1,8 +1,11 @@
 // src/runtime/kinds/dependency-vuln.ts
-import type { KindDeclaration, Scorer } from "../catalog/types";
+import type { BuiltInScoreExplainer, KindDeclaration, Scorer } from "../catalog/types";
 import type { Tier } from "../scoring/tier";
 import type { DependencyVulnDetails } from "../dataset/kinds/dependency-vuln";
-import { dependencyVulnScore } from "../scoring/dependency-vuln";
+import {
+  dependencyVulnScore,
+  explainDependencyVulnScore,
+} from "../scoring/dependency-vuln";
 import {
   dependencyVulnCharts,
   dependencyVulnRenderer,
@@ -27,6 +30,7 @@ export const dependencyVulnKind: KindDeclaration = {
     { name: "scope", type: "enum", values: ["runtime", "development"] },
   ],
   builtInScorer: dependencyVulnScore as Scorer,
+  explainBuiltInScore: explainDependencyVulnScore as BuiltInScoreExplainer,
   defaultModel: {
     kind: "dependency-vuln",
     scale: 100,

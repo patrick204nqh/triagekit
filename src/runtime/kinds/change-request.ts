@@ -1,9 +1,9 @@
 // src/runtime/kinds/change-request.ts
-import type { KindDeclaration, Scorer } from "../catalog/types";
+import type { BuiltInScoreExplainer, KindDeclaration, Scorer } from "../catalog/types";
 import type { Tier } from "../scoring/tier";
 import type { FieldDef } from "../scoring/field-catalog";
 import type { ReviewDetails } from "../dataset/shapes/review";
-import { reviewScore } from "../scoring/review";
+import { explainReviewScore, reviewScore } from "../scoring/review";
 import {
   changeRequestRenderer,
   changeRequestView,
@@ -25,6 +25,7 @@ export const changeRequestKind: KindDeclaration = {
   status: "ready",
   fields: changeRequestFields,
   builtInScorer: reviewScore as Scorer,
+  explainBuiltInScore: explainReviewScore as BuiltInScoreExplainer,
   renderer: changeRequestRenderer,
   filters: [],
   sorts: [],

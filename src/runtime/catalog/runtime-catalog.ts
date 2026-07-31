@@ -28,33 +28,24 @@ export interface RuntimeCatalogInput {
 
 function immutableSnapshot<T>(
   value: T,
-  seen = new WeakMap<object, unknown>(),
+  seen = new WeakSet<object>(),
 ): T {
   if (value === null || typeof value !== "object") return value;
-  const existing = seen.get(value);
-  if (existing) return existing as T;
+  if (seen.has(value)) return value;
+  seen.add(value);
 
   if (Array.isArray(value)) {
-    const copy: unknown[] = [];
-    seen.set(value, copy);
-    copy.push(...value.map((entry) => immutableSnapshot(entry, seen)));
+    const copy = value.map((entry) => immutableSnapshot(entry, seen));
     return Object.freeze(copy) as T;
   }
 
-  const copy = Object.create(Object.getPrototypeOf(value)) as Record<
-    PropertyKey,
-    unknown
-  >;
-  seen.set(value, copy);
-  for (const key of Reflect.ownKeys(value)) {
-    const descriptor = Object.getOwnPropertyDescriptor(value, key)!;
-    if ("value" in descriptor) {
-      descriptor.value = immutableSnapshot(descriptor.value, seen);
-    }
-    Object.defineProperty(copy, key, descriptor);
+  const copy: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(value)) {
+    copy[k] = immutableSnapshot(v, seen);
   }
   return Object.freeze(copy) as T;
 }
+
 
 function addUnique<T extends { id: string }>(
   map: Map<string, T>,
@@ -88,6 +79,11 @@ function validateReadyKind(kind: ReadyKindDeclaration): void {
       `kind "${kind.kind}": missing required builtInScorer`,
     );
   }
+  if (typeof kind.explainBuiltInScore !== "function") {
+    throw new CatalogError(
+      `kind "${kind.kind}": missing required explainBuiltInScore`,
+    );
+  }
   if (!kind.renderer || typeof kind.renderer !== "object") {
     throw new CatalogError(
       `kind "${kind.kind}": missing required renderer`,
@@ -96,6 +92,12 @@ function validateReadyKind(kind: ReadyKindDeclaration): void {
   if (kind.renderer.kind !== kind.kind) {
     throw new CatalogError(
       `kind "${kind.kind}": renderer declares "${kind.renderer.kind}"`,
+    );
+  }
+  if (!Array.isArray(kind.renderer.columns)
+    || kind.renderer.columns.length === 0) {
+    throw new CatalogError(
+      `kind "${kind.kind}": renderer must declare at least one column`,
     );
   }
 

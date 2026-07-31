@@ -4,6 +4,11 @@ import { type DependencyVulnDetails, DEPENDENCY_VULN } from "../../dataset/kinds
 import { detailsAs } from "../../dataset/details";
 import type { DetailView } from "../../layout/table/detail-view";
 import type { ViewModule } from "../registry";
+import {
+  priorityColumn,
+  repositoryColumn,
+  titleColumn,
+} from "../../layout/table/columns";
 
 const det = (r: ScoredItem) => detailsAs<DependencyVulnDetails>(r)!;
 
@@ -35,8 +40,17 @@ export function dependencyVulnDetailView(r: ScoredItem): DetailView {
 export const dependencyVulnRenderer: KindRenderer = {
   kind: DEPENDENCY_VULN,
   columns: [
-    { header: "Package", cell: (r) => esc(det(r).package) },
+    repositoryColumn(),
+    titleColumn("Dependency"),
     { header: "Severity", cell: (r) => { const s = det(r).severity; return `<span class="sev sev-${esc(s)}">${esc(s)}</span>`; } },
+    {
+      header: "Fix",
+      cell: (r) => {
+        const d = det(r);
+        return d.fixVersion ? esc(d.fixVersion) : d.fixAvailable ? "Available" : "No fix";
+      },
+    },
+    priorityColumn(),
   ],
   detail: (r) => dependencyVulnDetailView(r),
 };

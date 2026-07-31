@@ -8,6 +8,11 @@ import { detailsAs } from "../../dataset/details";
 import { uniqueValues } from "../../layout/toolbar/axis-utils";
 import type { DetailView } from "../../layout/table/detail-view";
 import { openLink } from "./view";
+import {
+  priorityColumn,
+  repositoryColumn,
+  titleColumn,
+} from "../../layout/table/columns";
 
 const cs = (r: ScoredItem) => detailsAs<CodeScanningDetails>(r)!;
 const SEV_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
@@ -31,9 +36,12 @@ export function codeScanningDetailView(r: ScoredItem): DetailView {
 export const codeScanningRenderer: KindRenderer = {
   kind: CODE_SCANNING,
   columns: [
-    { header: "Rule", cell: (r) => esc(cs(r).ruleName) },
+    repositoryColumn(),
+    titleColumn("Finding"),
+    { header: "Rule", cell: (r) => esc(cs(r).ruleId) },
     { header: "Severity", cell: (r) => { const s = cs(r).securitySeverity; return `<span class="sev sev-${esc(s)}">${esc(s)}</span>`; } },
-    { header: "Location", cell: (r) => `${esc(cs(r).location.path)}:${cs(r).location.line}` },
+    { header: "State", cell: (r) => esc(cs(r).state) },
+    priorityColumn(),
   ],
   detail: (r) => codeScanningDetailView(r),
 };

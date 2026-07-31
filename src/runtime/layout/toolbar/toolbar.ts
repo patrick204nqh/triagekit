@@ -16,6 +16,11 @@ import {
 } from "../handoff/selection-controls";
 
 export interface ToolbarViewMode { id: string; label: string; }
+export interface InsightScopeSummary {
+  readonly providerLabel: string;
+  readonly repositoryCount: number;
+  readonly openItemCount: number;
+}
 // The toolbar's provider rows ARE the provider-switch's inputs — one shape, one source of truth.
 export type ToolbarProvider = SwitchProvider;
 export interface ToolbarProps {
@@ -35,6 +40,7 @@ export interface ToolbarProps {
   onRepoSelect: (id: string) => void;
   catalog?: RuntimeCatalog;
   handoffSelection?: SelectionControlsProps;
+  insightScope?: InsightScopeSummary;
 }
 
 function activeFilterCount(state: ListState): number {
@@ -92,7 +98,9 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
     catalog,
     p.focusPolicy,
   ).length;
-  const countLabel = shown === total ? `${total}` : `${shown} / ${total}`;
+  const countLabel = p.activeView === "insights" && p.insightScope
+    ? `${p.insightScope.openItemCount}`
+    : shown === total ? `${total}` : `${shown} / ${total}`;
 
   const views = p.viewModes.map(v => {
     const active = v.id === p.activeView;
@@ -170,10 +178,14 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
     ? `<div class="focus-label-summary"><span>${esc(labelSummaryText)}</span>${labelSummaryActions}</div>`
     : "";
 
+  const insightScope = p.activeView === "insights" && p.insightScope;
+  const scopeHtml = insightScope
+    ? `<div class="insight-scope" data-insight-scope>${esc(insightScope.providerLabel)} · ${insightScope.repositoryCount} ${insightScope.repositoryCount === 1 ? "repository" : "repositories"} · all supported surfaces</div>`
+    : "";
   host.innerHTML = `<div class="toolbar">
       <div class="tb-left" role="tablist" aria-label="Dashboard view">${views}<span class="tb-count">${countLabel}</span></div>
     <div class="tb-right"><div data-provider-switch></div></div>
-  </div>
+  </div>${scopeHtml || `
   <div class="fbar">
     <div class="fbar-focus"><div data-repo-tabs></div>${labelSummary}</div>
     <div class="fbar-controls">
@@ -181,21 +193,23 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
       <div class="tb-ctl"><button class="tb-btn" data-tb-filter aria-haspopup="true" aria-controls="tb-pop-filter">≡ Filter${fcount ? ` · ${fcount}` : ""}</button>${filterPop}</div>
       <div class="tb-ctl"><button class="tb-btn" data-tb-sort aria-haspopup="true" aria-controls="tb-pop-sort">↕ ${esc(curSort)}</button>${sortPop}</div>
     </div>
-  </div>`;
+  </div>`}`;
 
   // Mount the provider scope switch into its dedicated host slot
   const provHost = host.querySelector<HTMLElement>("[data-provider-switch]")!;
   renderProviderSwitch(provHost, { providers: p.providers, onSelect: p.onProviderSelect });
 
-  const repoHost = host.querySelector<HTMLElement>("[data-repo-tabs]")!;
-  renderRepoTabs(repoHost, { repos: p.repos, active: p.activeRepo, onSelect: p.onRepoSelect });
-  const selectionHost = host.querySelector<HTMLElement>(
-    "[data-handoff-selection]",
-  )!;
-  if (p.handoffSelection) {
-    renderSelectionControls(selectionHost, p.handoffSelection);
-  } else {
-    selectionHost.remove();
+  if (!insightScope) {
+    const repoHost = host.querySelector<HTMLElement>("[data-repo-tabs]")!;
+    renderRepoTabs(repoHost, { repos: p.repos, active: p.activeRepo, onSelect: p.onRepoSelect });
+    const selectionHost = host.querySelector<HTMLElement>(
+      "[data-handoff-selection]",
+    )!;
+    if (p.handoffSelection) {
+      renderSelectionControls(selectionHost, p.handoffSelection);
+    } else {
+      selectionHost.remove();
+    }
   }
 
   // View tabs
@@ -216,6 +230,8 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
       p.onViewChange(next.dataset.view!);
     });
   });
+
+  if (insightScope) return;
 
   // Emit helper for filter mutations (clone like filter-state does).
   const emit = (mut: (s: ListState) => void) => {
