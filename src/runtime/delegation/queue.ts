@@ -44,10 +44,11 @@ function withSelection(entry: QueueEntry, selected: boolean): QueueEntry {
 export function createDelegationQueue(
   store?: DelegationQueueStore,
 ): DelegationQueue {
-  let mode: HandoffMode = "investigate";
-  let missionNote: string | undefined;
+  const restored = store?.load();
+  let mode: HandoffMode = restored?.mode ?? "investigate";
+  let missionNote = restored?.missionNote;
   const entries = new Map<string, QueueEntry>();
-  for (const entry of store?.load() ?? []) {
+  for (const entry of restored?.entries ?? []) {
     entries.set(queueKey(entry.identity), freezeEntry(entry));
   }
   const listeners = new Set<(snapshot: QueueSnapshot) => void>();
@@ -65,7 +66,11 @@ export function createDelegationQueue(
   };
   const publish = () => {
     const current = snapshot();
-    store?.save(current.entries);
+    store?.save({
+      mode: current.mode,
+      ...(current.missionNote ? { missionNote: current.missionNote } : {}),
+      entries: current.entries,
+    });
     for (const listener of listeners) listener(current);
   };
   const replace = (key: string, entry: QueueEntry): boolean => {

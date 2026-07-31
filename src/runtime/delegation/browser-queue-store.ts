@@ -2,11 +2,18 @@ import type { StoragePort } from "../core/ports";
 import type { Kind } from "../dataset/item";
 import type {
   DelegationQueueStore,
+  HandoffMode,
+  HandoffQueueState,
   QueueEntry,
   QueueStatus,
 } from "./types";
 
-const QUEUE_KEY = "triagekit.delegation.queue.v1";
+const QUEUE_KEY = "triagekit.handoff.queue.v1";
+const MODES = new Set<HandoffMode>(["investigate", "implement"]);
+const EMPTY_STATE: HandoffQueueState = {
+  mode: "investigate",
+  entries: [],
+};
 const KINDS = new Set<Kind>([
   "dependency-vuln",
   "code-scanning",
@@ -35,6 +42,7 @@ const ENTRY_KEYS = new Set([
   "selectedAt",
   "selected",
   "status",
+  "note",
   "reason",
   "changedFields",
   "transferredAt",
@@ -62,6 +70,7 @@ function parseEntry(value: unknown): QueueEntry | null {
     || typeof entry.selected !== "boolean"
     || typeof entry.status !== "string"
     || !STATUSES.has(entry.status as QueueStatus)
+    || (entry.note !== undefined && typeof entry.note !== "string")
     || (entry.reason !== undefined && typeof entry.reason !== "string")
     || (
       entry.changedFields !== undefined
@@ -88,6 +97,9 @@ function parseEntry(value: unknown): QueueEntry | null {
     selectedAt: entry.selectedAt,
     selected: entry.selected,
     status: entry.status as QueueStatus,
+    ...(typeof entry.note === "string" && entry.note.trim()
+      ? { note: entry.note.trim() }
+      : {}),
     ...(entry.reason === undefined ? {} : { reason: entry.reason }),
     ...(entry.changedFields === undefined
       ? {}
@@ -104,18 +116,40 @@ export function createBrowserQueueStore(
   return {
     load() {
       try {
-        const parsed = JSON.parse(storage.get(QUEUE_KEY) ?? "[]");
-        if (!Array.isArray(parsed)) return [];
-        return parsed.flatMap((entry) => {
+        const parsed = JSON.parse(storage.get(QUEUE_KEY) ?? "null");
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+          return EMPTY_STATE;
+        }
+        const state = parsed as Record<string, unknown>;
+        if (
+          Object.keys(state).some((key) =>
+            !["mode", "missionNote", "entries"].includes(key))
+          || typeof state.mode !== "string"
+          || !MODES.has(state.mode as HandoffMode)
+          || (
+            state.missionNote !== undefined
+            && typeof state.missionNote !== "string"
+          )
+          || !Array.isArray(state.entries)
+        ) return EMPTY_STATE;
+        const entries = state.entries.flatMap((entry) => {
           const safe = parseEntry(entry);
           return safe ? [safe] : [];
         });
+        const missionNote = typeof state.missionNote === "string"
+          ? state.missionNote.trim()
+          : "";
+        return {
+          mode: state.mode as HandoffMode,
+          ...(missionNote ? { missionNote } : {}),
+          entries,
+        };
       } catch {
-        return [];
+        return EMPTY_STATE;
       }
     },
-    save(entries) {
-      storage.set(QUEUE_KEY, JSON.stringify(entries));
+    save(state) {
+      storage.set(QUEUE_KEY, JSON.stringify(state));
     },
   };
 }

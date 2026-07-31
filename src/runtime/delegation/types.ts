@@ -48,6 +48,12 @@ export interface QueueSnapshot {
   readonly selectedCount: number;
 }
 
+export interface HandoffQueueState {
+  readonly mode: HandoffMode;
+  readonly missionNote?: string;
+  readonly entries: readonly QueueEntry[];
+}
+
 export interface QueueTransition {
   readonly status: QueueStatus;
   readonly selected?: boolean;
@@ -57,8 +63,8 @@ export interface QueueTransition {
 }
 
 export interface DelegationQueueStore {
-  load(): readonly QueueEntry[];
-  save(entries: readonly QueueEntry[]): void;
+  load(): HandoffQueueState;
+  save(state: HandoffQueueState): void;
 }
 
 export interface DelegationQueue {
