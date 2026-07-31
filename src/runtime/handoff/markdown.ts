@@ -4,7 +4,7 @@ import type {
   HandoffPackageV1,
 } from "./types";
 
-function esc(text: string): string {
+function escMd(text: string): string {
   return text.replace(/([\\`*_{}[\]()#+!])/g, "\\$1");
 }
 
@@ -27,32 +27,32 @@ function renderAuthorization(bundle: HandoffBundleV1): string[] {
     "### Authorization boundary",
     "",
     ...(bundle.instructions.generatedBoundary ?? []).map(
-      (constraint) => `- ${esc(constraint)}`,
+      (constraint) => `- ${escMd(constraint)}`,
     ),
   ];
 }
 
 function renderTarget(target: HandoffTargetV1): string {
   const lines = [
-    `### ${esc(target.title)}`,
+    `### ${escMd(target.title)}`,
     "",
-    `- **ID:** ${esc(target.id)}`,
-    `- **Kind:** ${esc(target.kind)}`,
-    `- **Provider:** ${esc(target.provider)}`,
-    `- **Repository:** ${esc(target.location)}`,
+    `- **ID:** ${escMd(target.id)}`,
+    `- **Kind:** ${escMd(target.kind)}`,
+    `- **Provider:** ${escMd(target.provider)}`,
+    `- **Repository:** ${escMd(target.location)}`,
     `- **Priority:** ${target.priority.tier} (score: ${target.priority.score}, signal: ${target.priority.signal})`,
-    `- **Created:** ${esc(target.createdAt)}`,
+    `- **Created:** ${escMd(target.createdAt)}`,
   ];
   if (target.url) lines.push(`- **URL:** ${target.url}`);
   if (target.note) {
-    lines.push("", "#### Item note", "", esc(target.note));
+    lines.push("", "#### Item note", "", escMd(target.note));
   }
   if (target.priority.explanation?.length) {
     lines.push("", "#### Evidence", "");
     for (const evidence of target.priority.explanation) {
       lines.push(
-        `- **${esc(evidence.label)}:** ${esc(String(evidence.value))}`
-        + (evidence.reason ? ` — ${esc(evidence.reason)}` : ""),
+        `- **${escMd(evidence.label)}:** ${escMd(String(evidence.value))}`
+        + (evidence.reason ? ` — ${escMd(evidence.reason)}` : ""),
       );
     }
   }
@@ -66,7 +66,7 @@ function renderTarget(target: HandoffTargetV1): string {
   if (typeof freshness.validatedAt === "string") {
     lines.push(
       "",
-      `- **Freshness:** ${freshness.stale === true ? "stale" : "current"}; validated ${esc(freshness.validatedAt)}`,
+      `- **Freshness:** ${freshness.stale === true ? "stale" : "current"}; validated ${escMd(freshness.validatedAt)}`,
     );
   }
   const truncation = record(target.details.truncation);
@@ -75,7 +75,7 @@ function renderTarget(target: HandoffTargetV1): string {
     && typeof truncation.originalLength === "number"
   ) {
     lines.push(
-      `- **Truncation:** ${esc(truncation.field)} was bounded; original length: ${truncation.originalLength}`,
+      `- **Truncation:** ${escMd(truncation.field)} was bounded; original length: ${truncation.originalLength}`,
     );
   }
   return lines.join("\n");
@@ -84,25 +84,25 @@ function renderTarget(target: HandoffTargetV1): string {
 function renderPackageSection(pkg: HandoffPackageV1): string {
   const intent = pkg.generatedIntent;
   const lines = [
-    `## Package ${pkg.order}: ${esc(pkg.repository)} · ${esc(pkg.kind)}`,
+    `## Package ${pkg.order}: ${escMd(pkg.repository)} · ${escMd(pkg.kind)}`,
     "",
-    `- **Package ID:** ${esc(pkg.id)}`,
-    `- **Selection reason:** ${esc(pkg.selectionReason)}`,
+    `- **Package ID:** ${escMd(pkg.id)}`,
+    `- **Selection reason:** ${escMd(pkg.selectionReason)}`,
     "",
     "### Generated instruction",
     "",
-    esc(intent.outcome),
+    escMd(intent.outcome),
   ];
   if (intent.constraints.length) {
     lines.push("", "#### Constraints", "");
     for (const constraint of intent.constraints) {
-      lines.push(`- ${esc(constraint)}`);
+      lines.push(`- ${escMd(constraint)}`);
     }
   }
   if (intent.verification.length) {
     lines.push("", "#### Verification", "");
     for (const verification of intent.verification) {
-      lines.push(`- ${esc(verification)}`);
+      lines.push(`- ${escMd(verification)}`);
     }
   }
   lines.push("", "### Targets", "");
@@ -116,16 +116,16 @@ function renderFocus(bundle: HandoffBundleV1): string[] {
   return [
     "## Focus summary",
     "",
-    `- **Provider:** ${esc(bundle.focus.provider)}`,
-    `- **Repository order:** ${bundle.focus.repositoryOrder.map(esc).join(" → ") || "none"}`,
-    `- **Show if labelled:** ${bundle.focus.includeLabels.map(esc).join(", ") || "all"}`,
-    `- **Hide if labelled:** ${bundle.focus.excludeLabels.map(esc).join(", ") || "none"}`,
+    `- **Provider:** ${escMd(bundle.focus.provider)}`,
+    `- **Repository order:** ${bundle.focus.repositoryOrder.map(escMd).join(" → ") || "none"}`,
+    `- **Show if labelled:** ${bundle.focus.includeLabels.map(escMd).join(", ") || "all"}`,
+    `- **Hide if labelled:** ${bundle.focus.excludeLabels.map(escMd).join(", ") || "none"}`,
   ];
 }
 
 function renderMissionNote(bundle: HandoffBundleV1): string[] {
   return bundle.instructions.missionNote
-    ? ["## Mission note", "", esc(bundle.instructions.missionNote), ""]
+    ? ["## Mission note", "", escMd(bundle.instructions.missionNote), ""]
     : [];
 }
 
@@ -135,7 +135,7 @@ export function renderHandoffBundleMarkdown(
   const lines = [
     "# Handoff bundle",
     "",
-    `*Created: ${esc(bundle.createdAt)}*`,
+    `*Created: ${escMd(bundle.createdAt)}*`,
     "",
     ...renderAuthorization(bundle),
     "",
@@ -159,7 +159,7 @@ export function renderHandoffPackageMarkdown(
   return [
     "# Handoff package",
     "",
-    `*Created: ${esc(bundle.createdAt)}*`,
+    `*Created: ${escMd(bundle.createdAt)}*`,
     "",
     ...renderAuthorization(bundle),
     "",

@@ -21,28 +21,12 @@ export interface CreateTriageSessionOptions {
   initial?: Partial<SessionState>;
 }
 
-const frozenFilters = (filters: ListState): ListState => {
-  const axes: Record<string, string[]> = Object.fromEntries(
-    Object.entries(filters.axes).map(([id, values]) => {
-      const copiedValues = [...values];
-      Object.freeze(copiedValues);
-      return [id, copiedValues];
-    }),
-  );
-  Object.freeze(axes);
-  const snapshot: ListState = {
-    sort: filters.sort,
-    axes,
-  };
-  Object.freeze(snapshot);
-  return snapshot;
+const frozenState = (state: SessionState): Readonly<SessionState> => {
+  const copy = structuredClone(state) as SessionState;
+  Object.freeze(copy.filters.axes);
+  Object.freeze(copy.filters);
+  return Object.freeze(copy);
 };
-
-const frozenState = (state: SessionState): Readonly<SessionState> =>
-  Object.freeze({
-    ...state,
-    filters: frozenFilters(state.filters),
-  });
 
 const serializedState = (
   state: Readonly<SessionState>,

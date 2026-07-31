@@ -74,3 +74,4 @@ export function makeSeverityScoring<D>(cfg: SeverityConfig<D>): SeverityScoring<
 export function makeSeverityScorer<D>(cfg: SeverityConfig<D>): SeverityScoring<D>["score"] {
   return makeSeverityScoring(cfg).score;
 }
+
