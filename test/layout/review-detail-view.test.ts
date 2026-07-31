@@ -81,6 +81,25 @@ describe("reviewDetailView", () => {
     expect(foot.querySelector("[data-cancel]")).toBeTruthy();
   });
 
+  it("labels merge and text action fields for assistive technology", () => {
+    const merge = reviewDetailView(pr(), {
+      actions: actions([{ intent: "merge", variants: ["squash"] }]),
+    });
+    merge.actions!(foot);
+    foot.querySelector<HTMLElement>('[data-action="merge"]')!.click();
+    expect(foot.querySelector<HTMLSelectElement>("[data-method]")?.labels[0]?.textContent)
+      .toBe("Merge as");
+
+    const issue = reviewDetailView(
+      { ...pr(), kind: "issue" } as ScoredItem,
+      { actions: actions([{ intent: "comment" }]) },
+    );
+    issue.actions!(foot);
+    foot.querySelector<HTMLElement>('[data-action="comment"]')!.click();
+    expect(foot.querySelector<HTMLTextAreaElement>("[data-input]")?.labels[0]?.textContent)
+      .toBe("Comment");
+  });
+
   it("keeps a malicious title raw in the header data (the frame escapes on render)", () => {
     const evil = reviewDetailView({ ...pr(), title: "<script>alert(1)</script>" } as ScoredItem, {});
     expect(evil.header.title).toContain("<script>");

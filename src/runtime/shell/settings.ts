@@ -406,7 +406,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     }</span>`;
     let html = `<div class="set-group"><label class="set-label">Credential</label>
         <div class="cred-row">
-          <input type="password" data-cred ${off ? "disabled" : ""} value="${getCred(prov) ? "••••••••" : ""}" placeholder="token / key — stored in this tab only"/>
+          <input type="password" data-cred aria-label="Credential for ${esc(prov)}" ${off ? "disabled" : ""} value="${getCred(prov) ? "••••••••" : ""}" placeholder="token / key — stored in this tab only"/>
           <button type="button" class="btn-ghost mini" data-cred-toggle ${off ? "disabled" : ""}>show</button>
         </div>
         ${setup}<span class="set-helper">Session-only, never persisted or embedded.</span></div>`;
@@ -420,7 +420,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
         html += `<button class="btn-ghost" data-discover="${esc(f.key)}" ${off ? "disabled" : ""}>${verb} ${tail}</button>
            <div class="discovery" data-list="${esc(f.key)}"></div>`;
       } else {
-        html += `<input type="text" data-field="${esc(f.key)}" ${off ? "disabled" : ""} value="${esc(((scope[f.key] as string[]) ?? []).join(", "))}" placeholder="${esc(f.label)} (comma-separated)"/>`;
+        html += `<input type="text" data-field="${esc(f.key)}" aria-label="${esc(f.label)}" ${off ? "disabled" : ""} value="${esc(((scope[f.key] as string[]) ?? []).join(", "))}" placeholder="${esc(f.label)} (comma-separated)"/>`;
       }
       html += `</div>`;
     }
@@ -532,7 +532,7 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
 
     list.innerHTML = `<div class="ms-chips" data-chips></div>
       <div class="list-tools">
-        <input class="list-filter" data-lf type="text" placeholder="Search ${esc(noun)} to add…"/>
+        <input class="list-filter" data-lf type="text" aria-label="Search ${esc(noun)} to add" placeholder="Search ${esc(noun)} to add…"/>
         <button class="btn-ghost mini" data-all>Add all</button>
         <button class="btn-ghost mini" data-none>Clear</button>
         <span class="list-count" data-count></span></div>

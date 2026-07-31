@@ -32,8 +32,8 @@ export function actionBarHtml(
       ?? [];
     const methods = advertised.length > 0 ? advertised : [st.method];
     const opt = (m: MergeMethod) => `<option value="${m}"${m === st.method ? " selected" : ""}>${m}</option>`;
-    return `<span class="muted">Merge as</span>
-      <select data-method>${methods.map(opt).join("")}</select>
+    return `<label class="muted" for="review-merge-method">Merge as</label>
+      <select id="review-merge-method" data-method>${methods.map(opt).join("")}</select>
       <button class="act danger" data-confirm>Confirm merge</button>
       <button class="act" data-cancel>Cancel</button>`;
   }
@@ -43,10 +43,11 @@ export function actionBarHtml(
   }
   if (st.armed === "comment" || st.armed === "label" || st.armed === "assign") {
     const ph = st.armed === "comment" ? "Write a comment…" : st.armed === "label" ? "label-name" : "github-login";
+    const label = st.armed === "comment" ? "Comment" : st.armed === "label" ? "Label" : "Assignee";
     const field = st.armed === "comment"
-      ? `<textarea class="rc-field" data-input placeholder="${ph}"></textarea>`
-      : `<input class="rc-field" data-input placeholder="${ph}">`;
-    return `${field}<button class="act primary" data-confirm>${ACTION_LABEL[st.armed]}</button>
+      ? `<textarea id="review-action-input" class="rc-field" data-input placeholder="${ph}"></textarea>`
+      : `<input id="review-action-input" class="rc-field" data-input placeholder="${ph}">`;
+    return `<label class="sr-only" for="review-action-input">${label}</label>${field}<button class="act primary" data-confirm>${ACTION_LABEL[st.armed]}</button>
       <button class="act" data-cancel>Cancel</button>`;
   }
   const advertised = new Set(availability.map(({ intent }) => intent));

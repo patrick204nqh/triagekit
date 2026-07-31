@@ -93,7 +93,7 @@ export function mountScoringEditor(host: HTMLElement, opts: ScoringEditorOpts) {
       `<div class="se-weight">
         <span class="se-wname">${esc(name)}</span>
         <span class="muted se-wfrom">${esc(spec.from)} · ${esc(spec.transform.type)}</span>
-        <input type="range" min="0" max="1" step="0.05" data-weight="${esc(name)}" value="${weights[name]}">
+        <input type="range" min="0" max="1" step="0.05" data-weight="${esc(name)}" value="${weights[name]}" aria-label="Weight for ${esc(name)}">
         <span class="se-wval" data-wval="${esc(name)}">${weights[name].toFixed(2)}</span>
       </div>`).join("");
     body.querySelectorAll<HTMLInputElement>("[data-weight]").forEach(slider =>
@@ -109,8 +109,8 @@ export function mountScoringEditor(host: HTMLElement, opts: ScoringEditorOpts) {
   }
 
   function renderAdvanced(body: HTMLElement, model: ScoreModel): void {
-    body.innerHTML = `<label class="set-label">Formula</label>
-      <textarea class="se-formula" data-formula rows="2">${esc(model.formula)}</textarea>
+    body.innerHTML = `<label class="set-label" for="scoring-formula">Formula</label>
+      <textarea id="scoring-formula" class="se-formula" data-formula rows="2">${esc(model.formula)}</textarea>
       <label class="set-label">Scale <input type="number" step="any" class="se-scale" data-scale value="${model.scale}"></label>
       <label class="set-label">Signals</label>
       <div class="se-signals" data-signals></div>

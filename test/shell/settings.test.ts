@@ -108,6 +108,13 @@ describe("mountSettings", () => {
     expect(host.querySelectorAll("[data-theme-seg] [data-theme]").length).toBe(3);
   });
 
+  it("names the provider credential field", () => {
+    const { host, s } = mount();
+    s.open("github");
+    expect(host.querySelector<HTMLInputElement>("[data-cred]")?.ariaLabel)
+      .toBe("Credential for github");
+  });
+
   it.each(["scoring", "repositories", "exclusions"] as const)(
     "opens directly to the requested %s category",
     (category) => {

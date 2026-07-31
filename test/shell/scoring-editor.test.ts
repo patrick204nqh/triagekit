@@ -82,6 +82,15 @@ describe("mountScoringEditor", () => {
     expect(drafts.get(KIND)!.formula).toBe("severity * 0.8 + cvss * 0.4");
   });
 
+  it("gives scoring fields accessible names", () => {
+    const { host } = harness({ [KIND]: def });
+    expect(host.querySelector<HTMLInputElement>('[data-weight="severity"]')?.ariaLabel)
+      .toBe("Weight for severity");
+    host.querySelector<HTMLButtonElement>('[data-mode="advanced"]')!.click();
+    expect(host.querySelector<HTMLTextAreaElement>("[data-formula]")?.labels[0]?.textContent)
+      .toBe("Formula");
+  });
+
   it("disables simple mode for a custom (non-weighted-sum) formula", () => {
     const { host } = harness({ [KIND]: { ...def, formula: "(severity * 0.6 + cvss * 0.4) * 100" } });
     expect(host.querySelector("[data-simple-disabled]")).not.toBeNull();
