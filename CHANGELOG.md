@@ -6,6 +6,23 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.4] — 2026-07-31
+
+### Added
+- Decision-focused list columns and built-in priority evidence in item details.
+- Built-in scoring explanations that show the factors behind each priority.
+
+### Changed
+- Browser persistence, native overlays, and runtime state handling now use smaller,
+  platform-native implementations with stricter validation.
+- The app header, toolbar, and domain rail remain visible while long result lists scroll.
+
+### Fixed
+- The packaged CLI now runs correctly through npm's executable symlink.
+- Repository search preserves keyboard focus and caret position while filtering.
+- Settings form labels, Insights scope navigation, background-refresh detail state, and
+  Delegation copy feedback remain stable across their interaction flows.
+
 ## [0.1.3] — 2026-07-29
 
 ### Added
@@ -95,7 +112,8 @@ All notable changes to this project are documented here. The format follows
   strict hash-based CSP with no external scripts.
 - Branded landing page + hosted generic dashboard on GitHub Pages.
 
-[Unreleased]: https://github.com/patrick204nqh/triagekit/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/patrick204nqh/triagekit/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/patrick204nqh/triagekit/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/patrick204nqh/triagekit/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/patrick204nqh/triagekit/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/patrick204nqh/triagekit/compare/v0.1.0...v0.1.1

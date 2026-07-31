@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { resolve } from "node:path";
+import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { runBuild } from "./build.js";
@@ -26,7 +27,7 @@ export function parseCliArguments(args: string[]) {
 
 if (
   process.argv[1] !== undefined
-  && fileURLToPath(import.meta.url) === resolve(process.argv[1])
+  && fileURLToPath(import.meta.url) === realpathSync(resolve(process.argv[1]))
 ) {
   try {
     const values = parseCliArguments(process.argv.slice(2));
