@@ -1,11 +1,17 @@
 import type {
   DelegationQueue,
   DelegationQueueStore,
+  HandoffMode,
   QueueEntry,
   QueueIdentity,
   QueueSnapshot,
   QueueTransition,
 } from "./types";
+
+function normalizedNote(value: string): string | undefined {
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : undefined;
+}
 
 export function queueKey(identity: QueueIdentity): string {
   return JSON.stringify([
@@ -38,6 +44,8 @@ function withSelection(entry: QueueEntry, selected: boolean): QueueEntry {
 export function createDelegationQueue(
   store?: DelegationQueueStore,
 ): DelegationQueue {
+  let mode: HandoffMode = "investigate";
+  let missionNote: string | undefined;
   const entries = new Map<string, QueueEntry>();
   for (const entry of store?.load() ?? []) {
     entries.set(queueKey(entry.identity), freezeEntry(entry));
@@ -49,6 +57,8 @@ export function createDelegationQueue(
   const snapshot = (): QueueSnapshot => {
     const current = serialized();
     return Object.freeze({
+      mode,
+      missionNote,
       entries: current,
       selectedCount: current.filter((entry) => entry.selected).length,
     });
@@ -95,6 +105,32 @@ export function createDelegationQueue(
   };
 
   return {
+    setMode(nextMode) {
+      if (mode === nextMode) return false;
+      mode = nextMode;
+      publish();
+      return true;
+    },
+    setMissionNote(note) {
+      const nextNote = normalizedNote(note);
+      if (missionNote === nextNote) return false;
+      missionNote = nextNote;
+      publish();
+      return true;
+    },
+    setItemNote(key, note) {
+      const entry = entries.get(key);
+      if (!entry) return false;
+      const nextNote = normalizedNote(note);
+      if (entry.note === nextNote) return false;
+      const { note: _previousNote, ...withoutNote } = entry;
+      entries.set(key, freezeEntry({
+        ...withoutNote,
+        ...(nextNote ? { note: nextNote } : {}),
+      }));
+      publish();
+      return true;
+    },
     add(identity, selectedAt) {
       const key = queueKey(identity);
       if (entries.has(key)) return false;

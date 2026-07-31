@@ -13,6 +13,50 @@ const identity = (itemId: string): QueueIdentity => ({
 });
 
 describe("delegation queue", () => {
+  it("defaults a new queue to investigate with no notes", () => {
+    const queue = createDelegationQueue();
+
+    expect(queue.snapshot()).toMatchObject({
+      mode: "investigate",
+      missionNote: undefined,
+      selectedCount: 0,
+    });
+  });
+
+  it("changes mode without changing membership or notes", () => {
+    const queue = createDelegationQueue();
+    queue.add(identity("github:42"), 100);
+    const key = queueKey(identity("github:42"));
+    queue.setMissionNote("Keep public APIs stable");
+    queue.setItemNote(key, "The failing snapshot is unrelated");
+
+    expect(queue.setMode("implement")).toBe(true);
+    expect(queue.snapshot()).toMatchObject({
+      mode: "implement",
+      missionNote: "Keep public APIs stable",
+      selectedCount: 1,
+    });
+    expect(queue.snapshot().entries[0].note)
+      .toBe("The failing snapshot is unrelated");
+  });
+
+  it("normalizes empty human notes away", () => {
+    const queue = createDelegationQueue();
+    queue.add(identity("github:42"), 100);
+    const key = queueKey(identity("github:42"));
+
+    queue.setMissionNote("  Verify the regression test  ");
+    queue.setItemNote(key, "  Do not change the public type  ");
+    expect(queue.snapshot().missionNote).toBe("Verify the regression test");
+    expect(queue.snapshot().entries[0].note)
+      .toBe("Do not change the public type");
+
+    queue.setMissionNote("  ");
+    queue.setItemNote(key, "\n");
+    expect(queue.snapshot().missionNote).toBeUndefined();
+    expect(queue.snapshot().entries[0].note).toBeUndefined();
+  });
+
   it("stores identity only and never removes an entry on status change", () => {
     const queue = createDelegationQueue();
     const selected = identity("github:42");

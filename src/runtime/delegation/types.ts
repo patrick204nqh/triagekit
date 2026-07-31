@@ -18,6 +18,8 @@ export interface QueueIdentity {
   readonly repository: string;
 }
 
+export type HandoffMode = "investigate" | "implement";
+
 export type QueueStatus =
   | "queued"
   | "checking"
@@ -33,12 +35,15 @@ export interface QueueEntry {
   readonly selectedAt: number;
   readonly selected: boolean;
   readonly status: QueueStatus;
+  readonly note?: string;
   readonly reason?: string;
   readonly changedFields?: readonly string[];
   readonly transferredAt?: number;
 }
 
 export interface QueueSnapshot {
+  readonly mode: HandoffMode;
+  readonly missionNote?: string;
   readonly entries: readonly QueueEntry[];
   readonly selectedCount: number;
 }
@@ -57,6 +62,9 @@ export interface DelegationQueueStore {
 }
 
 export interface DelegationQueue {
+  setMode(mode: HandoffMode): boolean;
+  setMissionNote(note: string): boolean;
+  setItemNote(key: string, note: string): boolean;
   add(identity: QueueIdentity, selectedAt: number): boolean;
   addMany(identities: readonly QueueIdentity[], selectedAt: number): number;
   setSelectedMany(
