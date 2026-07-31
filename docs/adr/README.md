@@ -11,3 +11,4 @@
 | [0007](0007-human-focus-policy.md) | Human-controlled Focus Policy | accepted | 2026-07-29 |
 | [0008](0008-bounded-delegation-bundles.md) | Bounded Delegation Bundles | superseded by ADR-0009 | 2026-07-29 |
 | [0009](0009-unified-handoff-queue.md) | Unified Handoff Queue and explicit agent authorization | accepted | 2026-07-31 |
+| [0010](0010-runtime-simplification.md) | Runtime simplification through native and established libraries | accepted | 2026-07-31 |
