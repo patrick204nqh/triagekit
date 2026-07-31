@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { reviewScore } from "../../src/runtime/scoring/review";
+import { explainReviewScore, reviewScore } from "../../src/runtime/scoring/review";
 import { tierOf } from "../../src/runtime/scoring/tier";
 import type { TriageItem } from "../../src/runtime/dataset/item";
 import type { ReviewDetails } from "../../src/runtime/dataset/shapes/review";
@@ -37,5 +37,15 @@ describe("reviewScore", () => {
       relations: [{ fromId: "a", toId: "github:acme/web:1", type: "fixes" }],
     }));
     expect(botFixing).toBeGreaterThan(botPlain);
+  });
+  it("explains the same fixed-time score through additive factors", () => {
+    const timestamp = Date.parse("2026-01-31T00:00:00Z");
+    const candidate = item({ labels: [{ name: "security", color: "d6504a" }] });
+    const explanation = explainReviewScore(candidate, timestamp);
+    expect(explanation.score).toBe(reviewScore(candidate, timestamp));
+    expect(explanation.factors.reduce(
+      (total, factor) => total + factor.contribution,
+      0,
+    )).toBe(explanation.score);
   });
 });

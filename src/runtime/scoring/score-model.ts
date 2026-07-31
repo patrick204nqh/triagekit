@@ -15,10 +15,28 @@ export interface ScoreModel {
   tiers: TierBand[];        // listed high -> low; mins strictly decrease
 }
 
-export interface ScoreExplanation {
-  signals: Record<string, { from: string; raw: unknown; value: number }>;  // value normalized 0..1
-  score: number;
+export interface BuiltInScoreFactor {
+  readonly label: string;
+  readonly raw: string | number | boolean | null;
+  readonly contribution: number;
+  readonly reason: string;
 }
+
+export type ScoreExplanation =
+  | {
+      readonly source: "configured";
+      readonly score: number;
+      readonly signals: Record<string, {
+        readonly from: string;
+        readonly raw: unknown;
+        readonly value: number;
+      }>;
+    }
+  | {
+      readonly source: "built-in";
+      readonly score: number;
+      readonly factors: readonly BuiltInScoreFactor[];
+    };
 
 function readField(item: TriageItem, from: string): unknown {
   if (Object.prototype.hasOwnProperty.call(item, from)) {
@@ -39,7 +57,11 @@ export function explainScoreModel(model: ScoreModel, item: TriageItem, now: numb
   }
   const expr = parseFormula(model.formula);
   const out = evalFormula(expr, scope) * model.scale;
-  return { signals, score: Number.isFinite(out) ? Math.round(out) : 0 };
+  return {
+    source: "configured",
+    signals,
+    score: Number.isFinite(out) ? Math.round(out) : 0,
+  };
 }
 
 export function evalScoreModel(model: ScoreModel, item: TriageItem, now: number = Date.now()): number {

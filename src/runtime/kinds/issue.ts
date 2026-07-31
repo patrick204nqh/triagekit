@@ -1,9 +1,9 @@
 // src/runtime/kinds/issue.ts
-import type { KindDeclaration, Scorer } from "../catalog/types";
+import type { BuiltInScoreExplainer, KindDeclaration, Scorer } from "../catalog/types";
 import type { Tier } from "../scoring/tier";
 import type { FieldDef } from "../scoring/field-catalog";
 import type { ReviewDetails } from "../dataset/shapes/review";
-import { reviewScore } from "../scoring/review";
+import { explainReviewScore, reviewScore } from "../scoring/review";
 import { issueRenderer, issueView } from "../views/code-review/view";
 
 // Honest detail-level keys on ReviewDetails (dataset/shapes/review.ts) that the
@@ -26,6 +26,7 @@ export const issueKind: KindDeclaration = {
   status: "ready",
   fields: reviewFields,
   builtInScorer: reviewScore as Scorer,
+  explainBuiltInScore: explainReviewScore as BuiltInScoreExplainer,
   renderer: issueRenderer,
   filters: [],
   sorts: [],

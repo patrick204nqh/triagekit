@@ -2,7 +2,7 @@ import type { Kind, TriageItem } from "../dataset/item";
 import type { Artifact } from "../dataset/artifact";
 import type { DomainId } from "../dataset/taxonomy";
 import type { FieldDef } from "../scoring/field-catalog";
-import type { ScoreModel } from "../scoring/score-model";
+import type { ScoreExplanation, ScoreModel } from "../scoring/score-model";
 import type { KindRenderer } from "../layout/table/kind-renderer";
 import type {
   FilterAxis,
@@ -15,7 +15,11 @@ import type { HandoffTargetV1 } from "../handoff/types";
 import type { InsightCapabilities } from "../insights/types";
 
 export type Scope = Readonly<Record<string, unknown>>;
-export type Scorer = (item: TriageItem) => number;
+export type Scorer = (item: TriageItem, now?: number) => number;
+export type BuiltInScoreExplainer = (
+  item: TriageItem,
+  now: number,
+) => Extract<ScoreExplanation, { source: "built-in" }>;
 export type FailureCategory =
   | "auth"
   | "scope"
@@ -72,6 +76,7 @@ export interface ReadyKindDeclaration {
   status: "ready";
   fields: readonly FieldDef[];
   builtInScorer: Scorer;
+  explainBuiltInScore: BuiltInScoreExplainer;
   defaultModel?: ScoreModel;
   renderer: KindRenderer;
   filters: readonly FilterAxis[];

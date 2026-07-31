@@ -17,6 +17,11 @@ const validModel: ScoreModel = {
 };
 
 const fields = [{ name: "cvss", type: "number" as const }];
+const context = (model: ScoreModel | null) => ({
+  getModel: () => model,
+  getFields: () => fields,
+  getThresholds: () => DEFAULT_THRESHOLDS,
+});
 
 describe("scoreAndTier", () => {
   it("uses a valid stored model when present", () => {
@@ -43,5 +48,24 @@ describe("scoreAndTier", () => {
   it("uses ctx.override scorer in the fallback path", () => {
     const r = scoreAndTier(item, { getModel: () => null, getFields: () => fields, getThresholds: () => DEFAULT_THRESHOLDS, override: () => 7 });
     expect(r.score).toBe(7);
+  });
+  it("returns configured evidence with the configured score", () => {
+    const result = scoreAndTier(item, context(validModel), undefined, 0);
+    expect(result.explanation.source).toBe("configured");
+    expect(result.explanation.score).toBe(result.score);
+  });
+  it("returns built-in factors with the built-in score", () => {
+    const result = scoreAndTier(
+      item,
+      context(null),
+      undefined,
+      Date.parse("2026-01-01T00:00:00Z"),
+    );
+    expect(result.explanation.source).toBe("built-in");
+    expect(result.explanation.score).toBe(result.score);
+    if (result.explanation.source === "built-in") {
+      expect(result.explanation.factors.map((factor) => factor.label))
+        .toEqual(expect.arrayContaining(["Severity", "CVSS", "Fix", "Scope", "Age"]));
+    }
   });
 });

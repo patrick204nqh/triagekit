@@ -31,8 +31,7 @@ export function derive(input: DeriveInput): Derived {
     .filter(it => input.activeKinds.includes(it.kind))
     .map((item) => withBotPolicy(item, input.botLogins))
     .map(it => {
-      const { score, tier } = scoreAndTier(it, input.score, catalog);
-      return { ...it, score, tier } as ScoredItem;
+      return { ...it, ...scoreAndTier(it, input.score, catalog) } as ScoredItem;
     })
     .sort(compareFocusedItems(input.focusPolicy.repositoryOrder));
   const scoped = input.repoView && scored.some(r => r.location === input.repoView)

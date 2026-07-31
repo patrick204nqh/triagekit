@@ -62,6 +62,10 @@ describe("derive", () => {
     expect(out.scored.map(r => r.id)).toEqual(["b", "a"]); // change-request filtered out, sorted desc
     expect(out.scored.map(r => r.score)).toEqual([90, 10]);
     expect(out.scored[0].tier).toBe("P0");
+    expect(out.scored[0].explanation).toMatchObject({
+      source: "built-in",
+      score: 90,
+    });
   });
 
   it("applies configured bot policy before scoring", () => {

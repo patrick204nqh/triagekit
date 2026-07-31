@@ -1,8 +1,11 @@
 // src/runtime/kinds/code-scanning.ts
-import type { KindDeclaration, Scorer } from "../catalog/types";
+import type { BuiltInScoreExplainer, KindDeclaration, Scorer } from "../catalog/types";
 import type { Tier } from "../scoring/tier";
 import type { CodeScanningDetails } from "../dataset/kinds/code-scanning";
-import { codeScanningScore } from "../scoring/code-scanning";
+import {
+  codeScanningScore,
+  explainCodeScanningScore,
+} from "../scoring/code-scanning";
 import {
   codeScanningCharts,
   codeScanningRenderer,
@@ -26,6 +29,7 @@ export const codeScanningKind: KindDeclaration = {
     { name: "state", type: "enum", values: ["open", "dismissed", "fixed"] },
   ],
   builtInScorer: codeScanningScore as Scorer,
+  explainBuiltInScore: explainCodeScanningScore as BuiltInScoreExplainer,
   // Severity-only display model for tier labelling; the built-in scorer (scoring/code-scanning.ts) additionally weights state + age.
   defaultModel: {
     kind: "code-scanning",

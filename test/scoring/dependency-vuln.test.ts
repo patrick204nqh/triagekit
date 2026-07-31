@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import { runtimeCatalog } from "../../src/runtime/catalog/built-in";
 import type { DependencyVulnDetails } from "../../src/runtime/dataset/kinds/dependency-vuln";
 import type { TriageItem } from "../../src/runtime/dataset/item";
-import { dependencyVulnScore } from "../../src/runtime/scoring/dependency-vuln";
+import {
+  dependencyVulnScore,
+  explainDependencyVulnScore,
+} from "../../src/runtime/scoring/dependency-vuln";
 
 const item = (
   details: Partial<DependencyVulnDetails>,
@@ -49,5 +52,15 @@ describe("dependency vulnerability scoring", () => {
       type: "enum",
       values: ["critical", "high", "medium", "low"],
     });
+  });
+
+  it("explains the same fixed-time score through additive factors", () => {
+    const now = Date.parse("2026-01-01T00:00:00Z");
+    const explanation = explainDependencyVulnScore(item({}), now);
+    expect(explanation.score).toBe(dependencyVulnScore(item({}), now));
+    expect(explanation.factors.reduce(
+      (total, factor) => total + factor.contribution,
+      0,
+    )).toBe(explanation.score);
   });
 });

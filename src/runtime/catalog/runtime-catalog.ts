@@ -88,6 +88,11 @@ function validateReadyKind(kind: ReadyKindDeclaration): void {
       `kind "${kind.kind}": missing required builtInScorer`,
     );
   }
+  if (typeof kind.explainBuiltInScore !== "function") {
+    throw new CatalogError(
+      `kind "${kind.kind}": missing required explainBuiltInScore`,
+    );
+  }
   if (!kind.renderer || typeof kind.renderer !== "object") {
     throw new CatalogError(
       `kind "${kind.kind}": missing required renderer`,

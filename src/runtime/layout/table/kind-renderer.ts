@@ -11,7 +11,11 @@ import type { DetailView } from "./detail-view";
 import { esc } from "../util";
 import type { HandoffSelection } from "../handoff/selection-controls";
 
-export interface ScoredItem extends TriageItem { score: number; tier: Tier; }
+export interface ScoredItem extends TriageItem {
+  score: number;
+  tier: Tier;
+  explanation?: ScoreExplanation;
+}
 export interface TableColumn {
   readonly header: string;
   readonly className?: string;
