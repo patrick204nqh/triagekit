@@ -1,109 +1,61 @@
+import { z } from "zod";
 import type { StoragePort } from "../core/ports";
-import type { Kind } from "../dataset/item";
+import { KINDS } from "../dataset/item";
 import type {
   HandoffQueueStore,
-  HandoffMode,
   HandoffQueueState,
-  HandoffQueueEntry,
-  HandoffQueueStatus,
 } from "./types";
 
 const QUEUE_KEY = "triagekit.handoff.queue.v1";
-const MODES = new Set<HandoffMode>(["investigate", "implement"]);
 const EMPTY_STATE: HandoffQueueState = {
   mode: "investigate",
   entries: [],
 };
-const KINDS = new Set<Kind>([
-  "dependency-vuln",
-  "code-scanning",
-  "secret-scanning",
-  "cloud-misconfig",
-  "edge-misconfig",
-  "waf-finding",
-  "runtime-threat",
-  "change-request",
-  "issue",
-  "email",
-  "task",
-]);
-const STATUSES = new Set<HandoffQueueStatus>([
-  "queued",
-  "checking",
-  "current",
-  "changed",
-  "resolved",
-  "unavailable",
-  "blocked",
-  "transferred",
-]);
-const ENTRY_KEYS = new Set([
-  "identity",
-  "selectedAt",
-  "selected",
-  "status",
-  "note",
-  "reason",
-  "changedFields",
-  "transferredAt",
-]);
+const kindSchema = z.enum(KINDS);
+const identitySchema = z.strictObject({
+  provider: z.string().min(1),
+  itemId: z.string().min(1),
+  kind: kindSchema,
+  repository: z.string().min(1),
+});
+const entrySchema = z.strictObject({
+  identity: identitySchema,
+  selectedAt: z.number().finite(),
+  selected: z.boolean(),
+  status: z.enum([
+    "queued",
+    "checking",
+    "current",
+    "changed",
+    "resolved",
+    "unavailable",
+    "blocked",
+    "transferred",
+  ]),
+  note: z.string().optional(),
+  reason: z.string().optional(),
+  changedFields: z.array(z.string()).optional(),
+  transferredAt: z.number().finite().optional(),
+});
+const aggregateSchema = z.strictObject({
+  mode: z.enum(["investigate", "implement"]),
+  missionNote: z.string().optional(),
+  entries: z.array(z.unknown()),
+});
 
-function parseEntry(value: unknown): HandoffQueueEntry | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const entry = value as Record<string, unknown>;
-  if (Object.keys(entry).some((key) => !ENTRY_KEYS.has(key))) return null;
-  const identity = entry.identity as Record<string, unknown> | undefined;
-  if (
-    !identity
-    || Object.keys(identity).some((key) =>
-      !["provider", "itemId", "kind", "repository"].includes(key))
-    || typeof identity.provider !== "string"
-    || !identity.provider
-    || typeof identity.itemId !== "string"
-    || !identity.itemId
-    || typeof identity.kind !== "string"
-    || !KINDS.has(identity.kind as Kind)
-    || typeof identity.repository !== "string"
-    || !identity.repository
-    || typeof entry.selectedAt !== "number"
-    || !Number.isFinite(entry.selectedAt)
-    || typeof entry.selected !== "boolean"
-    || typeof entry.status !== "string"
-    || !STATUSES.has(entry.status as HandoffQueueStatus)
-    || (entry.note !== undefined && typeof entry.note !== "string")
-    || (entry.reason !== undefined && typeof entry.reason !== "string")
-    || (
-      entry.changedFields !== undefined
-      && (
-        !Array.isArray(entry.changedFields)
-        || !entry.changedFields.every((field) => typeof field === "string")
-      )
-    )
-    || (
-      entry.transferredAt !== undefined
-      && (
-        typeof entry.transferredAt !== "number"
-        || !Number.isFinite(entry.transferredAt)
-      )
-    )
-  ) return null;
+function normalizeEntry(entry: z.infer<typeof entrySchema>) {
   return {
-    identity: {
-      provider: identity.provider,
-      itemId: identity.itemId,
-      kind: identity.kind as Kind,
-      repository: identity.repository,
-    },
+    identity: entry.identity,
     selectedAt: entry.selectedAt,
     selected: entry.selected,
-    status: entry.status as HandoffQueueStatus,
-    ...(typeof entry.note === "string" && entry.note.trim()
+    status: entry.status,
+    ...(entry.note?.trim()
       ? { note: entry.note.trim() }
       : {}),
     ...(entry.reason === undefined ? {} : { reason: entry.reason }),
     ...(entry.changedFields === undefined
       ? {}
-      : { changedFields: entry.changedFields as string[] }),
+      : { changedFields: entry.changedFields }),
     ...(entry.transferredAt === undefined
       ? {}
       : { transferredAt: entry.transferredAt }),
@@ -116,31 +68,17 @@ export function createBrowserHandoffQueueStore(
   return {
     load() {
       try {
-        const parsed = JSON.parse(storage.get(QUEUE_KEY) ?? "null");
-        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-          return EMPTY_STATE;
-        }
-        const state = parsed as Record<string, unknown>;
-        if (
-          Object.keys(state).some((key) =>
-            !["mode", "missionNote", "entries"].includes(key))
-          || typeof state.mode !== "string"
-          || !MODES.has(state.mode as HandoffMode)
-          || (
-            state.missionNote !== undefined
-            && typeof state.missionNote !== "string"
-          )
-          || !Array.isArray(state.entries)
-        ) return EMPTY_STATE;
-        const entries = state.entries.flatMap((entry) => {
-          const safe = parseEntry(entry);
-          return safe ? [safe] : [];
+        const parsed = aggregateSchema.safeParse(
+          JSON.parse(storage.get(QUEUE_KEY) ?? "null"),
+        );
+        if (!parsed.success) return EMPTY_STATE;
+        const entries = parsed.data.entries.flatMap((candidate) => {
+          const entry = entrySchema.safeParse(candidate);
+          return entry.success ? [normalizeEntry(entry.data)] : [];
         });
-        const missionNote = typeof state.missionNote === "string"
-          ? state.missionNote.trim()
-          : "";
+        const missionNote = parsed.data.missionNote?.trim() ?? "";
         return {
-          mode: state.mode as HandoffMode,
+          mode: parsed.data.mode,
           ...(missionNote ? { missionNote } : {}),
           entries,
         };

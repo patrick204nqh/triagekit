@@ -101,7 +101,7 @@ describe("DOM view adapter", () => {
 
     view.render(vm);
     host.querySelector<HTMLElement>(".alert-row")!.click();
-    expect(host.querySelector<HTMLElement>(".drawer")!.hidden).toBe(false);
+    expect(host.querySelector<HTMLDialogElement>(".drawer")!.open).toBe(true);
 
     view.render({
       ...vm,
@@ -109,7 +109,7 @@ describe("DOM view adapter", () => {
       shown: [{ ...item, score: 10 }],
     });
 
-    expect(host.querySelector<HTMLElement>(".drawer")!.hidden).toBe(false);
+    expect(host.querySelector<HTMLDialogElement>(".drawer")!.open).toBe(true);
     expect(host.querySelector("[data-head]")?.textContent).toContain("a");
   });
 });

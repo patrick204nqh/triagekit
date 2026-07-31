@@ -2,7 +2,7 @@ import type { TriageConfigT } from "../config/schema";
 import { createDomView } from "./adapters/dom-view";
 import { createBrowserSessionUrl } from "./adapters/browser-session-url";
 import { createBuiltInCatalog } from "./catalog/built-in";
-import type { RuntimeCatalog, Scorer } from "./catalog/types";
+import type { Scorer } from "./catalog/types";
 import { createCore } from "./core/core";
 import { createBrowserConnectionState } from "./cached-dataset/browser-connection-state";
 import { createCachedDatasets } from "./cached-dataset/cached-datasets";
@@ -15,15 +15,6 @@ import { createGithubProvider } from "./providers/github/provider";
 import { upcomingProviders } from "./providers/upcoming";
 import { mountShell, type ShellCore } from "./shell/app-shell";
 import { createTriageSession } from "./session/triage-session";
-
-export function createProductionCatalog(
-  fetchImpl: typeof fetch,
-): RuntimeCatalog {
-  return createBuiltInCatalog([
-    createGithubProvider(fetchImpl),
-    ...upcomingProviders,
-  ]);
-}
 
 // The one wiring point: compose the catalog, build adapters + store, and mount the shell.
 const createLazyBrowserPersistence = (): FallbackDatasetPersistence => {

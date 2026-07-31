@@ -73,6 +73,22 @@ const bundle = (
 });
 
 describe("handoff bundle validator", () => {
+  it("returns field errors for malformed runtime shapes instead of throwing", () => {
+    const result = validateHandoffBundle({
+      schema: "triagekit.handoff-bundle",
+      version: 1,
+      packages: "not-an-array",
+    });
+
+    expect(result).toEqual({
+      valid: false,
+      errors: expect.arrayContaining([
+        expect.objectContaining({ field: "packages" }),
+        expect.objectContaining({ field: "instructions" }),
+      ]),
+    });
+  });
+
   it("accepts five packages and rejects a sixth", () => {
     expect(validateHandoffBundle(bundle({ packages: packages(5) })))
       .toEqual({ valid: true });

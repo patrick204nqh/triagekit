@@ -1,9 +1,19 @@
+import { z } from "zod";
 import type {
   FocusPolicySnapshot,
   FocusPolicyStorage,
   FocusPolicyStore,
 } from "./types";
 import { normalizeLabelRules, reconcileRepositoryOrder } from "./policy";
+
+const storedPolicySchema = z.strictObject({
+  repositoryOrder: z.array(z.string()),
+  labels: z.strictObject({
+    include: z.array(z.string()),
+    exclude: z.array(z.string()),
+    enabled: z.boolean(),
+  }),
+});
 
 function emptyPolicy(provider: string): FocusPolicySnapshot {
   return {
@@ -13,39 +23,19 @@ function emptyPolicy(provider: string): FocusPolicySnapshot {
   };
 }
 
-function stringArray(value: unknown): string[] | null {
-  return Array.isArray(value) && value.every((entry) => typeof entry === "string")
-    ? value
-    : null;
-}
-
 function parsePolicy(
   provider: string,
   stored: string | null,
 ): FocusPolicySnapshot {
   if (stored === null) return emptyPolicy(provider);
   try {
-    const value = JSON.parse(stored) as Record<string, unknown>;
-    const repositoryOrder = stringArray(value.repositoryOrder);
-    const labels = value.labels as Record<string, unknown> | undefined;
-    const include = stringArray(labels?.include);
-    const exclude = stringArray(labels?.exclude);
-    if (
-      !repositoryOrder
-      || !include
-      || !exclude
-      || typeof labels?.enabled !== "boolean"
-    ) {
-      return emptyPolicy(provider);
-    }
+    const parsed = storedPolicySchema.safeParse(JSON.parse(stored));
+    if (!parsed.success) return emptyPolicy(provider);
+    const { repositoryOrder, labels } = parsed.data;
     return {
       provider,
       repositoryOrder: reconcileRepositoryOrder(repositoryOrder, []).saved,
-      labels: normalizeLabelRules({
-        include,
-        exclude,
-        enabled: labels.enabled,
-      }),
+      labels: normalizeLabelRules(labels),
     };
   } catch {
     return emptyPolicy(provider);
@@ -70,7 +60,10 @@ export function createFocusPolicyStore(
       };
       storage.set(
         `triagekit.focus.${policy.provider}`,
-        JSON.stringify(normalized),
+        JSON.stringify({
+          repositoryOrder: normalized.repositoryOrder,
+          labels: normalized.labels,
+        }),
       );
     },
   };

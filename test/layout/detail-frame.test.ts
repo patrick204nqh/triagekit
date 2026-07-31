@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runtimeCatalog } from "../../src/runtime/catalog/built-in";
 import type { RuntimeCatalog } from "../../src/runtime/catalog/types";
 import { renderTriageList } from "../../src/runtime/layout/table/detail-panel";
@@ -7,6 +7,7 @@ import type {
   KindRenderer,
   ScoredItem,
 } from "../../src/runtime/layout/table/kind-renderer";
+import { installNativeOverlayDoubles } from "../helpers/native-overlays";
 
 const row = (): ScoredItem => ({
   id: "x:1", provider: "github", providerRef: {}, kind: "stub-kind", title: "Row one",
@@ -17,6 +18,7 @@ const row = (): ScoredItem => ({
 let catalog: RuntimeCatalog;
 
 beforeEach(() => {
+  installNativeOverlayDoubles();
   document.body.innerHTML = "";
   const renderer: KindRenderer = {
     kind: "stub-kind" as any,
@@ -41,11 +43,27 @@ describe("DetailFrame", () => {
     renderTriageList(root, [row()], [], {}, catalog);
     root.querySelector<HTMLElement>(".alert-row")!.click();
 
-    const drawer = root.querySelector<HTMLElement>(".drawer")!;
-    expect(drawer.hidden).toBe(false);
+    const drawer = root.querySelector<HTMLDialogElement>("dialog.drawer")!;
+    expect(drawer).toBeInstanceOf(HTMLDialogElement);
+    expect(drawer.open).toBe(true);
     expect(drawer.querySelector(".drawer-head .prov-icon")).toBeTruthy();
     expect(drawer.querySelector(".drawer-head")!.textContent).not.toMatch(/github/i);
     expect(drawer.querySelector(".drawer-content .stub-body")).toBeTruthy();
     expect(drawer.querySelector(".drawer-foot [data-action='open']")).toBeTruthy();
+  });
+
+  it("closes detail state through the native cancel event", () => {
+    const root = document.createElement("div");
+    const onActiveItemChange = vi.fn();
+    renderTriageList(root, [row()], [], {}, catalog, {
+      onActiveItemChange,
+    });
+    root.querySelector<HTMLElement>(".alert-row")!.click();
+    const drawer = root.querySelector<HTMLDialogElement>("dialog.drawer")!;
+
+    drawer.dispatchEvent(new Event("cancel", { cancelable: true }));
+
+    expect(drawer.open).toBe(false);
+    expect(onActiveItemChange).toHaveBeenLastCalledWith(null);
   });
 });

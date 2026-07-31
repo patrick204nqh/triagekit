@@ -1,15 +1,15 @@
 import { describe, it, expect } from "vitest";
 import { readdirSync } from "node:fs";
-import { listDomains, getDomain, domainOf, classOf, type DomainId } from "../../src/runtime/dataset/taxonomy";
+import { listDomains, getDomain, domainOf, type DomainId } from "../../src/runtime/dataset/taxonomy";
 
 describe("taxonomy", () => {
   it("declares a class on every domain", () => {
     for (const d of listDomains()) expect(d.class === "finding" || d.class === "work").toBe(true);
   });
   it("derives class from kind", () => {
-    expect(classOf("dependency-vuln")).toBe("finding");
-    expect(classOf("waf-finding")).toBe("finding");
-    expect(classOf("change-request")).toBe("work");
+    expect(domainOf("dependency-vuln").class).toBe("finding");
+    expect(domainOf("waf-finding").class).toBe("finding");
+    expect(domainOf("change-request").class).toBe("work");
   });
   it("keeps cloud-posture and edge-security as separate domains", () => {
     expect(domainOf("cloud-misconfig").id).toBe("cloud-posture");

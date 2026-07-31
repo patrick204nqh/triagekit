@@ -54,4 +54,16 @@ describe("focus policy browser store", () => {
       },
     });
   });
+
+  it("rejects unknown persisted fields", () => {
+    const storage = new MapStorage();
+    storage.set("triagekit.focus.github", JSON.stringify({
+      repositoryOrder: ["acme-corp/core"],
+      labels: { include: [], exclude: [], enabled: true },
+      credential: "must-not-be-accepted",
+    }));
+
+    expect(createFocusPolicyStore(storage).get("github").repositoryOrder)
+      .toEqual([]);
+  });
 });

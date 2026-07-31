@@ -5,12 +5,13 @@ import type { ScoredItem, DetailCtx } from "./kind-renderer";
 import { warningsHtml } from "./kind-renderer";
 import { tableHtml } from "./triage-table";
 import { renderScoreBreakdown } from "./score-breakdown";
-import { dismissible } from "../../shell/dismissible";
 import { esc } from "../util";
 import { detailHeadHtml } from "../atoms/atoms";
 import type { DetailView } from "./detail-view";
 import { queueKey } from "../../handoff/queue";
 import { handoffIdentityForItem } from "../handoff/selection-controls";
+
+let detailPanelSequence = 0;
 
 export interface TriageDetailState {
   readonly activeItemId?: string | null;
@@ -58,34 +59,34 @@ export function renderTriageList(
     return () => {};
   }
   const r0 = catalog.readyKind(rows[0].kind)?.renderer;
+  const detailTitleId = `item-detail-title-${++detailPanelSequence}`;
   root.innerHTML = warnings + tableHtml(
     rows,
     r0?.columns,
     ctx.handoffSelection,
   )
-    + `<div class="scrim" data-drawer-scrim></div>`
-    + `<aside class="drawer" hidden role="dialog" aria-modal="true" aria-label="Item detail">
-         <div class="drawer-head"><div data-head></div><button class="drawer-close" aria-label="Close">×</button></div>
+    + `<dialog class="drawer" aria-labelledby="${detailTitleId}">
+         <div class="drawer-head"><div data-head></div><button class="drawer-close" aria-label="Close" autofocus>×</button></div>
          <div class="drawer-content" data-body></div>
          <div class="drawer-foot" data-foot></div>
-       </aside>`;
-  const drawer = root.querySelector<HTMLElement>(".drawer")!;
-  const scrim = root.querySelector<HTMLElement>("[data-drawer-scrim]")!;
+       </dialog>`;
+  const drawer = root.querySelector<HTMLDialogElement>(".drawer")!;
   const head = drawer.querySelector<HTMLElement>("[data-head]")!;
   const body = drawer.querySelector<HTMLElement>("[data-body]")!;
   const foot = drawer.querySelector<HTMLElement>("[data-foot]")!;
 
-  // The drawer overlays the list; a scrim dims it (and closes on click). Escape also
-  // closes, returning focus to the row.
-  const dismiss = dismissible(drawer, { onDismiss: () => closeDrawer() });
   function closeDrawer() {
-    drawer.hidden = true;
-    scrim.classList.remove("open");
-    dismiss.release();
+    if (drawer.open) drawer.close();
     detailState.onActiveItemChange?.(null);
   }
   drawer.querySelector<HTMLElement>(".drawer-close")!.addEventListener("click", closeDrawer);
-  scrim.addEventListener("click", closeDrawer);
+  drawer.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closeDrawer();
+  });
+  drawer.addEventListener("click", (event) => {
+    if (event.target === drawer) closeDrawer();
+  });
 
   root.querySelectorAll<HTMLElement>("[data-queue-select]").forEach((button) => {
     const toggle = (event: Event) => {
@@ -100,10 +101,11 @@ export function renderTriageList(
   const openRows = new Map<string, () => void>();
   root.querySelectorAll<HTMLElement>(".alert-row").forEach(tr => {
     const r = rows[Number(tr.dataset.i)];
+    const detailControl = tr.querySelector<HTMLElement>("[data-open-detail]")!;
     const openRow = () => {
       const kr = catalog.readyKind(r.kind)?.renderer;
       const view: DetailView = kr?.detail ? kr.detail(r, ctx) : defaultDetailView(r);
-      head.innerHTML = detailHeadHtml(view.header);
+      head.innerHTML = detailHeadHtml(view.header, detailTitleId);
       body.innerHTML = "";
       view.body(body);
       if (ctx.scoreExplain) renderScoreBreakdown(body, r, ctx.scoreExplain(r));
@@ -124,16 +126,11 @@ export function renderTriageList(
         });
         foot.appendChild(btn);
       }
-      drawer.hidden = false;
-      scrim.classList.add("open");
-      dismiss.activate();
+      if (!drawer.open) drawer.showModal();
       detailState.onActiveItemChange?.(r.id);
     };
     openRows.set(r.id, openRow);
     tr.addEventListener("click", openRow);
-    tr.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openRow(); }
-    });
   });
 
   if (detailState.activeItemId) {
@@ -145,5 +142,7 @@ export function renderTriageList(
     }
   }
 
-  return () => dismiss.destroy();
+  return () => {
+    if (drawer.open) drawer.close();
+  };
 }

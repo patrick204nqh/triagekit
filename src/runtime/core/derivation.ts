@@ -3,7 +3,7 @@ import type { Kind, TriageItem } from "../dataset/item";
 import { runtimeCatalog } from "../catalog/built-in";
 import type { RuntimeCatalog } from "../catalog/types";
 import { scoreAndTier, type ScoreContext } from "../scoring/configured";
-import { applyDecorators } from "./decorators";
+import { withBotPolicy } from "./author-policy";
 import { applyFilters, type ListState } from "../layout/toolbar/filter-state";
 import type { ScoredItem } from "../layout/table/kind-renderer";
 import type { FocusPolicySnapshot } from "../focus/types";
@@ -29,7 +29,7 @@ export function derive(input: DeriveInput): Derived {
   const catalog = input.catalog ?? runtimeCatalog;
   const scored = input.items
     .filter(it => input.activeKinds.includes(it.kind))
-    .map(it => applyDecorators(it, { botLogins: input.botLogins }))
+    .map((item) => withBotPolicy(item, input.botLogins))
     .map(it => {
       const { score, tier } = scoreAndTier(it, input.score, catalog);
       return { ...it, score, tier } as ScoredItem;

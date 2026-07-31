@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -8,9 +8,20 @@ const repo = resolve(import.meta.dirname, "..");
 const output = resolve(repo, "dist/triage.html");
 
 export function assertSelfContainedHtml(html) {
-  if (/<script\b[^>]*\bsrc=["']https?:/i.test(html)) {
+  const externalAsset =
+    /<script\b[^>]*\bsrc\s*=/i.test(html)
+    || /<link\b[^>]*\brel=["'](?:stylesheet|modulepreload)["']/i.test(html);
+  if (externalAsset) {
     throw new Error(
-      "✗ build-smoke: built HTML references an external script — single-file invariant broken",
+      "✗ build-smoke: built HTML references a runtime asset — single-file invariant broken",
+    );
+  }
+}
+
+export function assertSingleArtifact(entries) {
+  if (entries.length !== 1 || entries[0] !== "triage.html") {
+    throw new Error(
+      "✗ build-smoke: expected exactly dist/triage.html — single-file invariant broken",
     );
   }
 }
@@ -26,6 +37,7 @@ export function checkBuild() {
     ],
     { cwd: repo, stdio: "inherit" },
   );
+  assertSingleArtifact(readdirSync(resolve(repo, "dist")));
   let html;
   try {
     html = readFileSync(output, "utf8");

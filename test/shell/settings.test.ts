@@ -4,6 +4,7 @@ import { mountSettings } from "../../src/runtime/shell/settings";
 import { PolicyStore } from "../../src/runtime/shell/policy-store";
 import { provider } from "../helpers/provider";
 import { createConnectionSettingsFixture } from "../helpers/connection-settings";
+import { installNativeOverlayDoubles } from "../helpers/native-overlays";
 import type {
   FocusPolicySnapshot,
   FocusPolicyStore,
@@ -20,14 +21,6 @@ const github = provider({
     discoverScope: true,
     enrich: [],
     actions: {},
-  },
-  adapter: {
-    refresh: async () => [],
-    discoverScope: async () => [{
-      value: "acme/web",
-      label: "web",
-      group: "acme",
-    }],
   },
 });
 
@@ -92,7 +85,20 @@ function mountWithRepositories(repositories: string[]) {
 }
 
 describe("mountSettings", () => {
-  beforeEach(() => { sessionStorage.clear(); localStorage.clear(); document.body.innerHTML = ""; });
+  beforeEach(() => {
+    installNativeOverlayDoubles();
+    sessionStorage.clear();
+    localStorage.clear();
+    document.body.innerHTML = "";
+  });
+
+  it("opens settings as a native modal dialog", () => {
+    const { host, s } = mount();
+    s.open("github");
+    const panel = host.querySelector("dialog[data-panel]") as HTMLDialogElement;
+    expect(panel).toBeInstanceOf(HTMLDialogElement);
+    expect(panel.open).toBe(true);
+  });
 
   it("opens with the source expanded, showing its credential field and an Appearance control", () => {
     const { host, s } = mount();
@@ -395,7 +401,7 @@ describe("mountSettings", () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(host.querySelector("[data-panel]")?.classList.contains("open"))
+    expect(host.querySelector<HTMLDialogElement>("[data-panel]")?.open)
       .toBe(true);
     expect(host.querySelector("[data-save-error]")?.textContent)
       .toContain("credential rejected");
@@ -663,15 +669,15 @@ describe("mountSettings", () => {
     expect(host.querySelector("[data-unsaved]")).toBeNull();
   });
 
-  it("Escape closes the sheet without saving", () => {
+  it("native cancel closes the sheet without saving", () => {
     const { host, creds, s } = mount();
     s.open("github");
-    const panel = host.querySelector<HTMLElement>("[data-panel]")!;
-    expect(panel.classList.contains("open")).toBe(true);
+    const panel = host.querySelector<HTMLDialogElement>("[data-panel]")!;
+    expect(panel.open).toBe(true);
     const input = host.querySelector<HTMLInputElement>("[data-cred]")!;
     input.value = "ghp_x"; input.dispatchEvent(new Event("input"));
-    document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
-    expect(panel.classList.contains("open")).toBe(false);            // dismissed
+    panel.dispatchEvent(new Event("cancel", { cancelable: true }));
+    expect(panel.open).toBe(false);
     expect(creds.has("github")).toBe(false);                          // draft discarded, not saved
   });
 });

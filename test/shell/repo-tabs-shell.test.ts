@@ -36,7 +36,6 @@ describe("repo tabs render end-to-end after data loads", () => {
     sessionStorage.setItem("triagekit.cred.github", "tok");
     localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: ["acme/web", "acme/api", "acme/cli", "acme/docs"] }));
     localStorage.setItem("triagekit.focus.github", JSON.stringify({
-      provider: "github",
       repositoryOrder: ["acme/docs", "acme/cli", "acme/api", "acme/web"],
       labels: { include: [], exclude: [], enabled: true },
     }));
@@ -53,14 +52,16 @@ describe("repo tabs render end-to-end after data loads", () => {
       const shell = bootstrap(config);
       await shell.ready;
       await vi.waitFor(() => {
-        expect(document.querySelectorAll(".fbar [data-repo]").length)
+        expect(document.querySelectorAll(".fbar .repo-tabs > [data-repo]").length)
           .toBe(4);
       });
 
       const fbar = document.querySelector(".fbar");
       expect(fbar).not.toBeNull();
 
-      const inline = [...document.querySelectorAll<HTMLElement>(".fbar [data-repo]")].map(b => b.dataset.repo);
+      const inline = [...document.querySelectorAll<HTMLElement>(
+        ".fbar .repo-tabs > [data-repo]",
+      )].map(b => b.dataset.repo);
       // "All" + the top-MAX_REPO_TABS(3) repositories in explicit policy order.
       expect(inline).toEqual(["", "acme/docs", "acme/cli", "acme/api"]);
       // The 4th repository (web) sits in the +N overflow control.

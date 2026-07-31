@@ -10,3 +10,6 @@ Object.defineProperties(globalThis, {
   localStorage: { value: new MockStorage(), writable: true, configurable: true },
   sessionStorage: { value: new MockStorage(), writable: true, configurable: true },
 });
+
+installNativeOverlayDoubles();
+import { installNativeOverlayDoubles } from "../helpers/native-overlays";

@@ -13,13 +13,17 @@ export function tierBadgeHtml(tier: Tier): string {
 // The single detail-drawer header used by every kind: title + tier inline, then
 // a sub-row with the provider mark and an optional linked ref (e.g. "#482").
 // Replaces per-kind headers and the literal provider text. Escapes title/ref.
-export function detailHeadHtml(header: DetailView["header"]): string {
+export function detailHeadHtml(
+  header: DetailView["header"],
+  headingId?: string,
+): string {
   const ref = header.ref
     ? (header.ref.href
         ? `<a class="dh-ref-link" href="${esc(header.ref.href)}" target="_blank" rel="noreferrer">${esc(header.ref.text)} ↗</a>`
         : `<span>${esc(header.ref.text)}</span>`)
     : "";
-  return `<div class="dh-line"><h3>${esc(header.title)} ${tierBadgeHtml(header.tier)}</h3>`
+  const id = headingId ? ` id="${esc(headingId)}"` : "";
+  return `<div class="dh-line"><h3${id}>${esc(header.title)} ${tierBadgeHtml(header.tier)}</h3>`
     + `<span class="dh-ref">${providerIcon(header.provider)}${ref}</span></div>`;
 }
 
@@ -60,11 +64,6 @@ export function checkIndicatorHtml(c: CheckStatus | null): string {
     ? ` <span class="conflict">conflicts</span>`
     : ` <span class="muted">no conflicts</span>`;
   return `<span class="check ${cls}">${text}</span>${conf}`;
-}
-
-export function permalinkLinkHtml(p: Permalink): string {
-  const text = esc(p.label ?? p.kind);
-  return `<a class="plink plink-${p.kind}" href="${esc(p.href)}" target="_blank" rel="noreferrer">${text} ↗</a>`;
 }
 
 export function relationStripHtml(rels: Relation[], links: Permalink[]): string {

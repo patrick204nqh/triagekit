@@ -119,12 +119,6 @@ function validateProvider(
   provider: ProviderDeclaration,
   kinds: ReadonlyMap<Kind, KindDeclaration>,
 ): void {
-  const bindable = "bind" in provider
-    && typeof (provider as ProviderDeclaration & { bind?: unknown }).bind === "function";
-  if (provider.status === "ready" && !provider.adapter && !bindable) {
-    throw new CatalogError(`provider "${provider.id}" requires an adapter`);
-  }
-
   const supported = new Set(provider.kinds);
   for (const kind of provider.kinds) {
     if (!kinds.has(kind)) {

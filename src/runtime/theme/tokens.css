@@ -81,6 +81,10 @@ h1.brand { display:inline-flex; align-items:center; gap:9px; font-weight:640; fo
 .status-chip[aria-expanded="true"] .connection-status-chevron { transform:rotate(180deg); }
 .spacer { flex:1 1 auto; }
 button { font:600 14px var(--sans); cursor:pointer; border-radius:8px; }
+:where(button,a[href],summary,[tabindex]:not([tabindex="-1"])):focus-visible {
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+}
 .btn-primary { background:var(--accent); color:var(--on-accent); border:1px solid var(--accent); padding:8px 18px; min-height:38px; box-shadow:var(--shadow-accent); transition:transform .08s var(--spring), filter .15s, box-shadow .15s; }
 .btn-primary:hover { filter:brightness(1.06); box-shadow:0 4px 18px color-mix(in srgb,var(--accent) 32%,transparent); } .btn-primary:active { transform:translateY(1px); box-shadow:var(--shadow-accent); }
 .btn-ghost { background:transparent; color:var(--fg); border:1px solid var(--line-strong); padding:8px 14px; min-height:38px; transition:transform .08s var(--spring), background .15s; }
@@ -139,7 +143,15 @@ main { padding:24px 32px 64px; }
 .warnings [data-warning-cause] > span { color:var(--fg); }
 
 /* ── Table (pure — no charts here) ─────────────────────────────────── */
-table.alerts { width:100%; border-collapse:collapse; }
+.table-scroll {
+  width:100%;
+  max-width:100%;
+  overflow-x:auto;
+  overscroll-behavior-inline:contain;
+  scrollbar-gutter:stable;
+}
+.table-scroll:focus-visible { border-radius:6px; }
+table.alerts { width:100%; min-width:760px; border-collapse:collapse; }
 table.alerts thead th { position:sticky; top:0; background:var(--slate); color:var(--muted); font:600 12px var(--sans); letter-spacing:.04em; text-transform:uppercase; text-align:left; padding:10px 14px; border-bottom:1px solid var(--line-strong); }
 table.alerts thead th.num { text-align:right; }
 table.alerts tbody td { padding:11px 14px; border-top:1px solid var(--line); }
@@ -155,6 +167,21 @@ table.alerts .queue-col { width:42px; padding-inline:8px; text-align:center; }
 .queue-row-toggle:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 .alert-row { cursor:pointer; transition:background .12s; }
 .alert-row:hover { background:var(--carbon); }
+.alert-row:has(.alert-row-open:focus-visible) { background:var(--carbon); }
+.alert-row-open {
+  display:block;
+  width:100%;
+  padding:0;
+  border:0;
+  border-radius:3px;
+  background:transparent;
+  color:var(--fg);
+  font:inherit;
+  text-align:left;
+  transition:color .15s, transform .08s var(--spring);
+}
+.alert-row-open:hover { color:var(--accent); }
+.alert-row-open:active { transform:translateY(1px); }
 .sev-critical { color:var(--p0); } .sev-high { color:var(--p1); } .sev-medium { color:var(--p2); } .sev-low { color:var(--inert); }
 .sev { font-weight:500; }
 .tier { display:inline-block; font:600 12px var(--mono); color:var(--on-accent); border-radius:999px; padding:2px 9px; letter-spacing:.02em; }
@@ -442,19 +469,22 @@ table.alerts .queue-col { width:42px; padding-inline:8px; text-align:center; }
 }
 
 /* ── Slide-over base (table drawer + settings panel) ───────────────── */
-.scrim { position:fixed; inset:0; background:var(--scrim); opacity:0; pointer-events:none; transition:opacity .25s; z-index:10; }
-.scrim.open { opacity:1; pointer-events:auto; }
+.sheet,
+.drawer,
+.handoff-composer { margin:0; padding:0; border:0; }
+.sheet::backdrop,
+.drawer::backdrop,
+.handoff-composer::backdrop { background:var(--scrim); }
 .sheet { position:fixed; top:0; right:0; height:100dvh; background:var(--carbon); border-left:1px solid var(--line); box-shadow:-8px 0 32px var(--drawer-shadow), -1px 0 0 color-mix(in srgb,var(--accent) 22%,transparent); overflow-y:auto; transform:translateX(100%); transition:transform .32s var(--spring); z-index:11; }
-.sheet.open { transform:none; }
+.sheet[open] { transform:none; }
 
-/* table drawer — overlay slide-over toggled by [hidden]; a scrim (.scrim.open) dims
-   the list behind it. Flex column: non-scrolling head, scrolling body, bottom
+/* table drawer — modal slide-over. Flex column: non-scrolling head, scrolling body, bottom
    footer — so footer actions stay visible on long PR/issue bodies. */
-.drawer { position:fixed; top:0; right:0; height:100dvh; width:min(520px,92vw);
-  display:flex; flex-direction:column;
+.drawer { position:fixed; inset:0 0 0 auto; height:100dvh; width:min(520px,92vw);
+  flex-direction:column;
   background:var(--carbon); border-left:1px solid var(--line);
   box-shadow:-8px 0 32px var(--drawer-shadow), -1px 0 0 color-mix(in srgb,var(--accent) 22%,transparent); z-index:12; }
-.drawer[hidden] { display:none; }
+.drawer[open] { display:flex; }
 
 /* Header — shared identity row built by detailHeadHtml(): title + tier + provider ref
    in a single flex line. Close sits inline. */
@@ -496,7 +526,8 @@ table.breakdown td.num { text-align:right; font-family:var(--mono); font-variant
 .bd-total strong { color:var(--fg); }
 
 /* settings panel — full-screen surface with a centered content column */
-.sheet.panel { inset:0; width:100%; max-width:none; height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
+.sheet.panel { inset:0; width:100%; max-width:none; height:100dvh; flex-direction:column; overflow:hidden; }
+.sheet.panel[open] { display:flex; }
 .panel-head { display:flex; align-items:center; justify-content:space-between; padding:22px 24px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--carbon); }
 .panel-head h3 { margin:0; font-size:1.125rem; font-weight:600; }
 /* Two-column body: fixed sidebar (left) + flexible content (right), capped to a centered
@@ -818,10 +849,9 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 .tb-ctl { position: relative; }
 .tb-btn { padding: 4px 12px; border: 1px solid var(--line-strong); border-radius: 6px; background: none; color: var(--fg); cursor: pointer; }
 .tb-btn:hover { border-color: var(--accent); }
-.tb-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 220px;
+.tb-pop { position: fixed; position-area: bottom span-left; inset: auto; margin: 6px 0 0; z-index: 20; min-width: 220px;
   background: var(--carbon); border: 1px solid var(--line-strong); border-radius: 10px;
   box-shadow: var(--drawer-shadow); padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-.tb-pop[hidden] { display: none; }   /* author display:flex above beats the UA [hidden] rule — re-assert it */
 .pop-sort { text-align: left; background: none; border: 0; color: var(--fg); padding: 4px 6px; border-radius: 6px; cursor: pointer; }
 .pop-sort.on, .pop-sort:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
 
@@ -829,6 +859,10 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 .pop-ck { position:absolute; opacity:0; width:0; height:0; }
 .ck { width:15px; height:15px; border-radius:5px; border:1.5px solid var(--line-strong); flex:0 0 auto;
   display:grid; place-items:center; transition:background .12s, border-color .12s; }
+.pop-opt:has(.pop-ck:focus-visible) .ck {
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+}
 .pop-opt.on .ck { background:var(--accent); border-color:var(--accent); }
 .ck-tick { width:9px; height:9px; opacity:0; }
 .pop-opt.on .ck-tick { opacity:1; }
@@ -882,8 +916,7 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 .repo-ctl { position: relative; display: inline-flex; }
 .repo-more { padding: 4px 8px; border-radius: 6px; background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 13px; }
 .repo-more:hover { color: var(--fg); }
-.repo-pop { position: absolute; top: calc(100% + 4px); left: 0; z-index: 20; display: flex; flex-direction: column; gap: 2px; padding: 4px; background: var(--slate); border: 1px solid var(--line); border-radius: 8px; min-width: 160px; }
-.repo-pop[hidden] { display: none; }
+.repo-pop { position: fixed; position-area: bottom span-right; inset: auto; margin: 4px 0 0; z-index: 20; display: flex; flex-direction: column; gap: 2px; padding: 4px; background: var(--slate); border: 1px solid var(--line); border-radius: 8px; min-width: 160px; }
 .repo-pop .repo-tab { text-align: left; }
 
 /* Provider scope selector — top-right of row 1 (.tb-right) */
@@ -906,7 +939,6 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
   position:fixed;
   inset:0 0 0 auto;
   z-index:42;
-  display:flex;
   width:min(760px,96vw);
   height:100dvh;
   flex-direction:column;
@@ -916,12 +948,7 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
   box-shadow:-18px 0 48px var(--drawer-shadow);
   animation:handoff-enter 180ms var(--spring);
 }
-[data-handoff-scrim] {
-  position:fixed;
-  inset:0;
-  z-index:41;
-  background:var(--scrim);
-}
+.handoff-composer[open] { display:flex; }
 .handoff-composer-head,
 .handoff-composer-foot {
   flex:none;

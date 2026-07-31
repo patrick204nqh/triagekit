@@ -42,14 +42,6 @@ const provider = (
     enrich: [],
     actions: {},
   },
-  adapter: {
-    refresh: async (request) => request.kinds.map((requestedKind) => ({
-      kind: requestedKind,
-      status: "success",
-      items: [],
-      failures: [],
-    })),
-  },
 });
 
 export const testCatalog = () => createRuntimeCatalog({

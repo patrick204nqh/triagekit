@@ -30,14 +30,6 @@ const github = (): ProviderDeclaration => ({
   kinds: ["issue"],
   connection: { setupHint: "Token", scopeFields: [] },
   capabilities: { discoverScope: false, enrich: [], actions: {} },
-  adapter: {
-    refresh: async () => [{
-      kind: "issue",
-      status: "success",
-      items: [],
-      failures: [],
-    }],
-  },
 });
 
 describe("createRuntimeCatalog", () => {
@@ -92,14 +84,6 @@ describe("createRuntimeCatalog", () => {
       kinds: [issueKind()],
       providers: [{ ...github(), kinds: ["code-scanning"] }],
     })).toThrow(/github.*code-scanning.*unregistered/i);
-  });
-
-  it("rejects ready Providers without adapters", () => {
-    const { adapter: _, ...withoutAdapter } = github();
-    expect(() => createRuntimeCatalog({
-      kinds: [issueKind()],
-      providers: [withoutAdapter],
-    })).toThrow(/github.*adapter/i);
   });
 
   it("rejects a ready Kind without a built-in scorer", () => {

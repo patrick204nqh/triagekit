@@ -26,26 +26,15 @@ export type ReviewItem = TriageItem<ReviewDetails> & { tier: Tier; kind: ReviewK
 
 export type MergeMethod = "merge" | "squash" | "rebase";
 
-// Provider-agnostic write surface. GitHub impl lives in ingest/github/actions.ts.
-export interface ReviewActions {
-  merge(item: ReviewItem, method: MergeMethod): Promise<void>;
-  comment(item: ReviewItem, body: string): Promise<void>;
-  addLabels(item: ReviewItem, names: string[]): Promise<void>;
-  assign(item: ReviewItem, logins: string[]): Promise<void>;
-  close(item: ReviewItem): Promise<void>;
-}
-
-// "open" is rendered as a plain <a> link and is never dispatched through ReviewActions (no open() method by design).
+// "open" is rendered as a plain <a> link and is never dispatched as a mutation.
 export type ActionId = "merge" | "comment" | "label" | "assign" | "close" | "open";
 
-// Change requests intentionally omit "close" and "assign" from quick actions; those exist on ReviewActions but aren't surfaced for change requests by design.
+// Change requests intentionally omit "close" and "assign" from quick actions.
 export function actionsFor(kind: ReviewKind): ActionId[] {
   return kind === CHANGE_REQUEST
     ? ["merge", "comment", "label", "open"]
     : ["comment", "assign", "close", "label", "open"];
 }
-
-export function isBot(a: Actor): boolean { return a.kind === "bot"; }
 
 export function mergeable(d: ReviewDetails): boolean {
   return d.state === "open"

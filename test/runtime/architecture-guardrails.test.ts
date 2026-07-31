@@ -13,6 +13,26 @@ const filesUnder = (directory: string): string[] =>
   });
 
 describe("runtime architecture guardrails", () => {
+  it("delegates IndexedDB request and transaction mechanics to idb", () => {
+    const source = readFileSync(
+      join(runtime, "cached-dataset/indexed-db-persistence.ts"),
+      "utf8",
+    );
+    expect(source).toContain('from "idb"');
+    expect(source).not.toContain("IDBRequest<");
+    expect(source).not.toContain("transactionCompleted");
+  });
+
+  it("delegates persisted-state shapes to Zod", () => {
+    for (const relative of [
+      "focus/browser-store.ts",
+      "handoff/browser-queue-store.ts",
+    ]) {
+      expect(readFileSync(join(runtime, relative), "utf8"), relative)
+        .toContain('from "zod"');
+    }
+  });
+
   it("contains no mutable registration path", () => {
     const forbidden = [
       "registerSource(",
@@ -24,6 +44,7 @@ describe("runtime architecture guardrails", () => {
       "registerTab(",
       "registerView(",
       "registerFieldCatalog(",
+      "registerDecorator(",
     ];
     const source = filesUnder(runtime)
       .filter((path) => path.endsWith(".ts"))
@@ -32,6 +53,24 @@ describe("runtime architecture guardrails", () => {
 
     for (const marker of forbidden) {
       expect(source, marker).not.toContain(marker);
+    }
+  });
+
+  it("does not retain Ponytail-audit dead modules", () => {
+    const retired = [
+      "adapters/timer.ts",
+      "core/decorators.ts",
+      "core/scope-key.ts",
+      "core/store.ts",
+      "shell/dismissible.ts",
+      "handoff/adapters/clipboard.ts",
+      "handoff/adapters/types.ts",
+      "ingest/github/urls.ts",
+      "insights/capabilities.ts",
+    ];
+
+    for (const relative of retired) {
+      expect(existsSync(join(runtime, relative)), relative).toBe(false);
     }
   });
 

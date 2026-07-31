@@ -32,33 +32,10 @@ export interface TriageFailure {
   message: string;
 }
 
-export interface KindRefreshOutcome {
-  kind: Kind;
-  status: "success" | "partial" | "failed";
-  items: readonly TriageItem[];
-  failures: readonly TriageFailure[];
-}
-
-export interface RefreshRequest {
-  credential: string;
-  scope: Scope;
-  kinds: readonly Kind[];
-}
-
 export interface DiscoveryOption {
   value: string;
   label: string;
   group?: string;
-}
-
-export interface ProviderAdapter {
-  refresh(request: RefreshRequest): Promise<readonly KindRefreshOutcome[]>;
-  discoverScope?(credential: string): Promise<readonly DiscoveryOption[]>;
-  enrich?(
-    kind: Kind,
-    ref: unknown,
-    credential: string,
-  ): Promise<unknown>;
 }
 
 export interface ScopeField {
@@ -86,7 +63,6 @@ export interface ProviderDeclaration {
     scopeFields: readonly ScopeField[];
   };
   capabilities: ProviderCapabilities;
-  adapter?: ProviderAdapter;
 }
 
 export interface ReadyKindDeclaration {

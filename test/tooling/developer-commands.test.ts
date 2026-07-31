@@ -2,11 +2,15 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { parseCliArguments } from "../../src/cli/index";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const pkg = JSON.parse(
   readFileSync(resolve(root, "package.json"), "utf8"),
-) as { scripts: Record<string, string> };
+) as {
+  scripts: Record<string, string>;
+  dependencies: Record<string, string>;
+};
 const ci = readFileSync(resolve(root, ".github/workflows/ci.yml"), "utf8");
 const release = readFileSync(
   resolve(root, ".github/workflows/release.yml"),
@@ -14,6 +18,30 @@ const release = readFileSync(
 );
 
 describe("developer verification commands", () => {
+  it("uses Node argument parsing for the single build command", () => {
+    const cli = readFileSync(resolve(root, "src/cli/index.ts"), "utf8");
+    expect(cli).toContain('from "node:util"');
+    expect(cli).toContain("parseArgs(");
+    expect(cli).not.toContain("new Command(");
+    expect(pkg.dependencies.commander).toBeUndefined();
+  });
+
+  it("parses the supported build arguments", () => {
+    expect(parseCliArguments(["build"])).toEqual({
+      config: "triage.config.yml",
+      generic: false,
+    });
+    expect(parseCliArguments(["build", "-c", "team.yml", "--generic"]))
+      .toEqual({ config: "team.yml", generic: true });
+  });
+
+  it.each([
+    ["unknown command", ["nope"]],
+    ["unknown option", ["build", "--not-a-real-option"]],
+  ])("rejects %s with usage", (_label, args) => {
+    expect(() => parseCliArguments(args)).toThrow("Usage: triagekit build");
+  });
+
   it("runs the complete ordinary check in parallel", () => {
     expect(pkg.scripts.check).toBe(
       "node scripts/run-parallel.mjs typecheck test lint:anon check:dist",

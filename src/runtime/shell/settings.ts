@@ -27,7 +27,6 @@ import { scopeSummary } from "./health";
 import { providerIcon, categoryIcon } from "./provider-icons";
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from "./theme";
 import { REFRESH_OPTIONS } from "./refresh";
-import { dismissible } from "./dismissible";
 import type { ScoredItem } from "../layout/table/kind-renderer";
 import { esc } from "../layout/util";
 import type { FocusPolicySnapshot } from "../focus/types";
@@ -99,9 +98,8 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     }
     return [...byProv.values()];
   })();
-  host.innerHTML = `<div class="scrim" data-scrim></div>
-    <aside class="sheet panel" data-panel aria-hidden="true">
-      <div class="panel-head"><h3>Settings</h3>
+  host.innerHTML = `<dialog class="sheet panel" data-panel aria-labelledby="settings-title">
+      <div class="panel-head"><h3 id="settings-title">Settings</h3>
         <button class="icon-btn" data-close aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
       <div class="panel-body">
         <nav class="set-sidebar">${CATEGORIES.map(([id, label], i) =>
@@ -154,9 +152,8 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
         <span class="se-error" role="alert" data-save-error hidden></span>
         <span class="foot-actions"><button class="btn-ghost" data-cancel>Cancel</button><button class="btn-primary" data-save>Save</button></span>
       </div>
-    </aside>`;
-  const scrim = host.querySelector<HTMLElement>("[data-scrim]")!;
-  const panel = host.querySelector<HTMLElement>("[data-panel]")!;
+    </dialog>`;
+  const panel = host.querySelector<HTMLDialogElement>("[data-panel]")!;
   const conns = host.querySelector<HTMLElement>("[data-conns]")!;
   const seg = host.querySelector<HTMLElement>("[data-theme-seg]")!;
   const rseg = host.querySelector<HTMLElement>("[data-refresh-seg]")!;
@@ -600,12 +597,12 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     onChange();
   }
 
-  // Modal sheet: Escape / scrim dismiss, Tab trapped within, background inert, focus restored.
-  const dismiss = dismissible(panel, { onDismiss: () => discard(), scrim, modal: true });
   function setHidden(hidden: boolean) {
-    panel.classList.toggle("open", !hidden); scrim.classList.toggle("open", !hidden);
-    panel.setAttribute("aria-hidden", String(hidden));
-    if (hidden) dismiss.release(); else dismiss.activate();
+    if (hidden) {
+      if (panel.open) panel.close();
+    } else if (!panel.open) {
+      panel.showModal();
+    }
   }
   function discard() {
     if (draftTheme !== null) { setThemeChoice(savedTheme); onThemeChange?.(); }
@@ -620,6 +617,13 @@ export function mountSettings(host: HTMLElement, opts: Opts) {
     dirtyConnectionProviders.clear();
     updateSaveGate(); setHidden(true);
   }
+  panel.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    discard();
+  });
+  panel.addEventListener("click", (event) => {
+    if (event.target === panel) discard();
+  });
   async function save() {
     saveBtn.disabled = true;
     clearSaveError();

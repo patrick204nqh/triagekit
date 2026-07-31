@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   tierBadgeHtml, slaTagHtml, actorChipHtml, chipHtml, labelChipHtml,
-  checkIndicatorHtml, permalinkLinkHtml, relationStripHtml,
+  checkIndicatorHtml, relationStripHtml,
   detailHeadHtml,
 } from "../../src/runtime/layout/atoms/atoms";
 
@@ -54,13 +54,6 @@ describe("atoms", () => {
   it("checkIndicatorHtml shows pass + conflict state", () => {
     expect(checkIndicatorHtml({ state: "pass", conflicts: false })).toContain("ci-pass");
     expect(checkIndicatorHtml({ state: "pass", conflicts: true })).toContain("conflict");
-  });
-
-  it("permalinkLinkHtml opens in a new tab safely", () => {
-    const out = permalinkLinkHtml({ provider: "github", href: "https://x/y", kind: "pr", label: "#482" });
-    expect(out).toContain('href="https://x/y"');
-    expect(out).toContain('rel="noreferrer"');
-    expect(out).toContain("#482");
   });
 
   it("relationStripHtml links a 'fixes' relation to the advisory, or nothing", () => {

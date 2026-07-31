@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   mountHandoffComposer,
 } from "../../src/runtime/layout/handoff/composer";
+import { installNativeOverlayDoubles } from "../helpers/native-overlays";
 
 function controllerWith(overrides: Record<string, unknown> = {}) {
   let snapshot = {
@@ -76,10 +77,15 @@ function controllerWith(overrides: Record<string, unknown> = {}) {
 }
 
 describe("Handoff composer", () => {
+  beforeEach(installNativeOverlayDoubles);
+
   it("shows a safe default without package prompt fields", () => {
     const host = document.createElement("div");
     mountHandoffComposer(host, controllerWith());
 
+    const dialog = host.querySelector("dialog.handoff-composer");
+    expect(dialog).toBeInstanceOf(HTMLDialogElement);
+    expect((dialog as HTMLDialogElement).open).toBe(true);
     expect(host.querySelector("h2")?.textContent).toBe("Handoff queue");
     expect(host.querySelector<HTMLInputElement>(
       "[name='handoff-mode'][value='investigate']",
@@ -235,7 +241,7 @@ describe("Handoff composer", () => {
     expect(controller.removeTarget).toHaveBeenCalledWith("github:blocked");
   });
 
-  it("restores dashboard interaction when the composer closes", () => {
+  it("closes through the native cancel event", () => {
     document.body.innerHTML = "";
     const dashboard = document.createElement("main");
     const host = document.createElement("div");
@@ -243,12 +249,13 @@ describe("Handoff composer", () => {
     const controller = controllerWith();
 
     mountHandoffComposer(host, controller);
-    expect(dashboard.hasAttribute("inert")).toBe(true);
+    const dialog = host.querySelector<HTMLDialogElement>(
+      "dialog.handoff-composer",
+    )!;
+    dialog.dispatchEvent(new Event("cancel", { cancelable: true }));
 
-    host.querySelector<HTMLElement>("[data-handoff-close]")!.click();
-
+    expect(controller.close).toHaveBeenCalledOnce();
     expect(host.childElementCount).toBe(0);
-    expect(dashboard.hasAttribute("inert")).toBe(false);
   });
 
   it("keeps transfer, download, revalidation, and confirmation controls", () => {

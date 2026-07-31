@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { listArtifacts, artifactOf, GROUP_ORDER, GROUP_LABEL } from "../../src/runtime/dataset/artifact";
+import { GROUP_ORDER, GROUP_LABEL } from "../../src/runtime/dataset/artifact";
+import { runtimeCatalog } from "../../src/runtime/catalog/built-in";
+import type { Kind } from "../../src/runtime/dataset/item";
 import { domainOf } from "../../src/runtime/dataset/taxonomy";
+
+const listArtifacts = () => runtimeCatalog.artifacts();
+const artifactOf = (kind: Kind) => runtimeCatalog.artifact(kind)!;
 
 describe("artifacts", () => {
   it("groups finding and work as the two rail classes", () => {

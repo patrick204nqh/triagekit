@@ -1,8 +1,75 @@
+import { z } from "zod";
+import { KINDS } from "../dataset/item";
 import type {
   HandoffBundleV1,
+  HandoffValueV1,
   HandoffValidationError,
   HandoffValidationResult,
 } from "./types";
+
+const kindSchema = z.enum(KINDS);
+const scalarSchema = z.union([z.string(), z.number(), z.boolean()]);
+const valueSchema: z.ZodType<HandoffValueV1> = z.lazy(() => z.union([
+  ...scalarSchema.options,
+  z.null(),
+  z.array(valueSchema),
+  z.record(z.string(), valueSchema),
+]));
+const intentSchema = z.strictObject({
+  outcome: z.string(),
+  constraints: z.array(z.string()),
+  verification: z.array(z.string()),
+});
+const targetSchema = z.strictObject({
+  id: z.string(),
+  kind: kindSchema,
+  provider: z.string(),
+  providerReference: z.record(z.string(), scalarSchema),
+  title: z.string(),
+  location: z.string(),
+  url: z.string(),
+  createdAt: z.string(),
+  priority: z.strictObject({
+    signal: z.number(),
+    score: z.number(),
+    tier: z.enum(["P0", "P1", "P2", "P3"]),
+    explanation: z.array(z.strictObject({
+      label: z.string(),
+      value: scalarSchema,
+      reason: z.string().optional(),
+    })).optional(),
+  }),
+  note: z.string().optional(),
+  details: z.record(z.string(), valueSchema),
+});
+const packageSchema = z.strictObject({
+  id: z.string(),
+  order: z.number(),
+  repository: z.string(),
+  kind: kindSchema,
+  generatedIntent: intentSchema,
+  targets: z.array(targetSchema),
+  selectionReason: z.string(),
+});
+const bundleSchema = z.strictObject({
+  schema: z.literal("triagekit.handoff-bundle"),
+  version: z.literal(1),
+  createdAt: z.string(),
+  focus: z.strictObject({
+    provider: z.string(),
+    repositoryOrder: z.array(z.string()),
+    includeLabels: z.array(z.string()),
+    excludeLabels: z.array(z.string()),
+  }),
+  instructions: z.strictObject({
+    mode: z.enum(["investigate", "implement"]),
+    missionNote: z.string().optional(),
+    generatedBoundary: z.array(z.string()),
+    processPackagesInOrder: z.literal(true),
+    generatedFrom: z.literal("explicit-session-queue"),
+  }),
+  packages: z.array(packageSchema).min(1).max(5),
+});
 
 const SECRET_PATTERN =
   /token|secret|password|credential|authorization|auth(?!or)|apiKey|privateKey|accessKey|(^|[_-])key($|[_-])/i;
@@ -47,24 +114,20 @@ const INVESTIGATE_BOUNDARY = [
 ] as const;
 
 export function validateHandoffBundle(
-  bundle: HandoffBundleV1,
+  candidate: unknown,
 ): HandoffValidationResult {
+  const parsed = bundleSchema.safeParse(candidate);
+  if (!parsed.success) {
+    return {
+      valid: false,
+      errors: parsed.error.issues.map((issue) => ({
+        field: issue.path.length ? issue.path.join(".") : "(root)",
+        message: issue.message,
+      })),
+    };
+  }
+  const bundle: HandoffBundleV1 = parsed.data;
   const errors: HandoffValidationError[] = [];
-  if (bundle.schema !== "triagekit.handoff-bundle") {
-    errors.push({ field: "schema", message: "Unknown Handoff schema" });
-  }
-  if (bundle.version !== 1) {
-    errors.push({ field: "version", message: "Unsupported version" });
-  }
-  if (
-    bundle.instructions.mode !== "investigate"
-    && bundle.instructions.mode !== "implement"
-  ) {
-    errors.push({
-      field: "instructions.mode",
-      message: "Handoff mode must be investigate or implement",
-    });
-  }
   if (
     bundle.instructions.mode === "investigate"
     && !INVESTIGATE_BOUNDARY.every((constraint) =>
@@ -73,12 +136,6 @@ export function validateHandoffBundle(
     errors.push({
       field: "instructions.generatedBoundary",
       message: "Investigate mode requires the complete no-change boundary",
-    });
-  }
-  if (bundle.packages.length < 1 || bundle.packages.length > 5) {
-    errors.push({
-      field: "packages",
-      message: "Bundle must contain between one and five packages",
     });
   }
   const packageIds = new Set<string>();
