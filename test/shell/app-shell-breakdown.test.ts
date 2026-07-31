@@ -50,7 +50,7 @@ describe("app-shell score breakdown in drawer", () => {
     } finally { spy.mockRestore(); }
   });
 
-  it("shows the built-in note when no model is stored", async () => {
+  it("shows built-in factors when no model is stored", async () => {
     sessionStorage.setItem("triagekit.cred.github", "tok");
     localStorage.setItem("triagekit.scope.github", JSON.stringify({ repos: ["acme/web"] }));
     const spy = mockGithubItems([vulnItem]);
@@ -61,8 +61,8 @@ describe("app-shell score breakdown in drawer", () => {
         expect(document.querySelector("#root .surface-body .alert-row"))
           .not.toBeNull());
       document.querySelector<HTMLElement>("#root .surface-body .alert-row")!.click();
-      expect(document.querySelector("#root .drawer .breakdown")).toBeNull();
-      expect(document.querySelector("#root .drawer")!.textContent).toContain("Built-in scorer");
+      expect(document.querySelector("#root .drawer")!.textContent).toContain("Built-in priority");
+      expect(document.querySelector("#root .drawer")!.textContent).toContain("critical severity");
     } finally { spy.mockRestore(); }
   });
 });

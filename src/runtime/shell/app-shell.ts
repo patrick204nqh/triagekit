@@ -7,7 +7,7 @@ import type {
   Scope,
 } from "../catalog/types";
 import { GROUP_LABEL, GROUP_ORDER, type Artifact } from "../dataset/artifact";
-import { explainScoreModel, validateModel, type ScoreExplanation } from "../scoring/score-model";
+import type { ScoreExplanation } from "../scoring/score-model";
 import { renderTableSkeleton } from "../layout/table/triage-table";
 import { esc } from "../layout/util";
 import type { ScoredItem } from "../layout/table/kind-renderer";
@@ -326,11 +326,8 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
   let lastNavRowSig = "";
 
   // Per-item score breakdown for the list drawer (lifted from renderListWithFilters).
-  const scoreExplain = (i: ScoredItem): ScoreExplanation | null => {
-    const m = policy.getScoreModel(i.kind);
-    if (!m || validateModel(m, catalog.fieldsFor(i.kind)).length !== 0) return null;
-    try { return explainScoreModel(m, i); } catch { return null; }
-  };
+  const scoreExplain = (i: ScoredItem): ScoreExplanation | null =>
+    i.explanation ?? null;
 
   // Filter change: update state, re-derive from the store (no refetch).
   const onFilterChange = (next: ListState) => {
@@ -463,12 +460,14 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
         entries,
         before,
         session,
-        project: (item) =>
-          projectHandoffTarget({
-            item: scoreQueuedItem(item),
-            explanation: scoreExplain(scoreQueuedItem(item)),
+        project: (item) => {
+          const scored = scoreQueuedItem(item);
+          return projectHandoffTarget({
+            item: scored,
+            explanation: scoreExplain(scored),
             catalog,
-          }),
+          });
+        },
       });
       transitions.push(...result.transitions);
     }
