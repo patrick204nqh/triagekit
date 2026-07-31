@@ -33,7 +33,6 @@ import {
 } from "../adapters/browser-session-url";
 import { createTriageSession } from "../session/triage-session";
 import type { SessionUpdate, TriageSession } from "../session/types";
-import { HandoffController } from "../handoff/controller";
 import { buildInsightSnapshot } from "../insights/projector";
 import { resolveInsightRoute } from "../insights/routes";
 import type { InsightSnapshot } from "../insights/types";
@@ -57,8 +56,8 @@ import {
   queueKey,
 } from "../delegation/queue";
 import {
-  queueIdentityForItem,
-  type RowDelegationSelection,
+  handoffIdentityForItem,
+  type HandoffSelection,
   type SelectionControlsProps,
 } from "../layout/delegation/selection-controls";
 import {
@@ -270,14 +269,14 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
       .map((entry) => queueKey(entry.identity)),
   );
   const toggleQueueItem = (item: ScoredItem) => {
-    const identity = queueIdentityForItem(item);
+    const identity = handoffIdentityForItem(item);
     const key = queueKey(identity);
     const existing = delegationQueue.snapshot().entries.find((entry) =>
       queueKey(entry.identity) === key);
     if (existing) delegationQueue.setSelected(key, !existing.selected);
     else delegationQueue.add(identity, Date.now());
   };
-  const rowDelegationSelection = (): RowDelegationSelection => ({
+  const handoffSelection = (): HandoffSelection => ({
     queuedKeys: selectedQueueKeys(),
     onToggle: toggleQueueItem,
   });
@@ -290,7 +289,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
       totalCount: snapshot.entries.length,
       onSetVisible: (rows, selected) => {
         delegationQueue.setSelectedMany(
-          rows.map(queueIdentityForItem),
+          rows.map(handoffIdentityForItem),
           selected,
           Date.now(),
         );
@@ -381,9 +380,8 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
         artifact: active,
         scoreExplain,
         catalog: catalog,
-        handoffController,
         actions: actionPort,
-        delegationSelection: rowDelegationSelection(),
+        handoffSelection: handoffSelection(),
       }).render(vm);
     },
   };
@@ -779,12 +777,6 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
   const rail = document.getElementById("domainRail")!;
   const nav = document.getElementById("viewswitch")!;
   const root = document.getElementById("root")!;
-  const handoffController = new HandoffController({
-    session: () => session.snapshot(),
-    scoreExplain,
-    catalog,
-  });
-
   function buildRail() {
     rail.innerHTML = "";
     for (const g of GROUP_ORDER) {
@@ -842,7 +834,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
       onRepoSelect: (id) => {
         applySessionUpdate(session.selectRepository(id, lastRows));
       },
-      delegationSelection: delegationSelectionControls(),
+      handoffSelection: delegationSelectionControls(),
     });
   }
 

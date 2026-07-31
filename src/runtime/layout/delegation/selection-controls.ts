@@ -14,12 +14,12 @@ export interface SelectionControlsProps {
   readonly onOpenQueue: () => void;
 }
 
-export interface RowDelegationSelection {
+export interface HandoffSelection {
   readonly queuedKeys: ReadonlySet<string>;
   readonly onToggle: (item: ScoredItem) => void;
 }
 
-export function queueIdentityForItem(item: ScoredItem): QueueIdentity {
+export function handoffIdentityForItem(item: ScoredItem): QueueIdentity {
   return {
     provider: item.provider,
     itemId: item.id,
@@ -34,11 +34,11 @@ export function renderSelectionControls(
 ): void {
   const count = props.visible.length;
   const selectedVisible = props.visible.filter((item) =>
-    props.queuedKeys.has(queueKey(queueIdentityForItem(item)))).length;
+    props.queuedKeys.has(queueKey(handoffIdentityForItem(item)))).length;
   const allVisibleSelected = count > 0 && selectedVisible === count;
   const someVisibleSelected = selectedVisible > 0 && !allVisibleSelected;
   host.innerHTML = `<label class="tb-btn visible-selection"><input type="checkbox" data-toggle-visible${count === 0 ? " disabled" : ""}><span>Select visible · ${count}</span></label>
-    <button type="button" class="queue-badge" data-queue-badge aria-label="Open delegation queue: ${props.selectedCount} selected, ${props.totalCount} retained">${props.selectedCount} selected · ${props.totalCount} retained</button>`;
+    <button type="button" class="queue-badge" data-queue-badge aria-label="Open Handoff queue: ${props.selectedCount} selected, ${props.totalCount} retained">${props.selectedCount} selected · ${props.totalCount} retained</button>`;
   const input = host.querySelector<HTMLInputElement>("[data-toggle-visible]")!;
   input.checked = allVisibleSelected;
   input.indeterminate = someVisibleSelected;

@@ -60,7 +60,7 @@ describe("DOM view adapter", () => {
         kinds: ["issue"],
       } as any,
       scoreExplain: () => null,
-      delegationSelection: {
+      handoffSelection: {
         queuedKeys: new Set(),
         onToggle,
       },

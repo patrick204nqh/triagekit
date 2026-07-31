@@ -898,25 +898,7 @@ input[aria-invalid="true"]:focus { border-color:var(--p0); box-shadow:0 0 0 2px 
 
 .check.ci-open { color:var(--muted); }
 
-/* brief content — rendered inline inside the existing detail drawer */
-.brief-disclosure { font-size:12px; color:var(--muted); margin:0 0 16px; padding:8px 10px;
-  background:var(--slate); border-radius:6px; line-height:1.4; }
-.brief-item { margin-bottom:16px; }
-.brief-item label { display:block; font:600 11px var(--sans); letter-spacing:.04em; text-transform:uppercase;
-  color:var(--muted); margin-bottom:4px; }
-.brief-outcome { font:500 15px var(--sans); color:var(--fg); margin:0; padding:8px 10px;
-  background:var(--slate); border-radius:6px; }
-.brief-info { display:grid; grid-template-columns:max-content 1fr; gap:6px 16px; font-size:13px; }
-.brief-info > :nth-child(odd) { color:var(--muted); font-family:var(--mono); font-size:12px; }
-.brief-info a { color:var(--accent); word-break:break-all; }
-.brief-evidence { margin:0; padding:0; list-style:none; }
-.brief-evidence li { padding:4px 0; font-size:13px; }
-.brief-evidence li + li { border-top:1px solid var(--line); }
 
-.brief-raw { margin:0; padding:10px 12px; background:var(--void); border:1px solid var(--line);
-  border-radius:6px; font:400 12px/1.5 var(--mono); white-space:pre-wrap; word-break:break-word;
-  max-height:180px; overflow-y:auto; }
-.drawer-msg { flex:1; font:400 12px var(--sans); color:var(--muted); min-width:0; }
 
 /* Handoff queue — a dense working surface, not a second dashboard. */
 #delegation-host { position:relative; z-index:40; }

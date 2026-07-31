@@ -34,7 +34,7 @@ export interface ToolbarProps {
   onProviderSelect: (id: string) => void;
   onRepoSelect: (id: string) => void;
   catalog?: RuntimeCatalog;
-  delegationSelection?: SelectionControlsProps;
+  handoffSelection?: SelectionControlsProps;
 }
 
 function activeFilterCount(state: ListState): number {
@@ -192,8 +192,8 @@ export function renderToolbar(host: HTMLElement, p: ToolbarProps): void {
   const selectionHost = host.querySelector<HTMLElement>(
     "[data-delegation-selection]",
   )!;
-  if (p.delegationSelection) {
-    renderSelectionControls(selectionHost, p.delegationSelection);
+  if (p.handoffSelection) {
+    renderSelectionControls(selectionHost, p.handoffSelection);
   } else {
     selectionHost.remove();
   }

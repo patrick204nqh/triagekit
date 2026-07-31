@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { runtimeCatalog } from "../../src/runtime/catalog/built-in";
 import type { RuntimeCatalog } from "../../src/runtime/catalog/types";
 import { renderTriageList } from "../../src/runtime/layout/table/detail-panel";
@@ -78,7 +78,7 @@ describe("renderTriageList + DetailPanel", () => {
       [row({ id: "a" })],
       [],
       {
-        delegationSelection: {
+        handoffSelection: {
           queuedKeys: new Set(),
           onToggle: (item) => selected.push(item.id),
         },
@@ -90,6 +90,29 @@ describe("renderTriageList + DetailPanel", () => {
     toggle.click();
     expect(selected).toEqual(["a"]);
     expect(root.querySelector<HTMLElement>(".drawer")!.hidden).toBe(true);
+  });
+
+  it("uses the queue as the only item-level Handoff action", () => {
+    const root = document.createElement("div");
+    const item = row({ id: "a", title: "Investigate auth failure" });
+    const onToggle = vi.fn();
+    renderTriageList(root, [item], [], {
+      handoffSelection: {
+        queuedKeys: new Set(),
+        onToggle,
+      },
+    });
+
+    root.querySelector<HTMLElement>(".alert-row")!.click();
+
+    expect(root.querySelector("[data-brief-gen]")).toBeNull();
+    expect(root.textContent).not.toContain("Generate brief");
+    const detailAction = root.querySelector<HTMLElement>(
+      "[data-detail-handoff-toggle]",
+    )!;
+    expect(detailAction.textContent).toBe("Add to handoff");
+    detailAction.click();
+    expect(onToggle).toHaveBeenCalledWith(item);
   });
 
   it("opens the drawer with the row's kind detail, passing ctx", () => {
