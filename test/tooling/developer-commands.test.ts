@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { parseCliArguments } from "../../src/cli/index";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const pkg = JSON.parse(
@@ -23,6 +24,22 @@ describe("developer verification commands", () => {
     expect(cli).toContain("parseArgs(");
     expect(cli).not.toContain("new Command(");
     expect(pkg.dependencies.commander).toBeUndefined();
+  });
+
+  it("parses the supported build arguments", () => {
+    expect(parseCliArguments(["build"])).toEqual({
+      config: "triage.config.yml",
+      generic: false,
+    });
+    expect(parseCliArguments(["build", "-c", "team.yml", "--generic"]))
+      .toEqual({ config: "team.yml", generic: true });
+  });
+
+  it.each([
+    ["unknown command", ["nope"]],
+    ["unknown option", ["build", "--not-a-real-option"]],
+  ])("rejects %s with usage", (_label, args) => {
+    expect(() => parseCliArguments(args)).toThrow("Usage: triagekit build");
   });
 
   it("runs the complete ordinary check in parallel", () => {
