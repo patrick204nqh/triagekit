@@ -1,6 +1,7 @@
 import type { Kind } from "../dataset/item";
 import type {
   HandoffIntent,
+  HandoffMode,
   HandoffTargetV1,
   TransportResult,
 } from "../handoff/types";
@@ -18,7 +19,7 @@ export interface QueueIdentity {
   readonly repository: string;
 }
 
-export type HandoffMode = "investigate" | "implement";
+export type { HandoffMode } from "../handoff/types";
 
 export type QueueStatus =
   | "queued"
@@ -98,6 +99,8 @@ export interface PlannedPackage {
   readonly provider: string;
   readonly repository: string;
   readonly kind: Kind;
+  readonly generatedIntent: HandoffIntent;
+  /** Transitional until the breaking Handoff cutover. */
   readonly intent: HandoffIntent;
   readonly targets: readonly ScoredItem[];
   readonly selectionReason: string;
@@ -112,6 +115,7 @@ export interface PlanResult {
 export interface PlanPackagesInput {
   readonly items: readonly ScoredItem[];
   readonly repositoryOrder: readonly string[];
+  readonly mode?: HandoffMode;
   readonly includeLabels?: readonly string[];
   readonly excludeLabels?: readonly string[];
 }
@@ -124,6 +128,9 @@ export interface DelegationFocusV1 {
 }
 
 export interface DelegationInstructionsV1 {
+  readonly mode?: HandoffMode;
+  readonly missionNote?: string;
+  readonly generatedBoundary?: readonly string[];
   readonly processPackagesInOrder: true;
   readonly generatedFrom: "explicit-session-queue";
 }
@@ -133,13 +140,17 @@ export interface WorkPackageV1 {
   readonly order: number;
   readonly repository: string;
   readonly kind: Kind;
+  readonly generatedIntent: HandoffIntent;
+  /** Transitional until the breaking Handoff cutover. */
   readonly intent: HandoffIntent;
   readonly targets: readonly HandoffTargetV1[];
   readonly selectionReason: string;
 }
 
 export interface DelegationBundleV1 {
-  readonly schema: "triagekit.delegation-bundle";
+  readonly schema:
+    | "triagekit.handoff-bundle"
+    | "triagekit.delegation-bundle";
   readonly version: 1;
   readonly createdAt: string;
   readonly focus: DelegationFocusV1;

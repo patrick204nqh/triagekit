@@ -5,13 +5,31 @@ import type {
 } from "./types";
 
 function esc(text: string): string {
-  return text.replace(/([\\`*_{}[\]()#+\-.!])/g, "\\$1");
+  return text.replace(/([\\`*_{}[\]()#+!])/g, "\\$1");
 }
 
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {};
+}
+
+function modeLabel(bundle: DelegationBundleV1): string {
+  return bundle.instructions.mode === "implement"
+    ? "Implement"
+    : "Investigate";
+}
+
+function renderAuthorization(bundle: DelegationBundleV1): string[] {
+  return [
+    `## Mode: ${modeLabel(bundle)}`,
+    "",
+    "### Authorization boundary",
+    "",
+    ...(bundle.instructions.generatedBoundary ?? []).map(
+      (constraint) => `- ${esc(constraint)}`,
+    ),
+  ];
 }
 
 function renderTarget(target: HandoffTargetV1): string {
@@ -26,6 +44,9 @@ function renderTarget(target: HandoffTargetV1): string {
     `- **Created:** ${esc(target.createdAt)}`,
   ];
   if (target.url) lines.push(`- **URL:** ${target.url}`);
+  if (target.note) {
+    lines.push("", "#### Item note", "", esc(target.note));
+  }
   if (target.priority.explanation?.length) {
     lines.push("", "#### Evidence", "");
     for (const evidence of target.priority.explanation) {
@@ -61,25 +82,26 @@ function renderTarget(target: HandoffTargetV1): string {
 }
 
 function renderPackageSection(pkg: WorkPackageV1): string {
+  const intent = pkg.generatedIntent;
   const lines = [
     `## Package ${pkg.order}: ${esc(pkg.repository)} · ${esc(pkg.kind)}`,
     "",
     `- **Package ID:** ${esc(pkg.id)}`,
     `- **Selection reason:** ${esc(pkg.selectionReason)}`,
     "",
-    "### Outcome",
+    "### Generated instruction",
     "",
-    esc(pkg.intent.outcome),
+    esc(intent.outcome),
   ];
-  if (pkg.intent.constraints.length) {
-    lines.push("", "### Constraints", "");
-    for (const constraint of pkg.intent.constraints) {
+  if (intent.constraints.length) {
+    lines.push("", "#### Constraints", "");
+    for (const constraint of intent.constraints) {
       lines.push(`- ${esc(constraint)}`);
     }
   }
-  if (pkg.intent.verification.length) {
-    lines.push("", "### Verification", "");
-    for (const verification of pkg.intent.verification) {
+  if (intent.verification.length) {
+    lines.push("", "#### Verification", "");
+    for (const verification of intent.verification) {
       lines.push(`- ${esc(verification)}`);
     }
   }
@@ -101,22 +123,26 @@ function renderFocus(bundle: DelegationBundleV1): string[] {
   ];
 }
 
+function renderMissionNote(bundle: DelegationBundleV1): string[] {
+  return bundle.instructions.missionNote
+    ? ["## Mission note", "", esc(bundle.instructions.missionNote), ""]
+    : [];
+}
+
 export function renderBundleMarkdown(
   bundle: DelegationBundleV1,
 ): string {
   const lines = [
-    "# Delegation bundle",
+    "# Handoff bundle",
     "",
     `*Created: ${esc(bundle.createdAt)}*`,
     "",
-    "Process packages in the listed repository order. Complete each package's verification before moving to the next.",
+    ...renderAuthorization(bundle),
     "",
+    ...renderMissionNote(bundle),
     ...renderFocus(bundle),
     "",
-    "## Human instructions",
-    "",
-    "- This bundle came from an explicit session queue.",
-    "- Do not infer work outside the selected targets.",
+    "Process packages in the listed repository order. Do not infer work outside the selected targets.",
     "",
   ];
   for (const pkg of [...bundle.packages].sort((left, right) =>
@@ -131,10 +157,13 @@ export function renderPackageMarkdown(
   pkg: WorkPackageV1,
 ): string {
   return [
-    "# Delegation package",
+    "# Handoff package",
     "",
     `*Created: ${esc(bundle.createdAt)}*`,
     "",
+    ...renderAuthorization(bundle),
+    "",
+    ...renderMissionNote(bundle),
     ...renderFocus(bundle),
     "",
     renderPackageSection(pkg),

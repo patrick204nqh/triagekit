@@ -1,6 +1,10 @@
 import type { RuntimeCatalog } from "../catalog/types";
 import type { FocusPolicySnapshot } from "../focus/types";
 import type { HandoffValueV1, TransportResult } from "../handoff/types";
+import {
+  IMPLEMENT_BOUNDARY,
+  INVESTIGATE_BOUNDARY,
+} from "../handoff/intent";
 import type { ScoreExplanation } from "../scoring/score-model";
 import type { ScoredItem } from "../layout/table/kind-renderer";
 import { planPackages } from "./planner";
@@ -94,6 +98,7 @@ export function createDelegationController(
     const plan = planPackages({
       items: selectedItems,
       repositoryOrder: focus.repositoryOrder,
+      mode: queueSnapshot.mode,
       includeLabels: focus.labels.include,
       excludeLabels: focus.labels.exclude,
     });
@@ -150,6 +155,7 @@ export function createDelegationController(
           order: index + 1,
           repository: planned.repository,
           kind: planned.kind,
+          generatedIntent: intent,
           intent,
           targets,
           selectionReason: planned.selectionReason,
@@ -157,7 +163,7 @@ export function createDelegationController(
       },
     );
     const bundle: DelegationBundleV1 = {
-      schema: "triagekit.delegation-bundle",
+      schema: "triagekit.handoff-bundle",
       version: 1,
       createdAt: clock().toISOString(),
       focus: {
@@ -167,6 +173,13 @@ export function createDelegationController(
         excludeLabels: focus.labels.exclude,
       },
       instructions: {
+        mode: queueSnapshot.mode,
+        ...(queueSnapshot.missionNote
+          ? { missionNote: queueSnapshot.missionNote }
+          : {}),
+        generatedBoundary: queueSnapshot.mode === "investigate"
+          ? INVESTIGATE_BOUNDARY
+          : IMPLEMENT_BOUNDARY,
         processPackagesInOrder: true,
         generatedFrom: "explicit-session-queue",
       },

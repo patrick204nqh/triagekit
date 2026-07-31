@@ -56,6 +56,8 @@ describe("delegation package planner", () => {
     ]);
     expect(result.remainingPackages).toBe(2);
     expect(result.transfer.flatMap((pkg) => pkg.targets)).toHaveLength(36);
+    expect(result.transfer[0].generatedIntent.constraints)
+      .toContain("Do not modify files.");
   });
 
   it("creates stable IDs independent of input order", () => {
@@ -73,7 +75,14 @@ describe("delegation package planner", () => {
     expect(planPackages({
       items,
       repositoryOrder: ["acme-corp/core"],
+      mode: "implement",
     }).transfer[0].targets.map((target) => target.id))
       .toEqual(["a", "b", "z"]);
+    expect(planPackages({
+      items,
+      repositoryOrder: ["acme-corp/core"],
+      mode: "implement",
+    }).transfer[0].generatedIntent.outcome)
+      .toBe("Implement the requested changes for the selected issues");
   });
 });

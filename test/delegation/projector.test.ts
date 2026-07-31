@@ -72,4 +72,16 @@ describe("delegation target projector", () => {
     });
     expect(projected.details.body).not.toContain("…");
   });
+
+  it("projects a normalized human item note outside provider details", () => {
+    const projected = projectDelegationTarget({
+      item: issue("Investigate this issue"),
+      explanation: null,
+      catalog: runtimeCatalog,
+      note: "  Do not update beyond v4  ",
+    });
+
+    expect(projected.note).toBe("Do not update beyond v4");
+    expect(projected.details).not.toHaveProperty("note");
+  });
 });

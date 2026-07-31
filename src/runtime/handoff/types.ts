@@ -1,6 +1,8 @@
 import type { Kind } from "../dataset/item";
 import type { Tier } from "../scoring/tier";
 
+export type HandoffMode = "investigate" | "implement";
+
 export type HandoffValueV1 =
   | string
   | number
@@ -40,6 +42,7 @@ export interface HandoffTargetV1 {
     readonly tier: Tier;
     readonly explanation?: readonly HandoffEvidenceV1[];
   };
+  readonly note?: string;
   readonly details: Readonly<Record<string, HandoffValueV1>>;
 }
 

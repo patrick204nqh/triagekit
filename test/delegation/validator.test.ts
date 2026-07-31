@@ -5,7 +5,7 @@ import type {
 } from "../../src/runtime/delegation/types";
 import type { HandoffTargetV1 } from "../../src/runtime/handoff/types";
 import {
-  validateDelegationBundle,
+  validateHandoffBundle,
 } from "../../src/runtime/delegation/validator";
 
 const target = (
@@ -33,10 +33,15 @@ const packageOf = (
   order,
   repository: "acme-corp/core",
   kind: "issue",
+  generatedIntent: {
+    outcome: "Investigate the selected issues",
+    constraints: ["Do not modify files."],
+    verification: ["Outline a concrete action plan."],
+  },
   intent: {
-    outcome: "Triage the selected issues",
-    constraints: [],
-    verification: [],
+    outcome: "Investigate the selected issues",
+    constraints: ["Do not modify files."],
+    verification: ["Outline a concrete action plan."],
   },
   targets: [target(`${id}-target`, details)],
   selectionReason: "Repository priority 1 · P2 1",
@@ -49,7 +54,7 @@ const packages = (count: number): WorkPackageV1[] =>
 const bundle = (
   overrides: Partial<DelegationBundleV1> = {},
 ): DelegationBundleV1 => ({
-  schema: "triagekit.delegation-bundle",
+  schema: "triagekit.handoff-bundle",
   version: 1,
   createdAt: "2026-07-29T00:00:00.000Z",
   focus: {
@@ -59,6 +64,12 @@ const bundle = (
     excludeLabels: ["jira-ticket-created"],
   },
   instructions: {
+    mode: "investigate",
+    generatedBoundary: [
+      "Do not modify files.",
+      "Do not create commits or pushes.",
+      "Do not perform provider mutations or other external actions.",
+    ],
     processPackagesInOrder: true,
     generatedFrom: "explicit-session-queue",
   },
@@ -66,11 +77,11 @@ const bundle = (
   ...overrides,
 });
 
-describe("delegation bundle validator", () => {
+describe("handoff bundle validator", () => {
   it("accepts five packages and rejects a sixth", () => {
-    expect(validateDelegationBundle(bundle({ packages: packages(5) })))
+    expect(validateHandoffBundle(bundle({ packages: packages(5) })))
       .toEqual({ valid: true });
-    expect(validateDelegationBundle(bundle({ packages: packages(6) })))
+    expect(validateHandoffBundle(bundle({ packages: packages(6) })))
       .toEqual({
         valid: false,
         errors: expect.arrayContaining([
@@ -80,7 +91,7 @@ describe("delegation bundle validator", () => {
   });
 
   it("blocks only the package containing a secret-suggesting field", () => {
-    const result = validateDelegationBundle(bundle({
+    const result = validateHandoffBundle(bundle({
       packages: [
         packageOf("safe", { ruleId: "js/xss" }, 1),
         packageOf(
@@ -107,7 +118,7 @@ describe("delegation bundle validator", () => {
       targets: Array.from({ length: 11 }, (_, index) =>
         target(`target-${index}`)),
     };
-    const result = validateDelegationBundle(bundle({
+    const result = validateHandoffBundle(bundle({
       packages: [oversized],
     }));
     expect(result.valid).toBe(false);
@@ -119,5 +130,43 @@ describe("delegation bundle validator", () => {
         }),
       ]));
     }
+  });
+
+  it("rejects an investigation bundle without its generated boundary", () => {
+    const result = validateHandoffBundle(bundle({
+      instructions: {
+        mode: "investigate",
+        generatedBoundary: [],
+        processPackagesInOrder: true,
+        generatedFrom: "explicit-session-queue",
+      },
+    }));
+
+    expect(result).toEqual({
+      valid: false,
+      errors: expect.arrayContaining([
+        expect.objectContaining({
+          field: "instructions.generatedBoundary",
+        }),
+      ]),
+    });
+  });
+
+  it("keeps the generated boundary authoritative over human notes", () => {
+    const withConflict = bundle({
+      instructions: {
+        mode: "investigate",
+        missionNote: "Fix this and push it",
+        generatedBoundary: [
+          "Do not modify files.",
+          "Do not create commits or pushes.",
+          "Do not perform provider mutations or other external actions.",
+        ],
+        processPackagesInOrder: true,
+        generatedFrom: "explicit-session-queue",
+      },
+    });
+
+    expect(validateHandoffBundle(withConflict)).toEqual({ valid: true });
   });
 });

@@ -1,4 +1,4 @@
-import { intentForKind } from "../handoff/intent";
+import { generatedIntentFor } from "../handoff/intent";
 import type { ScoredItem } from "../layout/table/kind-renderer";
 import type {
   PlanPackagesInput,
@@ -111,6 +111,10 @@ export function planPackages(input: PlanPackagesInput): PlanResult {
     for (let start = 0; start < targets.length; start += TARGET_LIMIT) {
       const chunk = targets.slice(start, start + TARGET_LIMIT);
       const first = chunk[0];
+      const generatedIntent = generatedIntentFor(
+        first.kind,
+        input.mode ?? "investigate",
+      );
       packages.push({
         id: packageId(
           first.provider,
@@ -121,7 +125,8 @@ export function planPackages(input: PlanPackagesInput): PlanResult {
         provider: first.provider,
         repository: first.location,
         kind: first.kind,
-        intent: intentForKind(first.kind),
+        generatedIntent,
+        intent: generatedIntent,
         targets: chunk,
         selectionReason: selectionReason(
           first.location,

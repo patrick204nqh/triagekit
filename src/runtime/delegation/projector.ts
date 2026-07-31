@@ -19,6 +19,7 @@ export interface DelegationTargetProjectionInput {
   readonly explanation: ScoreExplanation | null;
   readonly catalog: RuntimeCatalog;
   readonly freshness?: DelegationFreshness;
+  readonly note?: string;
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -157,5 +158,10 @@ export function projectDelegationTarget(
       stale: input.freshness.stale,
     };
   }
-  return { ...target, details };
+  const note = input.note?.trim();
+  return {
+    ...target,
+    ...(note ? { note } : {}),
+    details,
+  };
 }

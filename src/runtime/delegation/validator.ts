@@ -9,15 +9,40 @@ import type {
   DelegationValidationResult,
 } from "./types";
 
-export function validateDelegationBundle(
+const INVESTIGATE_BOUNDARY = [
+  "Do not modify files.",
+  "Do not create commits or pushes.",
+  "Do not perform provider mutations or other external actions.",
+] as const;
+
+export function validateHandoffBundle(
   bundle: DelegationBundleV1,
 ): DelegationValidationResult {
   const errors: DelegationValidationError[] = [];
-  if (bundle.schema !== "triagekit.delegation-bundle") {
-    errors.push({ field: "schema", message: "Unknown delegation schema" });
+  if (bundle.schema !== "triagekit.handoff-bundle") {
+    errors.push({ field: "schema", message: "Unknown Handoff schema" });
   }
   if (bundle.version !== 1) {
     errors.push({ field: "version", message: "Unsupported version" });
+  }
+  if (
+    bundle.instructions.mode !== "investigate"
+    && bundle.instructions.mode !== "implement"
+  ) {
+    errors.push({
+      field: "instructions.mode",
+      message: "Handoff mode must be investigate or implement",
+    });
+  }
+  if (
+    bundle.instructions.mode === "investigate"
+    && !INVESTIGATE_BOUNDARY.every((constraint) =>
+      bundle.instructions.generatedBoundary?.includes(constraint))
+  ) {
+    errors.push({
+      field: "instructions.generatedBoundary",
+      message: "Investigate mode requires the complete no-change boundary",
+    });
   }
   if (bundle.packages.length < 1 || bundle.packages.length > 5) {
     errors.push({
@@ -57,10 +82,10 @@ export function validateDelegationBundle(
       });
     }
     totalTargets += pkg.targets.length;
-    if (!pkg.intent.outcome.trim()) {
+    if (!pkg.generatedIntent.outcome.trim()) {
       errors.push({
         ...(packageId ? { packageId } : {}),
-        field: "intent.outcome",
+        field: "generatedIntent.outcome",
         message: "Outcome must be non-empty",
       });
     }
@@ -109,3 +134,6 @@ export function validateDelegationBundle(
   }
   return errors.length ? { valid: false, errors } : { valid: true };
 }
+
+/** Transitional name removed in the final Handoff cutover. */
+export const validateDelegationBundle = validateHandoffBundle;

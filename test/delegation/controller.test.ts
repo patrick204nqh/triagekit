@@ -228,7 +228,7 @@ describe("delegation controller", () => {
       error: "denied",
     });
     expect(controller.snapshot().previewMarkdown).toContain(
-      "# Delegation bundle",
+      "# Handoff bundle",
     );
     expect(controller.snapshot().canDownload).toBe(true);
   });
