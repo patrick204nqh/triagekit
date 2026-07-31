@@ -14,7 +14,7 @@ import {
   renderHandoffPackageMarkdown,
 } from "./markdown";
 import { validateHandoffBundle } from "./validator";
-import { queueKey } from "./queue";
+import { isReadyForHandoff, queueKey } from "./queue";
 import type {
   HandoffBundleV1,
   HandoffController,
@@ -75,12 +75,7 @@ export function createHandoffController(
 
   const projection = (): Projection => {
     const queueSnapshot = deps.queue.snapshot();
-    const selected = queueSnapshot.entries.filter((entry) =>
-      entry.selected
-      && entry.status !== "resolved"
-      && entry.status !== "transferred"
-      && entry.status !== "blocked"
-      && entry.status !== "unavailable");
+    const selected = queueSnapshot.entries.filter(isReadyForHandoff);
     const selectedKeys = new Set(selected.map((entry) =>
       queueKey(entry.identity)));
     const selectedItems = deps.items().filter((item) =>

@@ -33,8 +33,7 @@ describe("Handoff selection controls", () => {
     renderSelectionControls(host, {
       visible,
       queuedKeys: new Set(),
-      selectedCount: 0,
-      totalCount: 0,
+      readyCount: 0,
       onSetVisible,
       onOpenQueue: () => {},
     });
@@ -49,8 +48,7 @@ describe("Handoff selection controls", () => {
     renderSelectionControls(host, {
       visible,
       queuedKeys: new Set([queueKey(handoffIdentityForItem(visible[0]))]),
-      selectedCount: 1,
-      totalCount: 1,
+      readyCount: 1,
       onSetVisible,
       onOpenQueue: () => {},
     });
@@ -68,8 +66,7 @@ describe("Handoff selection controls", () => {
           queueKey(handoffIdentityForItem(candidate))),
         queueKey(handoffIdentityForItem(hidden)),
       ]),
-      selectedCount: 3,
-      totalCount: 3,
+      readyCount: 3,
       onSetVisible,
       onOpenQueue: () => {},
     });
@@ -85,8 +82,7 @@ describe("Handoff selection controls", () => {
     renderSelectionControls(host, {
       visible: [],
       queuedKeys: new Set(),
-      selectedCount: 0,
-      totalCount: 0,
+      readyCount: 0,
       onSetVisible,
       onOpenQueue: () => {},
     });
@@ -95,22 +91,24 @@ describe("Handoff selection controls", () => {
     ).toBe(true);
   });
 
-  it("shows selected and retained queue counts and opens the queue", () => {
+  it.each([
+    [0, "Handoff", "Open Handoff queue"],
+    [3, "Handoff · 3 ready", "Open Handoff queue: 3 ready"],
+  ] as const)("shows operator-ready copy for %s items", (readyCount, text, label) => {
     const host = document.createElement("div");
     const onOpenQueue = vi.fn();
     renderSelectionControls(host, {
       visible: [],
       queuedKeys: new Set(),
-      selectedCount: 3,
-      totalCount: 5,
+      readyCount,
       onSetVisible: () => {},
       onOpenQueue,
     });
-    expect(host.querySelector("[data-queue-badge]")?.textContent)
-      .toContain("3 selected · 5 retained");
-    expect(host.querySelector("[data-queue-badge]")
-      ?.getAttribute("aria-label"))
-      .toBe("Open Handoff queue: 3 selected, 5 retained");
+    const button = host.querySelector("[data-queue-badge]");
+    expect(button?.textContent).toBe(text);
+    expect(button?.getAttribute("aria-label")).toBe(label);
+    expect(button?.textContent).not.toMatch(/selected|retained/i);
+    expect(button?.getAttribute("aria-label")).not.toMatch(/selected|retained/i);
     host.querySelector<HTMLElement>("[data-queue-badge]")!.click();
     expect(onOpenQueue).toHaveBeenCalledOnce();
   });

@@ -4,6 +4,7 @@ import {
 } from "../../src/runtime/handoff/controller";
 import {
   createHandoffQueue,
+  isReadyForHandoff,
   queueKey,
 } from "../../src/runtime/handoff/queue";
 import type { ScoredItem } from "../../src/runtime/layout/table/kind-renderer";
@@ -100,6 +101,28 @@ function fixture(input: {
 }
 
 describe("handoff controller", () => {
+  it("packages exactly the entries counted as ready", () => {
+    const { controller, queue } = fixture({ count: 5 });
+    const entries = queue.snapshot().entries;
+    queue.transitionMany([
+      { key: queueKey(entries[0].identity), transition: { status: "queued", selected: true } },
+      { key: queueKey(entries[1].identity), transition: { status: "checking", selected: true } },
+      { key: queueKey(entries[2].identity), transition: { status: "changed", selected: true } },
+      { key: queueKey(entries[3].identity), transition: { status: "blocked", selected: true } },
+      { key: queueKey(entries[4].identity), transition: { status: "transferred", selected: false } },
+    ]);
+
+    const ready = queue.snapshot().entries.filter(isReadyForHandoff);
+    const packagedIds = controller.snapshot().packages.flatMap((entry) =>
+      entry.targets.map((target) => target.id));
+
+    expect(ready).toHaveLength(2);
+    expect(packagedIds).toEqual([
+      "github:issue:00",
+      "github:issue:02",
+    ]);
+  });
+
   it("defaults to an investigation bundle with no human prompt", () => {
     const { controller } = fixture();
     const snapshot = controller.snapshot();

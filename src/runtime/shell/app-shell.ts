@@ -57,6 +57,7 @@ import {
 import { createBrowserHandoffQueueStore } from "../handoff/browser-queue-store";
 import {
   createHandoffQueue,
+  isReadyForHandoff,
   queueKey,
 } from "../handoff/queue";
 import {
@@ -296,8 +297,7 @@ export function mountShell(config: TriageConfigT, env: ShellEnv): ShellCore {
     return {
       visible: lastShownRows,
       queuedKeys: selectedQueueKeys(),
-      selectedCount: snapshot.selectedCount,
-      totalCount: snapshot.entries.length,
+      readyCount: snapshot.entries.filter(isReadyForHandoff).length,
       onSetVisible: (rows, selected) => {
         handoffQueue.setSelectedMany(
           rows.map(handoffIdentityForItem),

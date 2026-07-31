@@ -1,9 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createHandoffQueue,
+  isReadyForHandoff,
   queueKey,
 } from "../../src/runtime/handoff/queue";
-import type { HandoffIdentity } from "../../src/runtime/handoff/types";
+import type {
+  HandoffIdentity,
+  HandoffQueueEntry,
+} from "../../src/runtime/handoff/types";
 
 const identity = (itemId: string): HandoffIdentity => ({
   provider: "github",
@@ -12,7 +16,38 @@ const identity = (itemId: string): HandoffIdentity => ({
   repository: "acme-corp/core",
 });
 
+const queueEntry = (
+  over: Partial<HandoffQueueEntry>,
+): HandoffQueueEntry => ({
+  identity: identity("ready-test"),
+  selectedAt: 1000,
+  selected: true,
+  status: "queued",
+  ...over,
+});
+
 describe("handoff queue", () => {
+  it.each([
+    ["queued", true],
+    ["current", true],
+    ["changed", true],
+    ["checking", false],
+    ["resolved", false],
+    ["unavailable", false],
+    ["blocked", false],
+    ["transferred", false],
+  ] as const)("treats %s readiness as %s", (status, expected) => {
+    expect(isReadyForHandoff(queueEntry({ status, selected: true })))
+      .toBe(expected);
+  });
+
+  it("requires explicit selection for readiness", () => {
+    expect(isReadyForHandoff(queueEntry({
+      status: "current",
+      selected: false,
+    }))).toBe(false);
+  });
+
   it("defaults a new queue to investigate with no notes", () => {
     const queue = createHandoffQueue();
 
